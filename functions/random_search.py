@@ -13,6 +13,50 @@ import threading
 import functools
 
 
+# -------------------------------- TIMEOUT DECORATOR --------------------------------
+def timeout(seconds):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            result = [TimeoutError('Function call timed out')]
+            def target():
+                try:
+                    result[0] = func(*args, **kwargs)
+                except Exception as e:
+                    result[0] = e
+            thread = threading.Thread(target=target)
+            thread.start()
+            thread.join(seconds)
+            if thread.is_alive():
+                raise TimeoutError('Function call timed out')
+            if isinstance(result[0], Exception):
+                raise result[0]
+            return result[0]
+        return wrapper
+    return decorator
+
+
+@timeout(100)
+def run_slim_with_timeout(X_train, y_train, X_test, y_test, 
+                          slim_version, pop_size, n_iter, ms_lower, ms_upper, 
+                          p_inflate, max_depth, init_depth, seed, prob_const, 
+                          n_elites, log_level, verbose, struct_mutation, prob_replace, 
+                          p_prune, p_xo, p_struct_xo, tournament_size, n_jobs, algorithm):
+    
+    slim_ = slim(X_train=X_train, y_train=y_train, dataset_name='dataset_1',
+                            X_test=X_test, y_test=y_test, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter,
+                            ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
+                            seed=seed, prob_const=prob_const, n_elites=n_elites, log_level=log_level, verbose=verbose,
+                            struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
+                            p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1,
+                            )
+
+    predictions_slim = slim_.predict(X_test)
+    rmse_score = float(rmse(y_true=y_test, y_pred=predictions_slim))
+
+    return rmse_score
+
+
 # -------------------------------- SLIM --------------------------------
 
 def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
@@ -78,11 +122,13 @@ def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
     }
 
     results_slim = {}
+    # for algorithm in tqdm(["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"], disable=not show_progress):
     for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]:
         results = {}
+        seed = np.random.randint(0, 10000)
 
         # Perform a split of the dataset outside the loop, to ensure only parameter changes are made
-        X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=1-p_train, seed=10)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=1-p_train, seed=seed)
 
         if scale:
             scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
@@ -91,7 +137,7 @@ def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
             y_train = torch.tensor(scaler_y.fit_transform(y_train.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
             y_test = torch.tensor(scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
 
-        for i in tqdm(range(iterations), disable=not show_progress):
+        for i in tqdm(range(iterations)):
             # Randomly select parameters
             p_inflate = np.random.choice(params['p_inflate'])
             max_depth = int(np.random.choice(params['max_depth']))
@@ -108,16 +154,26 @@ def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
             if init_depth + 6 > max_depth:
                 max_depth = init_depth + 6
 
-            slim_ = slim(X_train=X_train, y_train=y_train, dataset_name='dataset_1',
-                            X_test=X_test, y_test=y_test, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter,
-                            ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
-                            seed=20, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
-                            struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
-                            p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1,
-                            )
+            # slim_ = slim(X_train=X_train, y_train=y_train, dataset_name='dataset_1',
+            #                 X_test=X_test, y_test=y_test, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter,
+            #                 ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
+            #                 seed=20, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
+            #                 struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
+            #                 p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1,
+            #                 )
 
-            predictions_slim = slim_.predict(X_test)
-            rmse_score = float(rmse(y_true=y_test, y_pred=predictions_slim))
+            # predictions_slim = slim_.predict(X_test)
+            # rmse_score = float(rmse(y_true=y_test, y_pred=predictions_slim))
+            
+            rmse_score = run_slim_with_timeout(X_train, y_train, X_test, y_test,
+                                                  slim_version=algorithm, pop_size=pop_size, n_iter=n_iter, 
+                                                  ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, 
+                                                  max_depth=max_depth, init_depth=init_depth, seed=seed, 
+                                                  prob_const=prob_const, n_elites=1, log_level=0, verbose=0, 
+                                                  struct_mutation=struct_mutation, prob_replace=prob_replace, 
+                                                  p_prune=p_prune, p_xo=p_xo, p_struct_xo=p_struct_xo, 
+                                                  tournament_size=tournament_size, n_jobs=1, algorithm=algorithm)
+            
             results[rmse_score] = {
                 'p_inflate': p_inflate,
                 'max_depth': max_depth,
@@ -150,6 +206,7 @@ def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
 
         with open(output_file, "wb") as f:
             pickle.dump(results_slim, f)
+            
     return results_slim
 
 
@@ -276,28 +333,6 @@ def random_search_gsgp(X, y, dataset,scale=False, p_train=0.7, iterations=50,
 
 
 # -------------------------------- GP --------------------------------
-def timeout(seconds):
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            result = [TimeoutError('Function call timed out')]
-            def target():
-                try:
-                    result[0] = func(*args, **kwargs)
-                except Exception as e:
-                    result[0] = e
-            thread = threading.Thread(target=target)
-            thread.start()
-            thread.join(seconds)
-            if thread.is_alive():
-                raise TimeoutError('Function call timed out')
-            if isinstance(result[0], Exception):
-                raise result[0]
-            return result[0]
-        return wrapper
-    return decorator
-
-
 @timeout(100)
 def run_gp_with_timeout(X_train, y_train, X_test, y_test, pop_size, n_iter, p_xo, max_depth, init_depth, prob_const, dataset_name, verbose):
     gp_model = gp(
@@ -310,7 +345,6 @@ def run_gp_with_timeout(X_train, y_train, X_test, y_test, pop_size, n_iter, p_xo
         verbose=verbose, log_level=0, minimization=True
     )
     return gp_model
-
 
 def random_search_gp(X, y, dataset, scale=False, p_train=0.7, iterations=50,
                         pop_size=100, n_iter=100, verbose=0, threshold=100000, show_progress=True):

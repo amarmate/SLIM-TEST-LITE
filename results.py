@@ -77,7 +77,7 @@ def process_dataset(args):
     results = {metric: {} for metric in metrics}
 
     try:
-        for algorithm in params:
+        for algorithm in tqdm(params.keys(), desc=f"Testing {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}"):
             # Clean the dictionary
             params_clean = {k: (v.item() if isinstance(v, (np.float64, np.int64)) else v) for k, v in params[algorithm].items()}
             
@@ -85,7 +85,7 @@ def process_dataset(args):
             rm, mp, ma, rm_c, mp_c, ma_c, time_stats, train, test, size, reps = test_slim(
                 X=X, y=y, args_dict=params_clean, dataset_name=dataset_loader.__name__,
                 n_iter=n_iter, pop_size=pop_size, n_elites=1, iterations=n_samples, scale=scale, 
-                algorithm=algorithm, verbose=0, p_train=p_train, show_progress=True,
+                algorithm=algorithm, verbose=0, p_train=p_train, show_progress=False,
             )
             
             # Store the results in a compact manner

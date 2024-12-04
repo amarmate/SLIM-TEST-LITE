@@ -37,6 +37,7 @@ def process_dataset(args):
     gp_xo_suffix = 'mut_xo' if mut_xo else 'no_mut_xo'
     struct_mutation_suffix = 'struct_mutation' if struct_mutation else 'no_struct_mutation'
     
+    # Check if the directory exists
     if not os.path.exists('params'):
         try:
             os.makedirs('params')
@@ -44,6 +45,7 @@ def process_dataset(args):
             print(f"Failed to create 'params' directory: {e}")
             exit(1)
     
+    # Check if the file already exists
     try:
         with open(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'rb') as f:
             pickle.load(f)
@@ -96,9 +98,9 @@ if __name__ == '__main__':
         f.write('Dataset,Time\n')
 
     # Define tasks for both scaled and unscaled processing
-    tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
-    tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
-    tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
+    # tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
+    # tasks = [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
+    tasks = [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]  # No mut xo and all 
 
     # Shuffle the tasks
     random.shuffle(tasks)
