@@ -38,7 +38,7 @@ def process_dataset(args):
     if not os.path.exists('params'):
         os.makedirs('params')
     
-    print('params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl')
+    print(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl')
     # Check if the there are already results for the dataset
     try:
         with open(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'wb') as f:
@@ -79,12 +79,20 @@ if __name__ == '__main__':
     tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
 
     # Limit max workers to balance CPU and memory usage
-    max_workers = 96 
+    max_workers = 40
 
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(process_dataset, task) for task in tasks]
-        for future in tqdm(as_completed(futures), total=len(tasks), desc="Processing tasks"):
-            try:
-                future.result()  # Raise any exceptions from the worker processes
-            except Exception as e:
-                print(f"Error in processing: {e}")
+    try:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(process_dataset, task) for task in tasks]
+            for future in tqdm(as_completed(futures), total=len(tasks), desc="Processing tasks"):
+                try:
+                    future.result()  # Raise any exceptions from the worker processes
+                except Exception as e:
+                    print(f"Error in processing: {e}")
+    except KeyboardInterrupt:
+        print("Process interrupted by user")
+    except Exception as e:
+        print(f"Error in processing: {e}")
+    finally:
+        print("Process finished")
+        exit
