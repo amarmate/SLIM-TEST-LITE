@@ -34,13 +34,6 @@ def process_dataset(args):
     xo_suffix = 'xo' if xo else 'no_xo'
     gp_xo_suffix = 'mut_xo' if mut_xo else 'no_mut_xo'
     struct_mutation_suffix = 'struct_mutation' if struct_mutation else 'no_struct_mutation'
-
-    # Logging start time
-    if not os.path.exists('time_log.txt'):
-        with open('time_log.txt', 'w') as f:
-            f.write('Dataset,Time\n')
-    with open('time_log.txt', 'a') as f:
-        f.write(f'{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix},{time.time()}\n')
     
     if not os.path.exists('params'):
         os.makedirs('params')
@@ -53,6 +46,13 @@ def process_dataset(args):
         return
     except Exception as e:
         pass
+
+    # Logging start time
+    if not os.path.exists('time_log.txt'):
+        with open('time_log.txt', 'w') as f:
+            f.write('Dataset,Time\n')
+    with open('time_log.txt', 'a') as f:
+        f.write(f'{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix},{time.time()}\n')
 
     # Random Search
     results = random_search_slim(
