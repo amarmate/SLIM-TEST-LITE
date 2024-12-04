@@ -38,6 +38,7 @@ def process_dataset(args):
     if not os.path.exists('params'):
         os.makedirs('params')
     
+    print('params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl')
     # Check if the there are already results for the dataset
     try:
         with open(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'wb') as f:
@@ -45,6 +46,7 @@ def process_dataset(args):
         print(f"File already exists: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
         return
     except Exception as e:
+        print(f"Calculating: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
         pass
 
     # Logging start time
