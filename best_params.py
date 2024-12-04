@@ -36,18 +36,22 @@ def process_dataset(args):
     struct_mutation_suffix = 'struct_mutation' if struct_mutation else 'no_struct_mutation'
     
     if not os.path.exists('params'):
-        os.makedirs('params')
+        try:
+            os.makedirs('params')
+        except Exception as e:
+            print(f"Failed to create 'params' directory: {e}")
+            exit(1)
     
-    print(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl')
-    # Check if the there are already results for the dataset
     try:
-        with open(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'wb') as f:
+        with open(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'rb') as f:
             pickle.load(f)
         print(f"File already exists: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
         return
-    except Exception as e:
+    except FileNotFoundError:
         print(f"Calculating: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
-        pass
+    except Exception as e:
+        print(f"Error while checking file existence: {e}")
+
 
     # Logging start time
     if not os.path.exists('time_log.txt'):
@@ -79,7 +83,7 @@ if __name__ == '__main__':
     tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
 
     # Limit max workers to balance CPU and memory usage
-    max_workers = 40
+    max_workers = 96
 
     try:
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
