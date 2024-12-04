@@ -25,6 +25,11 @@ n_iter_rs = 100
 p_train = 0.7
 
 def process_dataset(args):
+    dataset_loader, scale, struct_mutation, xo, mut_xo = args
+    X, y = dataset_loader()
+    dataset_name = dataset_loader.__name__.split('load_')[1]    
+
+    # Get the suffixes for the file name
     scale_suffix = 'scaled' if scale else 'unscaled'
     xo_suffix = 'xo' if xo else 'no_xo'
     gp_xo_suffix = 'mut_xo' if mut_xo else 'no_mut_xo'
@@ -48,10 +53,6 @@ def process_dataset(args):
         return
     except Exception as e:
         pass
-
-    dataset_loader, scale, struct_mutation, xo, mut_xo = args
-    X, y = dataset_loader()
-    dataset_name = dataset_loader.__name__
 
     # Random Search
     results = random_search_slim(
