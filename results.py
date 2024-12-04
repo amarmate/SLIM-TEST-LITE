@@ -1,4 +1,6 @@
 import os
+import argparse
+import time
 
 # Limit threads for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"  # Limit OpenMP threads to 1
@@ -27,6 +29,15 @@ def process_dataset(args):
     X, y = dataset_loader()
     dataset_name = dataset_loader.__name__.split('load_')[1]
 
+    # Log when the process starts 
+    start_time = time.time()
+    start_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))
+    if not os.path.exists('time_logs.txt'):
+        with open('time_logs.txt', 'w') as f:
+            f.write('Dataset,Time\n')
+    with open('time_logs.txt', 'a') as f:
+        f.write(f"{dataset_name}_{scale}_{xo}_{mut_xo}_{struct_mutation},{start_time}\n")
+
     # Get the suffixes for the file name
     scale_suffix = 'scaled' if scale else 'unscaled'
     xo_suffix = 'xo' if xo else 'no_xo'
@@ -42,7 +53,6 @@ def process_dataset(args):
         return
     
     # Define the dictionary to store the results
-    # rmse_, mape_, mae_, rmse_compare, mape_compare, mae_compare, time_stats, train_fit, test_fit, size, representations
     metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
     results = {metric: {} for metric in metrics}
 
@@ -55,11 +65,29 @@ def process_dataset(args):
             verbose=0, p_train=p_train, show_progress=False,
         )
 
-    if not os.path.exists('results'):
-        os.makedirs('results')
+        # Store the results in a compact manner
+        results['rmse'][algorithm] = rm
+        results['mape'][algorithm] = mp
+        results['mae'][algorithm] = ma
+        results['rmse_compare'][algorithm] = rm_c
+        results['mape_compare'][algorithm] = mp_c
+        results['mae_compare'][algorithm] = ma_c
+        results['time'][algorithm] = time
+        results['train_fit'][algorithm] = train
+        results['test_fit'][algorithm] = test
+        results['size'][algorithm] = size
+        results['representations'][algorithm] = reps
+
+    # Save the results in results/slim
+    if not os.path.exists('results/slim'):
+        try:
+            os.makedirs('results/slim')
+        except Exception as e:
+            print(f"Failed to create 'results/slim' directory: {e}")
+            exit(1)
 
     try:
-        with open(f'results/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'wb') as f:
+        with open(f'results/slim/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'wb') as f:
             pickle.dump(results, f)
         print(f"File saved: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
     except Exception as e:
@@ -67,13 +95,21 @@ def process_dataset(args):
 
 
 if __name__ == '__main__':
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="Process datasets with parallel workers.")
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=96, 
+        help="Number of maximum workers for parallel processing."
+    )
+    args = parser.parse_args()
+    max_workers = args.max_workers
+
     # Define tasks for both scaled and unscaled processing
     tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
     tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
     tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
-
-    # Limit max workers to balance CPU and memory usage
-    max_workers = 120 
 
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]
