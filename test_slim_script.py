@@ -23,7 +23,7 @@ datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 pop_size = 100
 n_iter = 250
 n_iter_rs = 100
-n_samples = 30
+n_samples = 50
 p_train = 0.7
 
 def process_dataset(args):
