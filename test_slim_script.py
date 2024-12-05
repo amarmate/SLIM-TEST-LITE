@@ -34,8 +34,8 @@ def process_dataset(args):
     # Suffix for file naming
     scale_suffix = 'scaled' if scale else None
     xo_suffix = 'xo' if xo else None
-    gp_xo_suffix = 'mut_xo' if mut_xo else None
-    struct_mutation_suffix = 'struct_mutation' if struct_mutation else None
+    gp_xo_suffix = 'mutxo' if mut_xo else None
+    struct_mutation_suffix = 'strucmut' if struct_mutation else None
     pattern = '_'.join([i for i in [dataset_name, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
 
     # Random search
@@ -50,7 +50,7 @@ def process_dataset(args):
                 X, y, dataset_name, scale=scale,
                 p_train=p_train, iterations=n_iter_rs, pop_size=pop_size, n_iter=n_iter,
                 struct_mutation=struct_mutation, show_progress=True,
-                x_o=xo, save=False, mut_xo=mut_xo
+                x_o=xo, save=False, mut_xo=mut_xo, pattern=pattern,
             )
             with open(f'params/{pattern}.pkl', 'wb') as f:
                 pickle.dump(results, f)

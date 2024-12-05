@@ -67,6 +67,7 @@ class SLIM_GSGP:
         mut_xo_operator='rshuffle',
         settings_dict=None,
         callbacks=None,
+        timeout=None,
     ):
         """
         Initialize the SLIM_GSGP algorithm with given parameters.
@@ -125,6 +126,8 @@ class SLIM_GSGP:
             Additional settings passed as a dictionary.
         callbacks : list
             List of callbacks to be executed during the evolution process. Default is None.
+        timeout : int
+            Maximum time for training. Default is None.
 
         """
         self.pi_init = pi_init
@@ -153,6 +156,9 @@ class SLIM_GSGP:
         self.mut_xo_operator = mut_xo_operator
         self.verbose_reporter = verbose_reporter
         self.callbacks = callbacks if callbacks is not None else []
+        self.stop_training = False
+        self.current_it = 0
+        self.timeout = timeout
 
         Tree.FUNCTIONS = pi_init["FUNCTIONS"]
         Tree.TERMINALS = pi_init["TERMINALS"]
@@ -233,6 +239,7 @@ class SLIM_GSGP:
 
         # starting time count
         start = time.time()
+        start_timeout = time.time() if self.timeout is not None else None
 
         # creating the initial population
         population = Population(
@@ -287,6 +294,13 @@ class SLIM_GSGP:
 
         # begining the evolution process
         for it in range(1, n_iter + 1, 1):
+            # Check if timeout is reached
+            if self.timeout is not None and time.time() - start_timeout > self.timeout:
+                break  
+            
+            # Setting the current iteration
+            self.current_it = it
+            
             # starting an empty offspring population
             offs_pop, start = [], time.time()
 
@@ -359,6 +373,9 @@ class SLIM_GSGP:
             # Run callbacks
             for callback in self.callbacks:
                 callback.on_generation_end(self, it, start, end)
+                
+            if self.stop_training: 
+                break
             
         # Run callbacks
         for callback in self.callbacks:

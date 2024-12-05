@@ -71,7 +71,13 @@ def flatten(data):
         yield data
 
 
-def create_grow_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, first_call=True):
+def create_grow_random_tree(depth, 
+                            FUNCTIONS, 
+                            TERMINALS, 
+                            CONSTANTS, 
+                            p_c=0.3, 
+                            first_call=True, 
+                            coin_flip=True):
     """
     Generates a random tree representation using the Grow method with a maximum specified depth.
 
@@ -91,6 +97,8 @@ def create_grow_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, fir
         Probability of choosing a constant node. Default is 0.3.
     first_call : bool, optional
         Variable that controls whether the function is being called for the first time. Default is True.
+    coin_flip : bool, optional
+        Variable that controls whether a coin flip is used to determine the selection of a terminal node. Default is True.
 
     Returns
     -------
@@ -100,10 +108,14 @@ def create_grow_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, fir
         The terminal or constant node selected, depending on depth and random probabilities.
     """
     # defining the probability for a terminal node to be selected, if the probability of constants is not 0
-    if p_c > 0:
-        p_terminal = (len(TERMINALS) + len(CONSTANTS)) / (len(TERMINALS) + len(CONSTANTS) + len(FUNCTIONS))
+    if not coin_flip:
+        if p_c > 0:
+            p_terminal = (len(TERMINALS) + len(CONSTANTS)) / (len(TERMINALS) + len(CONSTANTS) + len(FUNCTIONS))
+        else:
+            p_terminal = len(TERMINALS) / (len(TERMINALS) + len(FUNCTIONS))
+        
     else:
-        p_terminal = len(TERMINALS) / (len(TERMINALS) + len(FUNCTIONS))
+        p_terminal = 0.5
 
     # if a terminal is selected (or depth is 1) and its not the first call of the create_grow_random_tree function
     if (depth <= 1 or random.random() < p_terminal) and not first_call:
