@@ -154,7 +154,6 @@ def EarlyStopping(patience=10):
                 self.counter += 1
 
             if self.counter >= patience:
-                print('STOPPING')
                 slim_gsgp.stop_training = True
 
     return EarlyStoppingCallback()
