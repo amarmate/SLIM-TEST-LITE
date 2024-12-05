@@ -119,3 +119,41 @@ class LogFitness(SLIM_GSGP_Callback):
         plt.ylabel('Fitness')
         plt.legend()
         plt.show()
+        
+        
+def EarlyStopping(patience=10):
+    """
+    Callback to stop the training process when the fitness of the best individual does not improve for a number of generations.
+
+    Attributes
+    ----------
+    patience : int
+        Number of generations without improvement to wait before stopping the training process.
+
+    Methods
+    -------
+    on_generation_end(slim_gsgp, generation)
+        Called at the end of each generation.
+    """
+
+    class EarlyStoppingCallback(SLIM_GSGP_Callback):
+        def __init__(self):
+            self.best_fitness = None
+            self.counter = 0
+
+        def on_generation_end(self, slim_gsgp, generation, *args):
+            if generation == 1:
+                # Reinicialize the counter and the best fitness
+                self.best_fitness = slim_gsgp.elite.test_fitness.item()
+                self.counter = 0
+                
+            elif self.best_fitness is None or slim_gsgp.elite.test_fitness.item() < self.best_fitness:
+                self.best_fitness = slim_gsgp.elite.test_fitness.item()
+                self.counter = 0
+            else:
+                self.counter += 1
+
+            if self.counter >= patience:
+                slim_gsgp.stop_training = True
+
+    return EarlyStoppingCallback()

@@ -643,18 +643,22 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
 
         else:
             indices_list = get_indices(individual.structure[0])
-            while True:
-                if exp_decay:
-                    probs = exp_decay_prob(len(indices_list), decay_rate=0.1)
-                    random_index = random.choices(indices_list, weights=probs)[0]
+            
+            # Pre-filter the indices to ensure they meet the condition
+            valid_indices = [index for index in indices_list if max_depth - len(index) >= 2]
 
-                else:
-                    random_index = random.choice(indices_list)
-                    
-                depth = max_depth - len(random_index)
-                if depth >= 2:
-                    break
-                    
+            if not valid_indices:
+                raise ValueError("No valid indices satisfy the condition max_depth - len(index) >= 2")
+
+            # Choose from the filtered list
+            if exp_decay:
+                probs = exp_decay_prob(len(valid_indices), decay_rate=0.1)
+                random_index = random.choices(valid_indices, weights=probs)[0]
+            else:
+                random_index = random.choice(valid_indices)
+                
+            depth = max_depth - len(random_index)
+
             # get a random tree to replace a block in the main tree
             rt = get_random_tree(
                 depth,

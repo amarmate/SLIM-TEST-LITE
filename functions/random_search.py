@@ -2,6 +2,7 @@ from slim_gsgp_lib.main_slim import slim
 from slim_gsgp_lib.main_gsgp import gsgp 
 from slim_gsgp_lib.main_gp import gp
 from slim_gsgp_lib.utils.utils import train_test_split
+from slim_gsgp_lib.utils.callbacks import EarlyStopping
 from slim_gsgp_lib.evaluators.fitness_functions import rmse
 import numpy as np
 import torch
@@ -37,13 +38,13 @@ def timeout(seconds):
 
 
 @timeout(100)
-def run_slim_with_timeout(X_train, y_train, X_test, y_test, 
+def run_slim_with_timeout(X_train, y_train, X_test, y_test, dataset,
                           slim_version, pop_size, n_iter, ms_lower, ms_upper, 
                           p_inflate, max_depth, init_depth, seed, prob_const, 
                           n_elites, log_level, verbose, struct_mutation, prob_replace, 
                           p_prune, p_xo, p_struct_xo, tournament_size, n_jobs, algorithm):
     
-    slim_ = slim(X_train=X_train, y_train=y_train, dataset_name='dataset_1',
+    slim_ = slim(X_train=X_train, y_train=y_train, dataset_name=dataset,
                             X_test=X_test, y_test=y_test, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter,
                             ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
                             seed=seed, prob_const=prob_const, n_elites=n_elites, log_level=log_level, verbose=verbose,
@@ -112,16 +113,17 @@ def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
     'ms_lower': [0, 0, 0, 0.05, 0.1],
     'ms_upper': [1, 1, 1, 1, 0.8, 0.6, 0.4],
     'p_prune': [0.1, 0.2, 0.3, 0.4, 0.5] if struct_mutation==True else [0,0],
-    'p_xo': [0.1, 0.2, 0.3, 0.4, 0.5] if x_o==True else [0,0],
+    'p_xo': [0.1, 0.2, 0.3, 0.4, 0.5] if x_o==True or mut_xo==True else [0,0],
     'p_struct_xo': (
         [0.25, 0.35, 0.5, 0.6, 0.7, 0.8] if x_o and mut_xo
         else [1, 1] if not mut_xo and x_o
-        else [0, 0] 
+        else [0, 0]
     ),
     'prob_replace': [0, 0.01, 0.015, 0.02] if struct_mutation==True else [0,0],
     }
 
     results_slim = {}
+    early_stopping = EarlyStopping(patience=50)
     # for algorithm in tqdm(["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"], disable=not show_progress):
     for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]:
         results = {}
@@ -153,19 +155,9 @@ def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
 
             if init_depth + 6 > max_depth:
                 max_depth = init_depth + 6
-
-            # slim_ = slim(X_train=X_train, y_train=y_train, dataset_name='dataset_1',
-            #                 X_test=X_test, y_test=y_test, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter,
-            #                 ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
-            #                 seed=20, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
-            #                 struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
-            #                 p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1,
-            #                 )
-
-            # predictions_slim = slim_.predict(X_test)
-            # rmse_score = float(rmse(y_true=y_test, y_pred=predictions_slim))
             
-            rmse_score = run_slim_with_timeout(X_train, y_train, X_test, y_test,
+            try:
+                rmse_score = run_slim_with_timeout(X_train, y_train, X_test, y_test, dataset=dataset,
                                                   slim_version=algorithm, pop_size=pop_size, n_iter=n_iter, 
                                                   ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, 
                                                   max_depth=max_depth, init_depth=init_depth, seed=seed, 
@@ -173,6 +165,9 @@ def random_search_slim(X,y,dataset, scale=False, p_train=0.7,
                                                   struct_mutation=struct_mutation, prob_replace=prob_replace, 
                                                   p_prune=p_prune, p_xo=p_xo, p_struct_xo=p_struct_xo, 
                                                   tournament_size=tournament_size, n_jobs=1, algorithm=algorithm)
+            except TimeoutError:
+                print(f"Iteration {i} timed out after 100 seconds")
+                continue
             
             results[rmse_score] = {
                 'p_inflate': p_inflate,

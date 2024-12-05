@@ -32,10 +32,11 @@ def process_dataset(args):
     dataset_name = dataset_loader.__name__.split('load_')[1]    
 
     # Get the suffixes for the file name
-    scale_suffix = 'scaled' if scale else 'unscaled'
-    xo_suffix = 'xo' if xo else 'no_xo'
-    gp_xo_suffix = 'mut_xo' if mut_xo else 'no_mut_xo'
-    struct_mutation_suffix = 'struct_mutation' if struct_mutation else 'no_struct_mutation'
+    scale_suffix = 'scaled' if scale else None
+    xo_suffix = 'xo' if xo else None
+    gp_xo_suffix = 'mut_xo' if mut_xo else None
+    struct_mutation_suffix = 'struct_mutation' if struct_mutation else None
+    pattern = '_'.join([i for i in [dataset_name, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
     
     # Check if the directory exists
     if not os.path.exists('params'):
@@ -47,18 +48,18 @@ def process_dataset(args):
     
     # Check if the file already exists
     try:
-        with open(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'rb') as f:
+        with open(f'params/{pattern}.pkl', 'rb') as f:
             pickle.load(f)
-        print(f"File already exists: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
+        print(f"File already exists: {pattern}.pkl")
         return
     except FileNotFoundError:
-        print(f"Calculating: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
+        print(f"Calculating: {pattern}")
     except Exception as e:
         print(f"Error while checking file existence: {e}")
 
     # Logging start time
     with open('time_log.txt', 'a') as f:
-        f.write(f'{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix},{time.time()}\n')
+        f.write(f'{dataset_name}, {time.time()}\n')
 
     # Random Search
     try:
@@ -73,9 +74,9 @@ def process_dataset(args):
         print(f"Error in random_search_slim: {e}")
 
     try:
-        with open(f'params/{dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl', 'wb') as f:
+        with open(f'params/{pattern}.pkl', 'wb') as f:
             pickle.dump(results, f)
-        print(f"File saved: {dataset_name}_{scale_suffix}_{xo_suffix}_{gp_xo_suffix}_{struct_mutation_suffix}.pkl")
+        print(f"File saved: {pattern}.pkl")
     except Exception as e:
         print(f"Failed to save file for {dataset_name}: {e}")
         raise    
@@ -98,10 +99,11 @@ if __name__ == '__main__':
         f.write('Dataset,Time\n')
 
     # Define tasks for both scaled and unscaled processing
-    # tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
-    # tasks = [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
-    tasks = [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]  # No mut xo and all 
-
+    tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]  # Scaled                   and   unscaled
+    tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]    # Just structure mutation  and   just structure xo  
+    tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]      # Structure mutation + xo  and   structure mutation + mutation xo
+    tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]     # Just xo_mut              and   all
+    
     # Shuffle the tasks
     random.shuffle(tasks)
 

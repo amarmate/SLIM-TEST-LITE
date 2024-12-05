@@ -299,21 +299,37 @@ class SLIM_GSGP:
                 callback.on_generation_start(self, it)
 
             # filling the offspring population
+            times = {"crossover": 0, "inflate": 0, "deflate": 0}
+                        
             while len(offs_pop) < self.pop_size:
                 if random.random() < self.p_xo:
+                    start = time.time()
                     offs = self.crossover_step(population, X_train, X_test, reconstruct)
                     offs_pop.extend(offs)
+                    
+                    times["crossover"] += time.time() - start
                 else:
                     p1 = self.selector(population)
                     if random.random() < self.p_deflate:
+                        start = time.time()
                         off1 = self.deflate_mutation_step(p1, X_train, X_test, reconstruct)
+                        times["deflate"] += time.time() - start
                     else:
+                        start = time.time()
                         off1 = self.inflate_mutation_step(p1, X_train, X_test, reconstruct, max_depth)
+                        times["inflate"] += time.time() - start
                     offs_pop.append(off1)
 
             # removing any excess individuals from the offspring population
             if len(offs_pop) > population.size:
                 offs_pop = offs_pop[: population.size]
+                
+            # Print the time spent on each operation
+            if verbose > 0:
+                print(f"Generation {it}:")
+                print(f"    Time for crossover: {times['crossover']:.2f} s")
+                print(f"    Time for inflate mutation: {times['inflate']:.2f} s")
+                print(f"    Time for deflate mutation: {times['deflate']:.2f} s")
 
             # turning the offspring population into a Population
             offs_pop = Population(offs_pop)
@@ -480,7 +496,7 @@ class SLIM_GSGP:
                 self.elite.test_fitness,
                 self.elite.nodes_count,
                 float(gen_diversity),
-                np.std(population.fit),
+                np.std(self.population.fit),
                 " ".join([str(ind.nodes_count) for ind in self.population.population]),
                 " ".join([str(f) for f in self.population.fit]),
                 self.log_level,
