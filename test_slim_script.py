@@ -26,6 +26,31 @@ n_iter_rs = 100
 n_samples = 50
 p_train = 0.7
 
+import os
+import subprocess  # For running Git commands
+
+def save_and_commit(filepath, data):
+    """
+    Saves data to a file and commits the change to GitHub.
+    """
+    # Save the file
+    with open(filepath, 'wb') as f:
+        pickle.dump(data, f)
+    print(f"File saved: {filepath}")
+
+    # Commit the change to GitHub
+    try:
+        # Stage the file
+        subprocess.run(['git', 'add', filepath], check=True)
+        # Commit with a message
+        subprocess.run(['git', 'commit', '-m', f"Updated {os.path.basename(filepath)}"], check=True)
+        # Push to the remote repository
+        subprocess.run(['git', 'push'], check=True)
+        print(f"File committed and pushed to GitHub: {filepath}")
+    except subprocess.CalledProcessError as e:
+        print(f"Git operation failed: {e}")
+
+
 def process_dataset(args):
     dataset_loader, scale, struct_mutation, xo, mut_xo = args
     X, y = dataset_loader()
@@ -54,6 +79,7 @@ def process_dataset(args):
             )
             with open(f'params/{pattern}.pkl', 'wb') as f:
                 pickle.dump(results, f)
+                save_and_commit(f'params/{pattern}.pkl', results)
             print(f"Random search completed and saved: {pattern}.pkl")
         except Exception as e:
             print(f"Error during random search: {e}")
@@ -101,6 +127,7 @@ def process_dataset(args):
         with open(results_path, 'wb') as f:
             pickle.dump(test_results, f)
         print(f"Test results saved: {results_path}")
+        save_and_commit(results_path, test_results)
     except Exception as e:
         print(f"Error during testing: {e}")
 
