@@ -62,6 +62,7 @@ def process_dataset(args):
     gp_xo_suffix = 'mutxo' if mut_xo else None
     struct_mutation_suffix = 'strucmut' if struct_mutation else None
     pattern = '_'.join([i for i in [dataset_name, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
+    pattern += '_new'
 
     # Random search
     try:
@@ -146,7 +147,8 @@ if __name__ == '__main__':
     # tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
     # tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
-    tasks = [(loader, True, True, True, True) for loader in datasets]
+    
+    tasks = [(loader, True, True, False, False) for loader in datasets]   # Testing the structure mutation only 
 
     random.shuffle(tasks)
 
