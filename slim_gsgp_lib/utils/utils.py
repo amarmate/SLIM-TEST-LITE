@@ -433,7 +433,7 @@ def gs_size(y_true, y_pred):
 
 def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism, n_elites, init_depth, log_path,
                     prob_const, tree_functions, tree_constants, log, verbose, minimization, n_jobs, test_elite,
-                    fitness_function, initializer, tournament_size):
+                    fitness_function, initializer, tournament_size, ms_lower, ms_upper):
     """
     Validates the inputs based on the specified conditions.
 
@@ -480,6 +480,10 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
         List of constants allowed to appear in the trees.
     test_elite : bool, optional
         Whether to test the elite individual on the test set after each generation.
+    ms_lower : int, optional
+        The lower bound for the maximum size of the trees.
+    ms_upper : int, optional
+        The upper bound for the maximum size of the trees.
 
     """
     if not isinstance(X_train, torch.Tensor):
@@ -554,6 +558,12 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
 
     if tournament_size < 2:
         raise ValueError("tournament_size must be at least 2")
+
+    if ms_lower == ms_upper:
+        raise ValueError("ms_lower and ms_upper must be different")
+    
+    if ms_lower > ms_upper:
+        raise ValueError("ms_lower must be smaller than ms_upper")
 
 
 def check_slim_version(slim_version):

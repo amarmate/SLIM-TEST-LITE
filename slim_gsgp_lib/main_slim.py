@@ -51,6 +51,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          p_inflate: float = slim_gsgp_parameters["p_inflate"],
          p_xo: float = slim_gsgp_parameters["p_xo"],
          p_prune: int = slim_gsgp_parameters["p_prune"],
+         decay_rate: float = slim_gsgp_parameters["decay_rate"],
+         type_structure_mutation: str = 'old',
          p_struct_xo: float = slim_gsgp_parameters["p_struct_xo"],
          mut_xo_operator: str = slim_gsgp_parameters["mut_xo_operator"],
          selector: str = slim_gsgp_parameters["selector"],
@@ -73,7 +75,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          n_jobs: int = slim_gsgp_solve_parameters["n_jobs"],
          tournament_size: int = 2,
          test_elite: bool = slim_gsgp_solve_parameters["test_elite"],
-         callbacks: list = None, timeout: int = 120):
+         callbacks: list = None):
 
     """
     Main function to execute the SLIM GSGP algorithm on specified datasets.
@@ -110,6 +112,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         Probability of using crossover 
     p_prune : int, optional
         Probability of selecting prune mutation when mutating the structure of an individual.
+    decay_rate : float, optional
+        The decay rate for structure mutation.
     p_struct_xo : float, optional
         Probability of selecting structural crossover when crossing two individuals.
     mut_xo_operator : str, optional
@@ -157,8 +161,6 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         Whether to test the elite individual on the test set after each generation.
     callbacks : list, optional
         List of callbacks to use during the optimization process.
-    timeout : int, optional
-        Time limit for the optimization process. If the time limit is reached, the optimization process will stop.
 
     Returns
     -------
@@ -271,6 +273,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         FUNCTIONS=slim_gsgp_pi_init["FUNCTIONS"],
         TERMINALS=slim_gsgp_pi_init["TERMINALS"],
         CONSTANTS=slim_gsgp_pi_init["CONSTANTS"],
+        type=type_structure_mutation,
     )
     slim_gsgp_parameters["xo_operator"] = xo_operator(
         p_struct_xo=p_struct_xo,
@@ -289,6 +292,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     slim_gsgp_parameters["p_r"] = prob_replace
     slim_gsgp_parameters["p_g"] = prob_grow
     slim_gsgp_parameters["p_prune"] = p_prune
+    slim_gsgp_parameters["decay_rate"] = decay_rate
     slim_gsgp_parameters["verbose_reporter"] = verbose_reporter
     slim_gsgp_parameters['callbacks'] = callbacks
     slim_gsgp_parameters["fitness_sharing"] = fitness_sharing
@@ -297,8 +301,6 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
                                                 pool_size=tournament_size,
                                                 targets=y_train)
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
-    slim_gsgp_parameters['timeout'] = timeout
-
 
     #   *************** SLIM_GSGP_SOLVE_PARAMETERS ***************
 
@@ -343,8 +345,6 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     )
 
     optimizer.elite.version = slim_version
-    optimizer.elite.iteration = optimizer.current_it
-    optimizer.elite.early_stop = optimizer.stop_training
 
     return optimizer.elite
 

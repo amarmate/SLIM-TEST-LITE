@@ -56,6 +56,7 @@ class SLIM_GSGP:
         p_g=1,
         p_inflate=0.3,
         p_deflate=0.7,
+        decay_rate=0.2,
         pop_size=100,
         p_prune=0.4,
         fitness_sharing=False,
@@ -67,7 +68,6 @@ class SLIM_GSGP:
         mut_xo_operator='rshuffle',
         settings_dict=None,
         callbacks=None,
-        timeout=None,
     ):
         """
         Initialize the SLIM_GSGP algorithm with given parameters.
@@ -104,6 +104,8 @@ class SLIM_GSGP:
             Probability of inflate mutation. Default is 0.3.
         p_deflate : float
             Probability of deflate mutation. Default is 0.7.
+        decay_rate : float
+            Decay rate for exponential decay. Default is 0.2.
         p_prune : float
             Probability of prune mutation. Default is 0.4.
         pop_size : int
@@ -126,8 +128,6 @@ class SLIM_GSGP:
             Additional settings passed as a dictionary.
         callbacks : list
             List of callbacks to be executed during the evolution process. Default is None.
-        timeout : int
-            Maximum time for training. Default is None.
 
         """
         self.pi_init = pi_init
@@ -157,8 +157,7 @@ class SLIM_GSGP:
         self.verbose_reporter = verbose_reporter
         self.callbacks = callbacks if callbacks is not None else []
         self.stop_training = False
-        self.current_it = 0
-        self.timeout = timeout
+        self.decay_rate = decay_rate
 
         Tree.FUNCTIONS = pi_init["FUNCTIONS"]
         Tree.TERMINALS = pi_init["TERMINALS"]
@@ -239,7 +238,6 @@ class SLIM_GSGP:
 
         # starting time count
         start = time.time()
-        start_timeout = time.time() if self.timeout is not None else None
 
         # creating the initial population
         population = Population(
@@ -294,13 +292,6 @@ class SLIM_GSGP:
 
         # begining the evolution process
         for it in range(1, n_iter + 1, 1):
-            # Check if timeout is reached
-            if self.timeout is not None and time.time() - start_timeout > self.timeout:
-                break  
-            
-            # Setting the current iteration
-            self.current_it = it
-            
             # starting an empty offspring population
             offs_pop, start = [], time.time()
 
@@ -313,37 +304,21 @@ class SLIM_GSGP:
                 callback.on_generation_start(self, it)
 
             # filling the offspring population
-            times = {"crossover": 0, "inflate": 0, "deflate": 0}
-                        
             while len(offs_pop) < self.pop_size:
                 if random.random() < self.p_xo:
-                    start = time.time()
                     offs = self.crossover_step(population, X_train, X_test, reconstruct)
                     offs_pop.extend(offs)
-                    
-                    times["crossover"] += time.time() - start
                 else:
                     p1 = self.selector(population)
                     if random.random() < self.p_deflate:
-                        start = time.time()
                         off1 = self.deflate_mutation_step(p1, X_train, X_test, reconstruct)
-                        times["deflate"] += time.time() - start
                     else:
-                        start = time.time()
                         off1 = self.inflate_mutation_step(p1, X_train, X_test, reconstruct, max_depth)
-                        times["inflate"] += time.time() - start
                     offs_pop.append(off1)
 
             # removing any excess individuals from the offspring population
             if len(offs_pop) > population.size:
                 offs_pop = offs_pop[: population.size]
-                
-            # Print the time spent on each operation
-            if verbose > 0:
-                print(f"Generation {it}:")
-                print(f"    Time for crossover: {times['crossover']:.2f} s")
-                print(f"    Time for inflate mutation: {times['inflate']:.2f} s")
-                print(f"    Time for deflate mutation: {times['deflate']:.2f} s")
 
             # turning the offspring population into a Population
             offs_pop = Population(offs_pop)
@@ -374,7 +349,8 @@ class SLIM_GSGP:
             for callback in self.callbacks:
                 callback.on_generation_end(self, it, start, end)
                 
-            if self.stop_training: 
+            if self.stop_training:
+                print(f"{it} iterations completed. Training stopped by callback.") if verbose > 0 else None
                 break
             
         # Run callbacks
@@ -400,7 +376,7 @@ class SLIM_GSGP:
                 # Structure mutation is too hard on a fully mutated individual, we attenuate this 
                 # with exponential decay, which ensures the tree is mutated closer to the leaves 
                 # and we also leave the opportunity for deflate mutation to occur (75% chance, changeable)
-                if random.random() < 0.8:
+                if random.random() < 0:
                     return self.deflate_mutator(p1, reconstruct=reconstruct)
                 else:
                     return self.structure_mutator(
@@ -413,6 +389,7 @@ class SLIM_GSGP:
                         replace_probability=self.p_r,
                         p_prune=self.p_prune,
                         reconstruct=reconstruct,
+                        decay_rate=self.decay_rate, 
                         exp_decay=True)
             else:
                 return self.deflate_mutator(p1, reconstruct=reconstruct)
@@ -430,7 +407,7 @@ class SLIM_GSGP:
 
         if max_depth is not None and off1.depth > max_depth:
             if self.struct_mutation:
-                if random.random() < 0.6:
+                if random.random() < 0:
                     return self.deflate_mutator(p1, reconstruct=reconstruct)
                 else:
                     return self.structure_mutator(
@@ -443,6 +420,7 @@ class SLIM_GSGP:
                         replace_probability=self.p_r,
                         p_prune=self.p_prune,
                         reconstruct=reconstruct,
+                        decay_rate=self.decay_rate, 
                         exp_decay=True)
             else:
                 return self.deflate_mutator(p1, reconstruct=reconstruct)
@@ -463,6 +441,8 @@ class SLIM_GSGP:
                     replace_probability=self.p_r,
                     p_prune=self.p_prune,
                     reconstruct=reconstruct,
+                    decay_rate=self.decay_rate,
+                    exp_decay=False,
                 )
             else:
                 return self.inflate_mutator(

@@ -75,7 +75,7 @@ def process_dataset(args):
                 X, y, dataset_name, scale=scale,
                 p_train=p_train, iterations=n_iter_rs, pop_size=pop_size, n_iter=n_iter,
                 struct_mutation=struct_mutation, show_progress=True,
-                x_o=xo, save=False, mut_xo=mut_xo, pattern=pattern,
+                x_o=xo, save=False, mut_xo=mut_xo, pattern=pattern, force_params=False,
             )
             with open(f'params/{pattern}.pkl', 'wb') as f:
                 pickle.dump(results, f)
@@ -142,10 +142,11 @@ if __name__ == '__main__':
     if not os.path.exists('results/slim'):
         os.makedirs('results/slim')
 
-    tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
-    tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
-    tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]
-    tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
+    # tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
+    # tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
+    # tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]
+    # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
+    tasks = [(loader, True, True, True, True) for loader in datasets]
 
     random.shuffle(tasks)
 

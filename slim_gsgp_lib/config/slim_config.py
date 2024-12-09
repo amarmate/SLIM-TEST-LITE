@@ -47,6 +47,11 @@ CONSTANTS = {
     'constant__1': lambda _: torch.tensor(-1.0)
 }
 
+# # Changed constants to a list of 200 values between -1 and 1
+# constants = [round(-1 + (2 * i) / (200 - 1), 2) for i in range(200)]
+# CONSTANTS = {f'constant_{i}': lambda _: torch.tensor(i) for i in constants}
+
+
 # Set parameters
 settings_dict = {"p_test": 0.2}
 
@@ -86,6 +91,7 @@ slim_gsgp_parameters = {
     "p_g": 1,
     "p_prune": 0.4,
     "p_struct_xo": 0.5,
+    "decay_rate": 0.1,
     "mut_xo_operator": "rshuffle",
 }
 

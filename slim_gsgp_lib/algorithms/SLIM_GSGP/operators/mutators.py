@@ -28,7 +28,7 @@ import numpy as np
 import torch
 from slim_gsgp_lib.algorithms.GSGP.representations.tree import Tree
 from slim_gsgp_lib.algorithms.SLIM_GSGP.representations.individual import Individual
-from slim_gsgp_lib.utils.utils import get_random_tree, swap_sub_tree, get_indices
+from slim_gsgp_lib.utils.utils import get_random_tree, swap_sub_tree, get_indices, get_indices_with_levels
 from functools import lru_cache
 
 
@@ -538,12 +538,12 @@ def exp_decay_prob(n, decay_rate=0.1):
         The exponential decay probability distribution.
     """
 
-    prob = np.exp(-decay_rate * np.arange(n)) / np.sum(np.exp(-decay_rate * np.arange(n)))
-    prob = np.sort(prob)
-    return prob
+    prob = np.exp(-decay_rate * np.arange(n))
+    prob = prob[::-1]  # Reverse the array
+    return prob / np.sum(prob)
 
 
-def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
+def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
     """
     Generate a function for the structure mutation.
 
@@ -555,8 +555,11 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
         The dictionary of terminals used in the mutation.
     CONSTANTS : dict
         The dictionary of constants used in the mutation.
+    type : str
+        The type of structure mutation to be used.
     """
-    def structure(individual,
+    
+    def structure_old(individual,
                         X,
                         max_depth=8,
                         p_c=0.1,
@@ -564,8 +567,11 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
                         X_test=None,
                         grow_probability=1,
                         replace_probability=0.1,
+                        reconstruct=True, 
                         exp_decay=False,
-                        reconstruct=True):
+                        **args,
+    ):
+                        
         """
         Perform a mutation on a given Individual by changing the main structure of the tree.
 
@@ -593,7 +599,7 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
         exp_decay : bool, optional
             Flag to indicate whether exponential decay should be used to soften the mutation (default: False).
         reconstruct : bool
-            Whether to store the Individual's structure after mutation.
+            Whether to store the Individuals structure after mutation.
 
         Returns
         -------
@@ -601,6 +607,7 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
             The mutated individual
         """
 
+        # Replace the tree
         if random.random() < replace_probability:
             # In this case, the GP tree will be completely replaced by a new one, larger or smaller
             # The intuition behind is that maybe the tree needs to be expanded or diminished
@@ -615,12 +622,13 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
                 logistic=False,
             )
 
+        # Prune the tree
         elif random.random() < p_prune:
             # Prune the tree - equivalent to deflate mutation 
             indices_list = get_indices(individual.structure[0])
 
             if exp_decay:
-                probs = exp_decay_prob(len(indices_list), decay_rate=0.1)
+                probs = exp_decay_prob(len(indices_list), decay_rate=0.1) 
                 random_index = random.choices(indices_list, weights=probs)[0]
 
             else:
@@ -641,6 +649,7 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
             
             new_block.calculate_semantics(X)
 
+        # Replace a block in the tree
         else:
             indices_list = get_indices(individual.structure[0])
             
@@ -719,5 +728,127 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS):
         offs.recently_mutated = True
 
         return offs
+    
+        
+    def structure(individual,
+                        X,
+                        max_depth=8,
+                        p_c=0.1,
+                        X_test=None,
+                        grow_probability=1,
+                        reconstruct=True, 
+                        decay_rate=0.2,
+                        **args,
+    ):
+        """
+        Perform a mutation on a given Individual by changing the main structure of the tree.
 
-    return structure
+        Parameters
+        ----------
+        individual : Individual
+            The Individual to be mutated.
+        X : torch.Tensor
+            Input data for calculating semantics.
+        max_depth : int, optional
+            Maximum depth for generated trees (default: 8).
+        p_c : float, optional
+            Probability of choosing constants (default: 0.1).
+        p_prune : float, optional
+            Probability of pruning the tree (default: 0.5).
+        X_test : torch.Tensor, optional
+            Test data for calculating test semantics (default: None).
+        grow_probability : float, optional
+            Probability of growing trees during mutation (default: 1). 
+            If changed, trees will be completely replaced during mutation more often.
+        replace_probability : float, optional
+            Probability of replacing the main tree during mutation (default: 0.1).
+        X_test : torch.Tensor, optional
+            Test data for calculating test semantics (default: None).
+        exp_decay : bool, optional
+            Flag to indicate whether exponential decay should be used to soften the mutation (default: False).
+        reconstruct : bool
+            Whether to store the Individuals structure after mutation.
+
+        Returns
+        -------
+        Individual
+            The mutated individual
+        """
+
+        indices_with_levels = get_indices_with_levels(individual.structure[0])
+        valid_indices_with_levels = [(index, level) for index, level in indices_with_levels if max_depth - len(index) >= 2]
+
+        if not valid_indices_with_levels:
+            raise ValueError("No valid indices satisfy the condition max_depth - len(index) >= 2")
+
+        valid_indices, valid_levels = zip(*valid_indices_with_levels)
+        probs = exp_decay_prob(max(valid_levels) + 1, decay_rate=decay_rate)
+        level_probs = [probs[level] for level in valid_levels]
+        random_index = random.choices(valid_indices, weights=level_probs)[0]
+            
+        depth = max_depth - len(random_index)
+
+        # get a random tree to replace a block in the main tree
+        rt = get_random_tree(
+            depth,
+            FUNCTIONS,
+            TERMINALS,
+            CONSTANTS,
+            inputs=X,
+            p_c=p_c,
+            grow_probability=grow_probability,
+            logistic=False,
+        ) 
+
+        # Swap the subtree in the main tree
+        new_structure = swap_sub_tree(individual.structure[0], rt.structure, list(random_index))
+    
+        # Create the new block
+        new_block = Tree(structure=new_structure,
+                            train_semantics=None,
+                            test_semantics=None,
+                            reconstruct=True)
+        
+        new_block.calculate_semantics(X)            
+        
+        # Create the offspring individual
+        if X_test is not None:
+            new_block.calculate_semantics(X_test, testing=True, logistic=False)
+
+        offs = Individual(
+            collection=[new_block, *individual.collection[1:]],
+            train_semantics=torch.stack(
+                [
+                    new_block.train_semantics,
+                    *individual.train_semantics[1:],
+                ]   
+            ),
+            test_semantics=(
+                torch.stack(
+                    [
+                        new_block.test_semantics,
+                        *individual.test_semantics[1:],
+                    ]
+                )
+                if X_test is not None
+                else None
+            ),
+            reconstruct=reconstruct
+        )
+
+        # computing offspring attributes
+        offs.size = individual.size
+        offs.nodes_collection = [new_block.nodes,*individual.nodes_collection[1:]]
+        offs.nodes_count = sum(offs.nodes_collection) + offs.size - 1
+
+        offs.depth_collection = [new_block.depth, *individual.depth_collection[1:]]
+        offs.depth = max(offs.depth_collection) + offs.size - 1
+
+        offs.recently_mutated = True
+
+        return offs    
+
+    if type == "old":
+        return structure_old
+    else:
+        return structure

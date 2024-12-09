@@ -43,7 +43,8 @@ def timeout(seconds):
 def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
                        iterations=50, pop_size=100, n_iter=100,
                        struct_mutation=False, show_progress=True, 
-                       x_o=False, mut_xo=False, save=True, identifier=None):
+                       x_o=False, mut_xo=False, save=True, identifier=None,
+                       force_params=True):
     
     """"
     Perform a random search for the best hyperparameters for the SLIM algorithm.
@@ -80,34 +81,54 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         Whether to save the results or not.
     identifier: str
         A unique identifier for the output file.
+    force_params: bool
+        Whether to force the use of special parameters when they are used.
+        Ex.: If struct_mutation is True, force the use of p_prune, p_xo, p_struct_xo, prob_replace.
 
     Returns
     -------
     results_slim: dict
         A dictionary containing the best hyperparameters for each SLIM algorithm.
     """
-    params = {
-    'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
-    'max_depth': [19,20,21,22,23,24],
-    'init_depth': [5,6,7,8,10],
-    'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
-    'tournament_size': [2, 3],
-    'ms_lower': [0, 0, 0, 0.05, 0.1],
-    'ms_upper': [1, 1, 1, 1, 0.8, 0.6, 0.4],
-    'p_prune': [0.1, 0.2, 0.3, 0.4, 0.5] if struct_mutation==True else [0,0],
-    'p_xo': [0.1, 0.2, 0.3, 0.4, 0.5] if x_o==True or mut_xo==True else [0,0],
-    'p_struct_xo': (
-        [0.25, 0.35, 0.5, 0.6, 0.7, 0.8] if x_o and mut_xo
-        else [1, 1] if not mut_xo and x_o
-        else [0, 0]
-    ),
-    'prob_replace': [0, 0.01, 0.015, 0.02] if struct_mutation==True else [0,0],
-    }
+    if force_params:
+        params = {
+        'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
+        'max_depth': [19,20,21,22,23,24],
+        'init_depth': [5,6,7,8,10],
+        'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
+        'tournament_size': [2, 3],
+        'ms_lower': [0, 0, 0, 0.05, 0.1] if not scale else [0,0],
+        'ms_upper': [1, 1, 1, 1, 0.8, 0.6, 0.4] if not scale else [1,1],
+        'p_prune': [0.1, 0.2, 0.3, 0.4, 0.5] if struct_mutation==True else [0,0],
+        'p_xo': [0.1, 0.2, 0.3, 0.4, 0.5] if x_o==True or mut_xo==True else [0,0],
+        'p_struct_xo': (
+            [0.25, 0.35, 0.5, 0.6, 0.7, 0.8] if x_o and mut_xo
+            else [1, 1] if not mut_xo and x_o
+            else [0, 0]
+        ),
+        'prob_replace': [0, 0.01, 0.015, 0.02] if struct_mutation==True else [0,0],
+        'struct_mutation': [True, True] if struct_mutation==True else [False, False],
+        }
+    
+    else:
+        params = {
+        'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
+        'max_depth': [16,17,18,19,20,21,22,23,24],
+        'init_depth': [4,5,6,7,8,10,11],
+        'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
+        'tournament_size': [2, 3],
+        'ms_lower': [0, 0, 0, 0.05, 0.1] if not scale else [0,0],
+        'ms_upper': [1, 1, 1, 1, 0.8, 0.6, 0.4] if not scale else [1,1],
+        'p_prune': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+        'p_xo': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+        'p_struct_xo': [0, 0.10, 0.25, 0.35, 0.5, 0.6, 0.7, 0.8],
+        'prob_replace': [0, 0.01, 0.015, 0.02, 0.03],
+        'struct_mutation': [True, False],
+        }
 
     results_slim = {}
     early_stopping = EarlyStopping(patience=50)
     timeouts = 0
-    # for algorithm in tqdm(["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"], disable=not show_progress):
     for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]:
         results = {}
         # Generate a random seed without numpy
@@ -136,6 +157,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
             p_struct_xo = np.random.choice(params['p_struct_xo'])
             ms_lower = int(np.random.choice(params['ms_lower']))
             ms_upper = int(np.random.choice(params['ms_upper']))
+            struct_mutation = bool(np.random.choice(params['struct_mutation']))
 
             if init_depth + 6 > max_depth:
                 max_depth = init_depth + 6
