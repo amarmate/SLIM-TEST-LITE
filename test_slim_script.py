@@ -76,7 +76,7 @@ def process_dataset(args):
                 X, y, dataset_name, scale=scale,
                 p_train=p_train, iterations=n_iter_rs, pop_size=pop_size, n_iter=n_iter,
                 struct_mutation=struct_mutation, show_progress=True,
-                x_o=xo, save=False, mut_xo=mut_xo, pattern=pattern, force_params=False,
+                x_o=xo, save=False, mut_xo=mut_xo, pattern=pattern, force_params=True,
             )
             with open(f'params/{pattern}.pkl', 'wb') as f:
                 pickle.dump(results, f)
