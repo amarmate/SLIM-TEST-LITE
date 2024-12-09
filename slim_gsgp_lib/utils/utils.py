@@ -675,6 +675,42 @@ def get_indices(tree, path=()):
 
     return indices
 
+def get_indices_with_levels(tree):
+    """
+    Get all indices that can be used to access valid subtrees or terminal nodes in a tree,
+    along with their corresponding levels in the tree.
+
+    Parameters
+    ----------
+    tree : tuple
+        The root node of the tree.
+
+    Returns
+    -------
+    list
+        A list of tuples, each containing an index path and its corresponding level in the tree.
+    """
+    
+    def traverse(sub_tree, path=(), level=0):
+        indices_with_levels = []
+        
+        # If not tuple 
+        if not isinstance(sub_tree, tuple):
+            indices_with_levels.append((path, level))
+
+        # If tuple, separate
+        else:
+            indices_with_levels.append((path, level)) if path != () else None
+            op, left, right = sub_tree  
+            # Can substitute the left or right
+            indices_with_levels.extend(traverse(left, path + (1,), level + 1))
+            indices_with_levels.extend(traverse(right, path + (2,), level + 1))
+
+        return indices_with_levels
+    
+    return traverse(tree)
+
+
 def swap_sub_tree(tree, new_tree, indices):
     """
     Swap a subtree in a tree.
