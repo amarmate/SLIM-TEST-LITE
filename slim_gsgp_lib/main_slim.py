@@ -349,6 +349,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     )
 
     optimizer.elite.version = slim_version
+    optimizer.elite.iteration = optimizer.iteration
+    optimizer.elite.early_stop = optimizer.stop_training
 
     return optimizer.elite
 

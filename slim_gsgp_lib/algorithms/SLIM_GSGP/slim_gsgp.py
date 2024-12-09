@@ -162,6 +162,7 @@ class SLIM_GSGP:
         self.stop_training = False
         self.decay_rate = decay_rate
         self.timeout = timeout
+        self.iteration = 0
 
         Tree.FUNCTIONS = pi_init["FUNCTIONS"]
         Tree.TERMINALS = pi_init["TERMINALS"]
@@ -298,6 +299,8 @@ class SLIM_GSGP:
         start_time = time.time()
         # begining the evolution process
         for it in range(1, n_iter + 1, 1):
+            self.iteration += 1
+            
             if time.time() - start_time > self.timeout:
                 print(f"Timeout reached at iteration {it}. Training stopped.") if verbose > 0 else None
                 break
