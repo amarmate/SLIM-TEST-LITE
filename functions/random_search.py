@@ -175,7 +175,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
                  seed=seed_, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
                  struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
                  p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1, callbacks=[early_stopping],
-                 timeout=120, type_structure_mutation=type_structure_mutation, decay_rate=decay_rate
+                 type_structure_mutation=type_structure_mutation, decay_rate=decay_rate
                 )
 
                 predictions_slim = slim_.predict(X_test)

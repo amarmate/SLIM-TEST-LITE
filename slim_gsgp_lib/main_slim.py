@@ -75,7 +75,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          n_jobs: int = slim_gsgp_solve_parameters["n_jobs"],
          tournament_size: int = 2,
          test_elite: bool = slim_gsgp_solve_parameters["test_elite"],
-         callbacks: list = None):
+         callbacks: list = None, 
+         timeout: int = 0,):
 
     """
     Main function to execute the SLIM GSGP algorithm on specified datasets.
@@ -161,6 +162,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         Whether to test the elite individual on the test set after each generation.
     callbacks : list, optional
         List of callbacks to use during the optimization process.
+    timeout : int, optional
+        Time in seconds to run the algorithm. If 0, the algorithm will run until the n_iter is reached.
 
     Returns
     -------
@@ -301,6 +304,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
                                                 pool_size=tournament_size,
                                                 targets=y_train)
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
+    slim_gsgp_parameters['timeout'] = timeout
 
     #   *************** SLIM_GSGP_SOLVE_PARAMETERS ***************
 

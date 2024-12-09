@@ -62,7 +62,7 @@ def process_dataset(args):
     gp_xo_suffix = 'mutxo' if mut_xo else None
     struct_mutation_suffix = 'strucmut' if struct_mutation else None
     pattern = '_'.join([i for i in [dataset_name, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
-    pattern += '_new'
+    pattern += '_new'  # TEMPORARY
 
     # Random search
     try:

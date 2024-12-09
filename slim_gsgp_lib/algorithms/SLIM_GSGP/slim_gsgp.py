@@ -68,6 +68,7 @@ class SLIM_GSGP:
         mut_xo_operator='rshuffle',
         settings_dict=None,
         callbacks=None,
+        timeout=None,
     ):
         """
         Initialize the SLIM_GSGP algorithm with given parameters.
@@ -128,6 +129,8 @@ class SLIM_GSGP:
             Additional settings passed as a dictionary.
         callbacks : list
             List of callbacks to be executed during the evolution process. Default is None.
+        timeout : int
+            Timeout for the evolution process. Default is None.
 
         """
         self.pi_init = pi_init
@@ -158,6 +161,7 @@ class SLIM_GSGP:
         self.callbacks = callbacks if callbacks is not None else []
         self.stop_training = False
         self.decay_rate = decay_rate
+        self.timeout = timeout
 
         Tree.FUNCTIONS = pi_init["FUNCTIONS"]
         Tree.TERMINALS = pi_init["TERMINALS"]
@@ -290,8 +294,14 @@ class SLIM_GSGP:
         for callback in self.callbacks:
             callback.on_train_start(self)
 
+
+        start_time = time.time()
         # begining the evolution process
         for it in range(1, n_iter + 1, 1):
+            if time.time() - start_time > self.timeout:
+                print(f"Timeout reached at iteration {it}. Training stopped.") if verbose > 0 else None
+                break
+            
             # starting an empty offspring population
             offs_pop, start = [], time.time()
 
