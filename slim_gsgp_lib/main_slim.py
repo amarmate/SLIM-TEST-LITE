@@ -76,7 +76,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          tournament_size: int = 2,
          test_elite: bool = slim_gsgp_solve_parameters["test_elite"],
          callbacks: list = None, 
-         timeout: int = 0,):
+         timeout: int = 100,):
 
     """
     Main function to execute the SLIM GSGP algorithm on specified datasets.

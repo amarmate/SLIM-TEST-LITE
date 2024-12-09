@@ -297,6 +297,7 @@ class SLIM_GSGP:
 
 
         start_time = time.time()
+    
         # begining the evolution process
         for it in range(1, n_iter + 1, 1):
             self.iteration += 1

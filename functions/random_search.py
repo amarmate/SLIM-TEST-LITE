@@ -129,7 +129,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         }
 
     results_slim = {}
-    early_stopping = EarlyStopping(patience=80)
+    early_stopping = EarlyStopping(patience=75)
     timeouts = 0
     for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]:
         results = {}
@@ -163,8 +163,6 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
             type_structure_mutation = np.random.choice(params['type_structure_mutation'])
             decay_rate = np.random.choice(params['decay_rate'])
             
-            
-
             if init_depth + 6 > max_depth:
                 max_depth = init_depth + 6
             
@@ -175,7 +173,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
                  seed=seed_, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
                  struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
                  p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1, callbacks=[early_stopping],
-                 type_structure_mutation=type_structure_mutation, decay_rate=decay_rate
+                 type_structure_mutation=type_structure_mutation, decay_rate=decay_rate, timeout=200,
                 )
 
                 predictions_slim = slim_.predict(X_test)
