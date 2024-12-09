@@ -12,6 +12,9 @@ from functions.test_algorithms import *
 from functions.random_search import * 
 from slim_gsgp_lib.datasets.data_loader import *
 
+
+# DISCOVER WHY THIS IS TAKING SO LONG!
+
 datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 
 X,y = datasets[10]()

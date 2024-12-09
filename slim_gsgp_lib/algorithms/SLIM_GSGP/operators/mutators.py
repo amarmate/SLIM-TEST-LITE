@@ -787,9 +787,27 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         random_index = random.choices(valid_indices, weights=level_probs)[0]
             
         depth = max_depth - len(random_index)
-
-        # get a random tree to replace a block in the main tree
-        rt = get_random_tree(
+        
+        # Random choice of depth - uniform distribution
+        depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
+        depth = random.choice(depths)
+        
+        # Use exponential decay to choose the depth
+        # depth_probs = exp_decay_prob(len(depths), decay_rate=decay_rate)
+        # depth = random.choices(depths, weights=depth_probs)[0]
+        
+        # If just a node is selected
+        if depth == 1:
+            if random.random() < p_c:
+                new_block = random.choice(list(CONSTANTS.keys()))
+            else:
+                new_block = random.choice(list(TERMINALS.keys()))
+            
+            # Swap the subtree in the main tree
+            new_structure = swap_sub_tree(individual.structure[0], new_block, list(random_index))
+                        
+        else:
+            rt = get_random_tree(
             depth,
             FUNCTIONS,
             TERMINALS,
@@ -798,10 +816,10 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
             p_c=p_c,
             grow_probability=grow_probability,
             logistic=False,
-        ) 
+        )         
 
-        # Swap the subtree in the main tree
-        new_structure = swap_sub_tree(individual.structure[0], rt.structure, list(random_index))
+            # Swap the subtree in the main tree
+            new_structure = swap_sub_tree(individual.structure[0], rt.structure, list(random_index))
     
         # Create the new block
         new_block = Tree(structure=new_structure,
