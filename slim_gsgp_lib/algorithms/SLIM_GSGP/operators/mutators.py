@@ -520,7 +520,7 @@ def deflate_mutation(individual, reconstruct):
 
 
 # ----------------------------- ADDED ----------------------------- #
-@lru_cache(maxsize=128)  # Adjust maxsize based on expected variety of inputs
+@lru_cache(maxsize=128)
 def exp_decay_prob(n, decay_rate=0.1):
     """
     Generate an exponential decay probability distribution.
@@ -541,6 +541,45 @@ def exp_decay_prob(n, decay_rate=0.1):
     prob = np.exp(-decay_rate * np.arange(n))
     prob = prob[::-1]  # Reverse the array
     return prob / np.sum(prob)
+
+@lru_cache(maxsize=128) 
+def choose_depth(max_depth, random_index, mean=None, std_dev=None):
+    """
+    Choose a depth for the structure mutation.
+    
+    Parameters
+    ----------
+    max_depth : int
+        Maximum depth for generated trees.
+    random_index : list
+        List of random indices.
+    mean : float, optional
+        Mean of the normal distribution (default: None).
+    std_dev : float, optional
+        Standard deviation of the normal distribution (default: None).
+        
+    Returns
+    -------
+    int
+        The chosen depth.
+    """
+    depth = max_depth - len(random_index)
+    depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
+    
+    # Set mean and standard deviation
+    if mean is None:
+        mean = depths.mean()  # Default mean: middle of the range
+    if std_dev is None:
+        std_dev = (depths[-1] - depths[0]) / 4 
+    
+    # Generate probabilities using the normal distribution formula
+    probabilities = np.exp(-((depths - mean) ** 2) / (2 * std_dev ** 2))
+    probabilities /= probabilities.sum()  # Normalize
+    
+    # Choose a depth using the probabilities
+    chosen_depth = random.choices(depths, weights=probabilities, k=1)[0]
+    
+    return chosen_depth
 
 
 def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
@@ -785,16 +824,21 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         probs = exp_decay_prob(max(valid_levels) + 1, decay_rate=decay_rate)
         level_probs = [probs[level] for level in valid_levels]
         random_index = random.choices(valid_indices, weights=level_probs)[0]
+         
             
-        depth = max_depth - len(random_index)
+        # depth = max_depth - len(random_index)
+        # depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
         
-        # Random choice of depth - uniform distribution
-        depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
-        depth = random.choice(depths)
+        # Random choice of depth
+        # depth = random.choice(depths)  # Uniform distribution
         
         # Use exponential decay to choose the depth
-        # depth_probs = exp_decay_prob(len(depths), decay_rate=decay_rate)
+        # depth_probs = exp_decay_prob(len(depths), decay_rate=decay_rate)[::-1]
         # depth = random.choices(depths, weights=depth_probs)[0]
+        
+        # Use normal distribution to choose the depth
+        depth = choose_depth(max_depth, random_index, mean=None, std_dev=None) 
+        
         
         # If just a node is selected
         if depth == 1:

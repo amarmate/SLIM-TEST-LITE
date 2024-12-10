@@ -279,6 +279,7 @@ class SLIM_GSGP:
         self.log_path = log_path
         self.run_info = run_info
         self.dataset = curr_dataset
+        self.time_dict = {'struct':[], 'inflate':[], 'deflate':[], 'xo':[]}
 
         # calculating the testing semantics and the elite's testing fitness if test_elite is true
         if test_elite:
@@ -300,6 +301,7 @@ class SLIM_GSGP:
     
         # begining the evolution process
         for it in range(1, n_iter + 1, 1):
+            self.time_dict = {'struct':[], 'inflate':[], 'deflate':[], 'xo':[]}
             self.iteration += 1
             
             if time.time() - start_time > self.timeout:
@@ -375,10 +377,12 @@ class SLIM_GSGP:
     # ---------------------------------------------   Modules   -----------------------------------------------------------
 
     def crossover_step(self, population, X_train, X_test, reconstruct):
+        start = time.time()
         p1, p2 = self.selector(population), self.selector(population)
         while p1 == p2:
             p1, p2 = self.selector(population), self.selector(population)
         offs = self.xo_operator(p1, p2, X=X_train, X_test=X_test, reconstruct=reconstruct)
+        self.time_dict['xo'].append(time.time() - start)
         return offs
     
 
@@ -387,13 +391,15 @@ class SLIM_GSGP:
         
         if max_depth is not None and p1.depth == max_depth:
             if self.struct_mutation:
-                # Structure mutation is too hard on a fully mutated individual, we attenuate this 
-                # with exponential decay, which ensures the tree is mutated closer to the leaves 
-                # and we also leave the opportunity for deflate mutation to occur (75% chance, changeable)
-                if random.random() < 0:
-                    return self.deflate_mutator(p1, reconstruct=reconstruct)
+                # Half of the times, we perform a structure mutation
+                if random.random() < 0.5:
+                    start = time.time()
+                    result = self.deflate_mutator(p1, reconstruct=reconstruct)
+                    self.time_dict['deflate'].append(time.time() - start)
+                    return result
                 else:
-                    return self.structure_mutator(
+                    start = time.time()
+                    result = self.structure_mutator(
                         individual=p1,
                         X=X_train,
                         max_depth=self.pi_init["init_depth"],
@@ -405,9 +411,15 @@ class SLIM_GSGP:
                         reconstruct=reconstruct,
                         decay_rate=self.decay_rate, 
                         exp_decay=True)
+                    self.time_dict['struct'].append(time.time() - start)
+                    return result
             else:
-                return self.deflate_mutator(p1, reconstruct=reconstruct)
+                start = time.time()
+                result = self.deflate_mutator(p1, reconstruct=reconstruct)
+                self.time_dict['deflate'].append(time.time() - start)
+                return result
 
+        start = time.time()
         off1 = self.inflate_mutator(
             p1,
             ms_,
@@ -421,10 +433,14 @@ class SLIM_GSGP:
 
         if max_depth is not None and off1.depth > max_depth:
             if self.struct_mutation:
-                if random.random() < 0:
-                    return self.deflate_mutator(p1, reconstruct=reconstruct)
+                if random.random() < 0.5:
+                    start = time.time()
+                    result = self.deflate_mutator(p1, reconstruct=reconstruct)
+                    self.time_dict['deflate'].append(time.time() - start)
+                    return result
                 else:
-                    return self.structure_mutator(
+                    start = time.time()
+                    result = self.structure_mutator(
                         individual=p1,
                         X=X_train,
                         max_depth=self.pi_init["init_depth"],
@@ -436,16 +452,23 @@ class SLIM_GSGP:
                         reconstruct=reconstruct,
                         decay_rate=self.decay_rate, 
                         exp_decay=True)
+                    self.time_dict['struct'].append(time.time() - start)
+                    return result
             else:
-                return self.deflate_mutator(p1, reconstruct=reconstruct)
+                start = time.time()
+                result = self.deflate_mutator(p1, reconstruct=reconstruct)
+                self.time_dict['deflate'].append(time.time() - start)
+                return result
         
+        self.time_dict['inflate'].append(time.time() - start)
         return off1
     
 
     def deflate_mutation_step(self, p1, X_train, X_test, reconstruct):
         if p1.size == 1:
             if self.struct_mutation:
-                return self.structure_mutator(
+                start = time.time()
+                result = self.structure_mutator(
                     individual=p1,
                     X=X_train,
                     max_depth=self.pi_init["init_depth"],
@@ -458,8 +481,11 @@ class SLIM_GSGP:
                     decay_rate=self.decay_rate,
                     exp_decay=False,
                 )
+                self.time_dict['struct'].append(time.time() - start)
+                return result
             else:
-                return self.inflate_mutator(
+                start = time.time()
+                result = self.inflate_mutator(
                     p1,
                     self.ms(),
                     X_train,
@@ -469,9 +495,13 @@ class SLIM_GSGP:
                     reconstruct=reconstruct,
                     grow_probability=self.p_g,
                 )
+                self.time_dict['inflate'].append(time.time() - start)   
+                return result
         
-        return self.deflate_mutator(p1, reconstruct=reconstruct)
-
+        start = time.time()
+        result = self.deflate_mutator(p1, reconstruct=reconstruct)
+        self.time_dict['deflate'].append(time.time() - start)
+        return result
 
     def log_results(self, 
                     iteration, 
@@ -530,17 +560,21 @@ class SLIM_GSGP:
     def print_results(self, iteration, start, end):
                 stats_data = {
                     "dataset": self.dataset,
-                    "iteration": iteration,
-                    "train_fit": self.elite.fitness,
-                    "test_fit": self.elite.test_fitness,
+                    "it": iteration,
+                    "train": self.elite.fitness,
+                    "test": self.elite.test_fitness,
                     "time": end - start,
                     "nodes": self.elite.nodes_count,
-                    "diversity": round(self.calculate_diversity(iteration).item(),2),
-                    "avg_size": np.mean([ind.size for ind in self.population.population]),
-                    "avg_fit": np.mean(self.population.fit),
-                    "std_fit": np.std(self.population.fit),   
-                    "avg_gpd0": np.mean([ind.depth_collection[0] for ind in self.population.population]),
-                    "avg_depth": np.mean([ind.depth for ind in self.population.population]),       
+                    "div": int(self.calculate_diversity(iteration).item()),
+                    # "avgSize": np.mean([ind.size for ind in self.population.population]),
+                    # "avgFit": np.mean(self.population.fit),
+                    # "std_fit": np.std(self.population.fit),   
+                    "avgStru": np.mean([ind.depth_collection[0] for ind in self.population.population]),
+                    "avgDep": np.mean([ind.depth for ind in self.population.population]),    
+                    "struct": f"{np.round(1000*np.mean([self.time_dict['struct']]),2) if self.time_dict['struct'] != [] else 'N/A'} ({len(self.time_dict['struct'])})",
+                    "inflate": f"{np.round(1000*np.mean([self.time_dict['inflate']]),2) if self.time_dict['inflate'] != [] else 'N/A'} ({len(self.time_dict['inflate'])})",
+                    "deflate": f"{np.round(1000*np.mean([self.time_dict['deflate']]),2) if self.time_dict['deflate'] != [] else 'N/A'} ({len(self.time_dict['deflate'])})",
+                    "xo": f"{np.round(1000*np.mean([self.time_dict['xo']]),2) if self.time_dict['xo'] != [] else 'N/A'} ({len(self.time_dict['xo'])})",
                 }
 
                 self.verbose_reporter(
