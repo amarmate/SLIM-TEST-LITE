@@ -30,21 +30,29 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2, seed=seed)
     
     start = time.time()
+    print('Single core performance test...')
     example_tree = slim(X_train=X_train, y_train=y_train, test_elite=False, dataset_name='test',
                         max_depth=22, init_depth=10, pop_size=200, n_iter=250, p_inflate=0.1, seed=seed,
                         struct_mutation=True, decay_rate=0.05, type_structure_mutation='new', timeout=200, verbose=0)
     end_single_core = time.time()
     print(f'Single core performance: {end_single_core-start}sec)')
 
-    # Parallel version
+    print('Multi-core performance test...')
     start = time.time()
     with ProcessPoolExecutor() as executor:
-        # Run 5 parallel instances
-        futures = [executor.submit(slim, X_train=X_train, y_train=y_train, test_elite=False, dataset_name='test',
-                                   max_depth=22, init_depth=10, pop_size=200, n_iter=250, p_inflate=0.1, seed=seed,
-                                   struct_mutation=True, decay_rate=0.05, type_structure_mutation='new', timeout=200, verbose=0) for _ in range(5)]
-        results = [f.result() for f in as_completed(futures)]
+        # Submete 5 instâncias paralelas
+        futures = [executor.submit(slim, 
+                                    X_train=X_train, y_train=y_train, test_elite=False, dataset_name='test',
+                                    max_depth=22, init_depth=10, pop_size=200, n_iter=250, p_inflate=0.1, seed=seed,
+                                    struct_mutation=True, decay_rate=0.05, type_structure_mutation='new', 
+                                    timeout=200, verbose=0) 
+                for _ in range(5)]
+        
+        # Apenas aguarda a conclusão de todas as tarefas
+        for _ in as_completed(futures):
+            pass  # Ignora os resultados
+
     end_multi_core = time.time()
-    print(f'Multi-core performance: {end_multi_core-start}sec)')
-    
+    print(f'Multi-core performance: {end_multi_core - start} sec')
+        
     
