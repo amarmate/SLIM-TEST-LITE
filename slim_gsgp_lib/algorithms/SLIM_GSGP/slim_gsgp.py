@@ -406,7 +406,7 @@ class SLIM_GSGP:
         if max_depth is not None and p1.depth >= max_depth-1:
             if self.struct_mutation:
                 # Half of the times, we perform a structure mutation
-                if random.random() < 0.5:
+                if random.random() < 0.5 and p1.size > 1:
                     start = time.time()
                     result = self.deflate_mutator(p1, reconstruct=reconstruct)
                     self.time_dict['deflate'].append(time.time() - start)
