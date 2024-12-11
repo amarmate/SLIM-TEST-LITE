@@ -39,7 +39,6 @@ from slim_gsgp_lib.utils.utils import verbose_reporter
 ELITES = {}
 UNIQUE_RUN_ID = uuid.uuid1()
 
-
 def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None, y_test: torch.Tensor = None,
          dataset_name: str = None,
          slim_version: str = "SLIM+SIG2",
@@ -49,6 +48,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          init_depth: int = slim_gsgp_pi_init["init_depth"],
          ms_lower: float = 0, ms_upper: float = 1,
          p_inflate: float = slim_gsgp_parameters["p_inflate"],
+         p_struct: float = slim_gsgp_parameters["p_struct"],
          p_xo: float = slim_gsgp_parameters["p_xo"],
          p_prune: int = slim_gsgp_parameters["p_prune"],
          decay_rate: float = slim_gsgp_parameters["decay_rate"],
@@ -109,6 +109,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         Upper bound for mutation rates (default is 1).
     p_inflate : float, optional
         Probability of selecting inflate mutation when mutating an individual.
+    p_struct : float, optional
+        Probability of selecting structural mutation when mutating an individual.
     p_xo : float, optional 
         Probability of using crossover 
     p_prune : int, optional
@@ -185,7 +187,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
                     elitism=elitism, n_elites=n_elites, init_depth=init_depth, log_path=log_path, prob_const=prob_const,
                     tree_functions=tree_functions, tree_constants=tree_constants, log=log_level, verbose=verbose,
                     minimization=minimization, n_jobs=n_jobs, test_elite=test_elite, fitness_function=fitness_function,
-                    initializer=initializer, tournament_size=tournament_size, ms_lower=ms_lower, ms_upper=ms_upper)
+                    initializer=initializer, tournament_size=tournament_size, ms_lower=ms_lower, ms_upper=ms_upper,
+                    p_inflate=p_inflate, p_struct=p_struct)
 
     # Checking that both ms bounds are numerical
     assert isinstance(ms_lower, (int, float)) and isinstance(ms_upper, (int, float)), \
@@ -288,7 +291,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     slim_gsgp_parameters["initializer"] = initializer_options[initializer]
     slim_gsgp_parameters["ms"] = ms
     slim_gsgp_parameters['p_inflate'] = p_inflate
-    slim_gsgp_parameters['p_deflate'] = 1 - slim_gsgp_parameters['p_inflate']
+    slim_gsgp_parameters['p_struct'] = p_struct
+    slim_gsgp_parameters['p_deflate'] = 1 - p_inflate - p_struct
     slim_gsgp_parameters['p_xo'] = p_xo
     slim_gsgp_parameters["struct_mutation"] = struct_mutation
     slim_gsgp_parameters["seed"] = seed

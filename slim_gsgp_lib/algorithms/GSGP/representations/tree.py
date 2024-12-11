@@ -24,10 +24,9 @@ Tree Class for Genetic Programming using PyTorch.
 """
 
 import torch
-from slim_gsgp_lib.algorithms.GP.representations.tree_utils import flatten, tree_depth
+from slim_gsgp_lib.algorithms.GP.representations.tree_utils import tree_depth_and_nodes
 from slim_gsgp_lib.algorithms.GSGP.representations.tree_utils import apply_tree, nested_depth_calculator, nested_nodes_calculator
 from slim_gsgp_lib.algorithms.GSGP.operators.crossover_operators import geometric_crossover
-
 
 class Tree:
     """
@@ -90,8 +89,10 @@ class Tree:
 
         # if the tree is a base (gp) tree
         if isinstance(structure, tuple):
-            self.depth = tree_depth(Tree.FUNCTIONS)(structure)
-            self.nodes = len(list(flatten(structure)))
+            # Very slow
+            self.depth, self.nodes = tree_depth_and_nodes(Tree.FUNCTIONS)(structure)
+            # self.depth = tree_depth(Tree.FUNCTIONS)(structure)
+            # self.nodes = len(list(flatten(structure)))
 
         # if it's not a base tree, calculate the depth via the nested depth function
         elif reconstruct:

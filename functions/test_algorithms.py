@@ -108,9 +108,9 @@ def test_slim(X, y, args_dict=None,
                 os.makedirs(os.path.dirname(path))
             
         start = time.time()
-        final_tree = slim(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
+        final_tree = slim(X_train=X_train, y_train=y_train,
                             dataset_name=dataset_name, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter, seed=it,
-                            reconstruct=True, n_jobs=1, initializer=initializer,
+                            reconstruct=True, n_jobs=1, initializer=initializer, test_elite=False,
                             verbose=verbose, n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None))
         end = time.time()
                 

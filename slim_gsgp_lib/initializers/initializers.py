@@ -111,7 +111,6 @@ def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
     """
 
     population = []
-
     inds_per_bin = init_pop_size / (init_depth - 1)
 
     for curr_depth in range(2, init_depth + 1):
@@ -128,7 +127,7 @@ def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
         population.extend(
             [
                 create_grow_random_tree(
-                    curr_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c
+                    curr_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c
                 )
                 for _ in range(int(inds_per_bin // 2))
             ]
@@ -136,7 +135,7 @@ def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
 
     while len(population) < init_pop_size:
         population.append(
-            create_grow_random_tree(init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
+            create_grow_random_tree(init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c)
         )
 
     return population

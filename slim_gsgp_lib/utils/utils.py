@@ -265,7 +265,6 @@ def get_best_max(population, n_elites):
         elite = population.population[np.argmax(population.fit)]
         return [elite], elite
 
-
 def get_random_tree(
         max_depth,
         FUNCTIONS,
@@ -275,6 +274,7 @@ def get_random_tree(
         p_c=0.3,
         grow_probability=1,
         logistic=True,
+        list_form=False,
 ):
     """
     Get a random tree using either grow or full method.
@@ -297,6 +297,8 @@ def get_random_tree(
         Probability of using the grow method.
     logistic : bool, default=True
             Whether to use logistic semantics.
+    list_form : bool, default=False
+        Whether the functions, terminals, and constants are in list form.
 
     Returns
     -------
@@ -305,11 +307,11 @@ def get_random_tree(
     """
     if random.random() < grow_probability:
         tree_structure = create_grow_random_tree(
-            max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c
+            max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c,
         )
     else:
         tree_structure = create_full_random_tree(
-            max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c
+            max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c
         )
 
     tree = Tree(
@@ -433,7 +435,7 @@ def gs_size(y_true, y_pred):
 
 def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism, n_elites, init_depth, log_path,
                     prob_const, tree_functions, tree_constants, log, verbose, minimization, n_jobs, test_elite,
-                    fitness_function, initializer, tournament_size, ms_lower, ms_upper):
+                    fitness_function, initializer, tournament_size, ms_lower, ms_upper, p_inflate, p_struct):
     """
     Validates the inputs based on the specified conditions.
 
@@ -484,6 +486,10 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
         The lower bound for the maximum size of the trees.
     ms_upper : int, optional
         The upper bound for the maximum size of the trees.
+    p_inflate : float, optional
+        The probability of inflating a tree.
+    p_struct : float, optional
+        The probability of structural mutation.
 
     """
     if not isinstance(X_train, torch.Tensor):
@@ -564,6 +570,18 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     
     if ms_lower > ms_upper:
         raise ValueError("ms_lower must be smaller than ms_upper")
+    
+    if not isinstance(p_inflate, float):
+        raise TypeError("p_inflate must be a float")
+    
+    if not isinstance(p_struct, float):
+        raise TypeError("p_struct must be a float")
+    
+    if p_inflate < 0 or p_struct < 0:
+        raise ValueError("p_inflate and p_struct must be greater or equal to 0")
+    
+    if p_inflate + p_struct > 1:
+        raise ValueError("p_inflate + p_struct must be smaller or equal to 1")
 
 
 def check_slim_version(slim_version):

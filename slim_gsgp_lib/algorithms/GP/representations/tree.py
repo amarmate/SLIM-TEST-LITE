@@ -23,7 +23,7 @@
 Tree class implementation for representing tree structures in genetic programming.
 """
 
-from slim_gsgp_lib.algorithms.GP.representations.tree_utils import bound_value, flatten, tree_depth, _execute_tree
+from slim_gsgp_lib.algorithms.GP.representations.tree_utils import bound_value, _execute_tree, tree_depth_and_nodes
 import torch
 
 class Tree:
@@ -68,10 +68,11 @@ class Tree:
         self.CONSTANTS = Tree.CONSTANTS
 
         self.repr_ = repr_
-        self.depth = tree_depth(Tree.FUNCTIONS)(repr_)
+        # self.depth = tree_depth(Tree.FUNCTIONS)(repr_)
+        # self.node_count = len(list(flatten(self.repr_)))
+        self.depth, self.nodes_count = tree_depth_and_nodes(Tree.FUNCTIONS)(repr_)
         self.fitness = None
         self.test_fitness = None
-        self.node_count = len(list(flatten(self.repr_)))
 
     def apply_tree(self, inputs):
         """

@@ -31,7 +31,6 @@ from slim_gsgp_lib.algorithms.SLIM_GSGP.representations.individual import Indivi
 from slim_gsgp_lib.utils.utils import get_random_tree, swap_sub_tree, get_indices, get_indices_with_levels
 from functools import lru_cache
 
-
 # two tree function
 def two_trees_delta(operator="sum"):
     """
@@ -234,7 +233,7 @@ def one_tree_delta(operator="sum", sig=False):
     return ot_delta
 
 
-def inflate_mutation(FUNCTIONS, TERMINALS,CONSTANTS,two_trees=True,operator="sum",single_tree_sigmoid=False,sig=False):
+def inflate_mutation(FUNCTIONS, TERMINALS, CONSTANTS, two_trees=True, operator="sum", single_tree_sigmoid=False, sig=False):
     """
     Generate an inflate mutation function.
 
@@ -289,6 +288,7 @@ def inflate_mutation(FUNCTIONS, TERMINALS,CONSTANTS,two_trees=True,operator="sum
     The returned function performs inflate mutation on Individuals, using either one or two randomly generated trees
     and applying either delta mutation or sigmoid mutation based on the parameters.
     """
+    
     def inflate(
         individual,
         ms,
@@ -348,6 +348,7 @@ def inflate_mutation(FUNCTIONS, TERMINALS,CONSTANTS,two_trees=True,operator="sum
                 grow_probability=grow_probability,
                 logistic=True,
             )
+            
             # adding the random trees to a list, to be used in the creation of a new block
             random_trees = [random_tree1, random_tree2]
 
@@ -543,7 +544,7 @@ def exp_decay_prob(n, decay_rate=0.1):
     return prob / np.sum(prob)
 
 @lru_cache(maxsize=128) 
-def choose_depth(max_depth, random_index, mean=None, std_dev=None):
+def choose_depth_norm(max_depth, random_index, mean=None, std_dev=None):
     """
     Choose a depth for the structure mutation.
     
@@ -598,177 +599,177 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         The type of structure mutation to be used.
     """
     
-    def structure_old(individual,
-                        X,
-                        max_depth=8,
-                        p_c=0.1,
-                        p_prune=0.4,
-                        X_test=None,
-                        grow_probability=1,
-                        replace_probability=0.1,
-                        reconstruct=True, 
-                        exp_decay=False,
-                        **args,
-    ):
+    # def structure_old(individual,
+    #                     X,
+    #                     max_depth=8,
+    #                     p_c=0.1,
+    #                     p_prune=0.4,
+    #                     X_test=None,
+    #                     grow_probability=1,
+    #                     replace_probability=0.1,
+    #                     reconstruct=True, 
+    #                     exp_decay=False,
+    #                     **args,
+    # ):
                         
-        """
-        Perform a mutation on a given Individual by changing the main structure of the tree.
+    #     """
+    #     Perform a mutation on a given Individual by changing the main structure of the tree.
 
-        Parameters
-        ----------
-        individual : Individual
-            The Individual to be mutated.
-        X : torch.Tensor
-            Input data for calculating semantics.
-        max_depth : int, optional
-            Maximum depth for generated trees (default: 8).
-        p_c : float, optional
-            Probability of choosing constants (default: 0.1).
-        p_prune : float, optional
-            Probability of pruning the tree (default: 0.5).
-        X_test : torch.Tensor, optional
-            Test data for calculating test semantics (default: None).
-        grow_probability : float, optional
-            Probability of growing trees during mutation (default: 1). 
-            If changed, trees will be completely replaced during mutation more often.
-        replace_probability : float, optional
-            Probability of replacing the main tree during mutation (default: 0.1).
-        X_test : torch.Tensor, optional
-            Test data for calculating test semantics (default: None).
-        exp_decay : bool, optional
-            Flag to indicate whether exponential decay should be used to soften the mutation (default: False).
-        reconstruct : bool
-            Whether to store the Individuals structure after mutation.
+    #     Parameters
+    #     ----------
+    #     individual : Individual
+    #         The Individual to be mutated.
+    #     X : torch.Tensor
+    #         Input data for calculating semantics.
+    #     max_depth : int, optional
+    #         Maximum depth for generated trees (default: 8).
+    #     p_c : float, optional
+    #         Probability of choosing constants (default: 0.1).
+    #     p_prune : float, optional
+    #         Probability of pruning the tree (default: 0.5).
+    #     X_test : torch.Tensor, optional
+    #         Test data for calculating test semantics (default: None).
+    #     grow_probability : float, optional
+    #         Probability of growing trees during mutation (default: 1). 
+    #         If changed, trees will be completely replaced during mutation more often.
+    #     replace_probability : float, optional
+    #         Probability of replacing the main tree during mutation (default: 0.1).
+    #     X_test : torch.Tensor, optional
+    #         Test data for calculating test semantics (default: None).
+    #     exp_decay : bool, optional
+    #         Flag to indicate whether exponential decay should be used to soften the mutation (default: False).
+    #     reconstruct : bool
+    #         Whether to store the Individuals structure after mutation.
 
-        Returns
-        -------
-        Individual
-            The mutated individual
-        """
+    #     Returns
+    #     -------
+    #     Individual
+    #         The mutated individual
+    #     """
 
-        # Replace the tree
-        if random.random() < replace_probability:
-            # In this case, the GP tree will be completely replaced by a new one, larger or smaller
-            # The intuition behind is that maybe the tree needs to be expanded or diminished
-            new_block = get_random_tree(
-                max_depth,
-                FUNCTIONS,
-                TERMINALS,
-                CONSTANTS,
-                inputs=X,
-                p_c=p_c,
-                grow_probability=grow_probability,
-                logistic=False,
-            )
+    #     # Replace the tree
+    #     if random.random() < replace_probability:
+    #         # In this case, the GP tree will be completely replaced by a new one, larger or smaller
+    #         # The intuition behind is that maybe the tree needs to be expanded or diminished
+    #         new_block = get_random_tree(
+    #             max_depth,
+    #             FUNCTIONS,
+    #             TERMINALS,
+    #             CONSTANTS,
+    #             inputs=X,
+    #             p_c=p_c,
+    #             grow_probability=grow_probability,
+    #             logistic=False,
+    #         )
 
-        # Prune the tree
-        elif random.random() < p_prune:
-            # Prune the tree - equivalent to deflate mutation 
-            indices_list = get_indices(individual.structure[0])
+    #     # Prune the tree
+    #     elif random.random() < p_prune:
+    #         # Prune the tree - equivalent to deflate mutation 
+    #         indices_list = get_indices(individual.structure[0])
 
-            if exp_decay:
-                probs = exp_decay_prob(len(indices_list), decay_rate=0.1) 
-                random_index = random.choices(indices_list, weights=probs)[0]
+    #         if exp_decay:
+    #             probs = exp_decay_prob(len(indices_list), decay_rate=0.1) 
+    #             random_index = random.choices(indices_list, weights=probs)[0]
 
-            else:
-                random_index = random.choice(indices_list)
+    #         else:
+    #             random_index = random.choice(indices_list)
 
-            # Generate a terminal or costant
-            if random.random() < p_c:
-                new_block = random.choice(list(CONSTANTS.keys()))
-            else:
-                new_block = random.choice(list(TERMINALS.keys()))
+    #         # Generate a terminal or costant
+    #         if random.random() < p_c:
+    #             new_block = random.choice(list(CONSTANTS.keys()))
+    #         else:
+    #             new_block = random.choice(list(TERMINALS.keys()))
             
-            # Swap the subtree in the main tree
-            new_structure = swap_sub_tree(individual.structure[0], new_block, list(random_index))
-            new_block = Tree(structure=new_structure,
-                                train_semantics=None,
-                                test_semantics=None,
-                                reconstruct=True)
+    #         # Swap the subtree in the main tree
+    #         new_structure = swap_sub_tree(individual.structure[0], new_block, list(random_index))
+    #         new_block = Tree(structure=new_structure,
+    #                             train_semantics=None,
+    #                             test_semantics=None,
+    #                             reconstruct=True)
             
-            new_block.calculate_semantics(X)
+    #         new_block.calculate_semantics(X)
 
-        # Replace a block in the tree
-        else:
-            indices_list = get_indices(individual.structure[0])
+    #     # Replace a block in the tree
+    #     else:
+    #         indices_list = get_indices(individual.structure[0])
             
-            # Pre-filter the indices to ensure they meet the condition
-            valid_indices = [index for index in indices_list if max_depth - len(index) >= 2]
+    #         # Pre-filter the indices to ensure they meet the condition
+    #         valid_indices = [index for index in indices_list if max_depth - len(index) >= 2]
 
-            if not valid_indices:
-                raise ValueError("No valid indices satisfy the condition max_depth - len(index) >= 2")
+    #         if not valid_indices:
+    #             raise ValueError("No valid indices satisfy the condition max_depth - len(index) >= 2")
 
-            # Choose from the filtered list
-            if exp_decay:
-                probs = exp_decay_prob(len(valid_indices), decay_rate=0.1)
-                random_index = random.choices(valid_indices, weights=probs)[0]
-            else:
-                random_index = random.choice(valid_indices)
+    #         # Choose from the filtered list
+    #         if exp_decay:
+    #             probs = exp_decay_prob(len(valid_indices), decay_rate=0.1)
+    #             random_index = random.choices(valid_indices, weights=probs)[0]
+    #         else:
+    #             random_index = random.choice(valid_indices)
                 
-            depth = max_depth - len(random_index)
+    #         depth = max_depth - len(random_index)
 
-            # get a random tree to replace a block in the main tree
-            rt = get_random_tree(
-                depth,
-                FUNCTIONS,
-                TERMINALS,
-                CONSTANTS,
-                inputs=X,
-                p_c=p_c,
-                grow_probability=grow_probability,
-                logistic=False,
-            ) 
+    #         # get a random tree to replace a block in the main tree
+    #         rt = get_random_tree(
+    #             depth,
+    #             FUNCTIONS,
+    #             TERMINALS,
+    #             CONSTANTS,
+    #             inputs=X,
+    #             p_c=p_c,
+    #             grow_probability=grow_probability,
+    #             logistic=False,
+    #         ) 
 
-            # Swap the subtree in the main tree
-            new_structure = swap_sub_tree(individual.structure[0], rt.structure, list(random_index))
+    #         # Swap the subtree in the main tree
+    #         new_structure = swap_sub_tree(individual.structure[0], rt.structure, list(random_index))
         
-            # Create the new block
-            new_block = Tree(structure=new_structure,
-                                train_semantics=None,
-                                test_semantics=None,
-                                reconstruct=True)
+    #         # Create the new block
+    #         new_block = Tree(structure=new_structure,
+    #                             train_semantics=None,
+    #                             test_semantics=None,
+    #                             reconstruct=True)
             
-            new_block.calculate_semantics(X)            
+    #         new_block.calculate_semantics(X)            
         
-        # Create the offspring individual
-        if X_test is not None:
-            new_block.calculate_semantics(X_test, testing=True, logistic=False)
+    #     # Create the offspring individual
+    #     if X_test is not None:
+    #         new_block.calculate_semantics(X_test, testing=True, logistic=False)
 
-        offs = Individual(
-            collection=[new_block, *individual.collection[1:]],
-            train_semantics=torch.stack(
-                [
-                    new_block.train_semantics,
-                    *individual.train_semantics[1:],
-                ]   
-            ),
-            test_semantics=(
-                torch.stack(
-                    [
-                        new_block.test_semantics,
-                        *individual.test_semantics[1:],
-                    ]
-                )
-                if X_test is not None
-                else None
-            ),
-            reconstruct=reconstruct
-        )
+    #     offs = Individual(
+    #         collection=[new_block, *individual.collection[1:]],
+    #         train_semantics=torch.stack(
+    #             [
+    #                 new_block.train_semantics,
+    #                 *individual.train_semantics[1:],
+    #             ]   
+    #         ),
+    #         test_semantics=(
+    #             torch.stack(
+    #                 [
+    #                     new_block.test_semantics,
+    #                     *individual.test_semantics[1:],
+    #                 ]
+    #             )
+    #             if X_test is not None
+    #             else None
+    #         ),
+    #         reconstruct=reconstruct
+    #     )
 
-        # computing offspring attributes
-        offs.size = individual.size
-        offs.nodes_collection = [new_block.nodes,*individual.nodes_collection[1:]]
-        offs.nodes_count = sum(offs.nodes_collection) + offs.size - 1
+    #     # computing offspring attributes
+    #     offs.size = individual.size
+    #     offs.nodes_collection = [new_block.nodes,*individual.nodes_collection[1:]]
+    #     offs.nodes_count = sum(offs.nodes_collection) + offs.size - 1
 
-        offs.depth_collection = [new_block.depth, *individual.depth_collection[1:]]
-        offs.depth = max(offs.depth_collection) + offs.size - 1
+    #     offs.depth_collection = [new_block.depth, *individual.depth_collection[1:]]
+    #     offs.depth = max(offs.depth_collection) + offs.size - 1
 
 
-        offs.recently_mutated = True
+    #     offs.recently_mutated = True
 
-        return offs
+    #     return offs
     
-        
+    
     def structure(individual,
                         X,
                         max_depth=8,
@@ -833,12 +834,11 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         # depth = random.choice(depths)  # Uniform distribution
         
         # Use exponential decay to choose the depth
-        # depth_probs = exp_decay_prob(len(depths), decay_rate=decay_rate)[::-1]
+        # depth_probs = exp_decay_prob(len(depths), decay_rate=decay_rate)
         # depth = random.choices(depths, weights=depth_probs)[0]
         
         # Use normal distribution to choose the depth
-        depth = choose_depth(max_depth, random_index, mean=None, std_dev=None) 
-        
+        depth = choose_depth_norm(max_depth, random_index, mean=None, std_dev=None) 
         
         # If just a node is selected
         if depth == 1:
@@ -876,7 +876,7 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         # Create the offspring individual
         if X_test is not None:
             new_block.calculate_semantics(X_test, testing=True, logistic=False)
-
+            
         offs = Individual(
             collection=[new_block, *individual.collection[1:]],
             train_semantics=torch.stack(
@@ -911,6 +911,7 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         return offs    
 
     if type == "old":
-        return structure_old
+        pass
+        # return structure_old
     else:
         return structure

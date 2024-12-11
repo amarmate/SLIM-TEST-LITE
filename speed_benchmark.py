@@ -27,7 +27,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2)
 start = time.time()
 
 example_tree = slim(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-                    max_depth=21, init_depth=10, pop_size=100, n_iter=250, p_inflate=0.1, seed=0,
-                    struct_mutation=True, decay_rate=0.05, type_structure_mutation='new')
+                    max_depth=22, init_depth=10, pop_size=100, n_iter=250, p_inflate=0.1, seed=0,
+                    struct_mutation=True, decay_rate=0.05, type_structure_mutation='new', timeout=100)
 
 print(f'{time.time()-start}sec)')

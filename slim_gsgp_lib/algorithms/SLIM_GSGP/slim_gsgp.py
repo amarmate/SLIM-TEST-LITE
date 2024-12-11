@@ -55,7 +55,8 @@ class SLIM_GSGP:
         p_r=0.2,
         p_g=1,
         p_inflate=0.3,
-        p_deflate=0.7,
+        p_deflate=0.6,
+        p_struct=0.1,
         decay_rate=0.2,
         pop_size=100,
         p_prune=0.4,
@@ -104,7 +105,9 @@ class SLIM_GSGP:
         p_inflate : float
             Probability of inflate mutation. Default is 0.3.
         p_deflate : float
-            Probability of deflate mutation. Default is 0.7.
+            Probability of deflate mutation. Default is 0.6.
+        p_struct : float
+            Probability of structure mutation. Default is 0.1.
         decay_rate : float
             Decay rate for exponential decay. Default is 0.2.
         p_prune : float
@@ -137,6 +140,7 @@ class SLIM_GSGP:
         self.selector = selector
         self.p_inflate = p_inflate
         self.p_deflate = p_deflate
+        self.p_struct = p_struct
         self.inflate_mutator = inflate_mutator
         self.deflate_mutator = deflate_mutator
         self.structure_mutator = structure_mutator
@@ -172,6 +176,7 @@ class SLIM_GSGP:
         GP_Tree.TERMINALS = pi_init["TERMINALS"]
         GP_Tree.CONSTANTS = pi_init["CONSTANTS"]
 
+    @profile
     def solve(
         self,
         X_train,
@@ -266,7 +271,10 @@ class SLIM_GSGP:
 
         # calculating initial population semantics
         population.calculate_semantics(X_train)
-        population.evaluate(ffunction, y=y_train, operator=self.operator, n_jobs=n_jobs, fitness_sharing=self.fitness_sharing)
+        population.evaluate_no_parall(ffunction, y=y_train, operator=self.operator, 
+                                      # n_jobs=n_jobs, 
+                                      #fitness_sharing=self.fitness_sharing
+                                      ) # CHANGED TO NO PARALLEL
 
         end = time.time()
 
@@ -328,6 +336,10 @@ class SLIM_GSGP:
                     p1 = self.selector(population)
                     if random.random() < self.p_deflate:
                         off1 = self.deflate_mutation_step(p1, X_train, X_test, reconstruct)
+                        
+                    elif random.random() < self.p_struct:
+                        off1 = self.struct_mutation_step(p1, X_train, X_test, reconstruct)
+                        
                     else:
                         off1 = self.inflate_mutation_step(p1, X_train, X_test, reconstruct, max_depth)
                     offs_pop.append(off1)
@@ -339,7 +351,10 @@ class SLIM_GSGP:
             # turning the offspring population into a Population
             offs_pop = Population(offs_pop)
             offs_pop.calculate_semantics(X_train)
-            offs_pop.evaluate(ffunction, y=y_train, operator=self.operator, n_jobs=n_jobs, fitness_sharing=self.fitness_sharing)
+            offs_pop.evaluate_no_parall(ffunction, y=y_train, operator=self.operator, 
+                                        # n_jobs=n_jobs, 
+                                        #fitness_sharing=self.fitness_sharing
+                                        )  # CHANGED TO NO PARALLEL
 
             # replacing the current population with the offspring population P = P'
             population = offs_pop
@@ -389,7 +404,7 @@ class SLIM_GSGP:
     def inflate_mutation_step(self, p1, X_train, X_test, reconstruct, max_depth):
         ms_ = self.ms()
         
-        if max_depth is not None and p1.depth == max_depth:
+        if max_depth is not None and p1.depth >= max_depth-1:
             if self.struct_mutation:
                 # Half of the times, we perform a structure mutation
                 if random.random() < 0.5:
@@ -502,6 +517,24 @@ class SLIM_GSGP:
         result = self.deflate_mutator(p1, reconstruct=reconstruct)
         self.time_dict['deflate'].append(time.time() - start)
         return result
+    
+    def struct_mutation_step(self, p1, X_train, X_test, reconstruct):
+        start = time.time()
+        result = self.structure_mutator(
+                    individual=p1,
+                    X=X_train,
+                    max_depth=self.pi_init["init_depth"],
+                    p_c=self.pi_init["p_c"],
+                    X_test=X_test,
+                    grow_probability=self.p_g,
+                    replace_probability=self.p_r,
+                    p_prune=self.p_prune,
+                    reconstruct=reconstruct,
+                    decay_rate=self.decay_rate,
+                    exp_decay=False,)
+        self.time_dict['struct'].append(time.time() - start)
+        return result
+
 
     def log_results(self, 
                     iteration, 

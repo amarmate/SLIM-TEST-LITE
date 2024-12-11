@@ -25,6 +25,7 @@ Utility functions for Tree Evaluation and Mutation in GSGP.
 
 from slim_gsgp_lib.algorithms.GP.representations.tree import Tree
 from slim_gsgp_lib.algorithms.GP.representations.tree_utils import bound_value
+from slim_gsgp_lib.algorithms.GP.representations.tree_utils import _execute_tree as exec_tree
 import torch
 
 def _execute_tree(individual, inputs, testing=False, logistic=False):
@@ -82,6 +83,49 @@ def _execute_tree(individual, inputs, testing=False, logistic=False):
                 *individual.structure[1:], testing=False
             )
 
+# Too slow
+# def apply_tree(tree, inputs):
+#     """
+#     Evaluates the tree on input vectors.
+
+#     Parameters
+#     ----------
+#     tree : Tree
+#         The tree structure to be evaluated.
+#     inputs : torch.Tensor
+#         Input vectors x and y.
+
+#     Returns
+#     -------
+#     torch.Tensor
+#         Output of the evaluated tree.
+#     """
+#     if isinstance(tree.structure, tuple):  # If it's a function node
+#         function_name = tree.structure[0]
+#         if tree.FUNCTIONS[function_name]["arity"] == 2:
+#             left_subtree, right_subtree = tree.structure[1], tree.structure[2]
+#             left_subtree = Tree(left_subtree)
+#             right_subtree = Tree(right_subtree)
+#             left_result = left_subtree.apply_tree(inputs)
+#             right_result = right_subtree.apply_tree(inputs)
+#             output = tree.FUNCTIONS[function_name]["function"](
+#                 left_result, right_result
+#             )
+#         else:
+#             left_subtree = tree.structure[1]
+#             left_subtree = Tree(left_subtree)
+#             left_result = left_subtree.apply_tree(inputs)
+#             output = tree.FUNCTIONS[function_name]["function"](left_result)
+#         return bound_value(output, -1000000000000.0, 10000000000000.0)
+#     else:  # If it's a terminal node
+#         if tree.structure in list(tree.TERMINALS.keys()):
+#             output = inputs[:, tree.TERMINALS[tree.structure]]
+#             return output
+#         elif tree.structure in list(tree.CONSTANTS.keys()):
+#             output = tree.CONSTANTS[tree.structure](None)
+#             return output
+        
+      
 def apply_tree(tree, inputs):
     """
     Evaluates the tree on input vectors.
@@ -102,17 +146,16 @@ def apply_tree(tree, inputs):
         function_name = tree.structure[0]
         if tree.FUNCTIONS[function_name]["arity"] == 2:
             left_subtree, right_subtree = tree.structure[1], tree.structure[2]
-            left_subtree = Tree(left_subtree)
-            right_subtree = Tree(right_subtree)
-            left_result = left_subtree.apply_tree(inputs)
-            right_result = right_subtree.apply_tree(inputs)
+            FUNCTIONS, TERMINALS, CONSTANTS = tree.FUNCTIONS, tree.TERMINALS, tree.CONSTANTS
+            left_result = exec_tree(left_subtree, inputs, FUNCTIONS, TERMINALS, CONSTANTS)
+            right_result = exec_tree(right_subtree, inputs, FUNCTIONS, TERMINALS, CONSTANTS)
             output = tree.FUNCTIONS[function_name]["function"](
                 left_result, right_result
             )
         else:
             left_subtree = tree.structure[1]
-            left_subtree = Tree(left_subtree)
-            left_result = left_subtree.apply_tree(inputs)
+            FUNCTIONS, TERMINALS, CONSTANTS = tree.FUNCTIONS, tree.TERMINALS, tree.CONSTANTS
+            left_result = exec_tree(left_subtree, inputs, FUNCTIONS, TERMINALS, CONSTANTS)
             output = tree.FUNCTIONS[function_name]["function"](left_result)
         return bound_value(output, -1000000000000.0, 10000000000000.0)
     else:  # If it's a terminal node
