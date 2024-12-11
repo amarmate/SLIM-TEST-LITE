@@ -21,9 +21,9 @@ datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
 
 # Settings
-pop_size = 20
-n_iter = 25
-n_iter_rs = 10
+pop_size = 100
+n_iter = 250
+n_iter_rs = 100
 n_samples = 30
 p_train = 0.7
 
