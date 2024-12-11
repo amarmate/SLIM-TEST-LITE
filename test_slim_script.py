@@ -156,7 +156,7 @@ if __name__ == '__main__':
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
-    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms[:3]]
+    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms[3:]]
     random.shuffle(tasks)
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
