@@ -20,10 +20,10 @@ os.environ["BLIS_NUM_THREADS"] = "1"
 datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 
 # Settings
-pop_size = 100
+pop_size = 200
 n_iter = 250
 n_iter_rs = 100
-n_samples = 50
+n_samples = 30
 p_train = 0.7
 
 import os
@@ -52,7 +52,7 @@ def save_and_commit(filepath, data):
 
 
 def process_dataset(args):
-    dataset_loader, scale, struct_mutation, xo, mut_xo = args
+    dataset_loader, algorithm, scale, struct_mutation, xo, mut_xo = args
     X, y = dataset_loader()
     dataset_name = dataset_loader.__name__.split('load_')[1]
 
@@ -61,7 +61,7 @@ def process_dataset(args):
     xo_suffix = 'xo' if xo else None
     gp_xo_suffix = 'mutxo' if mut_xo else None
     struct_mutation_suffix = 'strucmut' if struct_mutation else None
-    pattern = '_'.join([i for i in [dataset_name, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
+    pattern = '_'.join([i for i in [dataset_name, algorithm, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
     pattern += '_new'  # TEMPORARY
 
     # Random search
@@ -148,7 +148,8 @@ if __name__ == '__main__':
     # tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
     
-    tasks = [(loader, True, True, False, False) for loader in datasets]   # Testing the structure mutation only 
+            # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
+    tasks = [(loader, algorithm, True, True, False, False) for loader,algorithm in zip(datasets, ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"])]
 
     random.shuffle(tasks)
 

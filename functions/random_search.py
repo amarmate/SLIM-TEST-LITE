@@ -41,7 +41,7 @@ def timeout(seconds):
 # -------------------------------- SLIM --------------------------------
 
 def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
-                       iterations=50, pop_size=100, n_iter=100,
+                       iterations=50, pop_size=100, n_iter=100, algorithm=None,
                        struct_mutation=False, show_progress=True, 
                        x_o=False, mut_xo=False, save=True, identifier=None,
                        force_params=True):
@@ -69,6 +69,8 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         The population size.
     n_iter: int
         The number of iterations to perform.
+    algorithm: str
+        The SLIM algorithm to use.
     struct_mutation: bool
         Whether to use structural mutation or not.
     show_progress: bool
@@ -93,10 +95,16 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
     if force_params:
         params = {
         'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
-        'max_depth': [18,19,20,21,22,23,24],
+        'max_depth': [17,18,19,20,21,22,23,24],
         'init_depth': [5,6,7,8,10],
         'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
         'tournament_size': [2, 3],
+        'decay_rate': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
+        'p_struct': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
+        
+        # NOT IMPORTANT. NEED TO REMOVE SOME OF THEM AND SIMPLIFY
+        'type_structure_mutation': ['new', 'new'],
+        'struct_mutation': [True, True] if struct_mutation==True else [False, False],
         'ms_lower': [0, 0, 0, 0.05, 0.1] if not scale else [0,0],                   # If scaling, will be 0
         'ms_upper': [1, 1, 1, 1, 0.8, 0.6, 0.4] if not scale else [1,1],            # If scaling, will be 1
         'p_prune': [0.1, 0.2, 0.3, 0.4, 0.5] if struct_mutation==True else [0,0],   # If struct_mutation is False, will be 0
@@ -107,9 +115,6 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
             else [0, 0]
         ),
         'prob_replace': [0, 0.01, 0.015, 0.02] if struct_mutation==True else [0,0],
-        'struct_mutation': [True, True] if struct_mutation==True else [False, False],
-        'type_structure_mutation': ['new', 'new'],
-        'decay_rate': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
         }
     
     else:
@@ -129,9 +134,14 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         }
 
     results_slim = {}
-    early_stopping = EarlyStopping(patience=75)
+    early_stopping = EarlyStopping(patience=80)
     timeouts = 0
-    for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]:
+    if algorithm is None:
+        algorithms = ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
+    else:
+        algorithms = [algorithm]
+        
+    for algo in algorithms:
         results = {}
         # Generate a random seed without numpy
         seed_ = random.randint(0, 10000)
@@ -168,7 +178,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
             
             try:
                 slim_ = slim(X_train=X_train, y_train=y_train, dataset_name=dataset,
-                 X_test=X_test, y_test=y_test, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter,
+                 slim_version=algo, pop_size=pop_size, n_iter=n_iter, test_elite=False,
                  ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
                  seed=seed_, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
                  struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
@@ -211,7 +221,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         results = {k: v for k, v in sorted(results.items(), key=lambda item: item[0])}
         # Get the best hyperparameters
         best_hyperparameters = list(results.values())[0]
-        results_slim[algorithm] = best_hyperparameters
+        results_slim[algo] = best_hyperparameters
 
     # Pickle the results
     if save:

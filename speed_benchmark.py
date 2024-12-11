@@ -35,7 +35,7 @@ if __name__ == '__main__':
                         max_depth=22, init_depth=10, pop_size=200, n_iter=250, p_inflate=0.1, seed=seed,
                         struct_mutation=True, decay_rate=0.05, type_structure_mutation='new', timeout=200, verbose=0)
     end_single_core = time.time()
-    print(f'Single core performance: {end_single_core-start}sec)')
+    print(f'Single core performance: {end_single_core-start}sec')
 
     print('Multi-core performance test...')
     start = time.time()
