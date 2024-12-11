@@ -18,6 +18,7 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["BLIS_NUM_THREADS"] = "1"
 
 datasets = [globals()[i] for i in globals() if 'load' in i][2:]
+datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
 
 # Settings
 pop_size = 200
@@ -148,15 +149,15 @@ if __name__ == '__main__':
     if not os.path.exists('results/slim'):
         os.makedirs('results/slim')
 
+    algorithms = ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
     # tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
     # tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
     # tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
-    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]]
+    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms[:3]]
     random.shuffle(tasks)
-    tasks = tasks[:5]
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]
