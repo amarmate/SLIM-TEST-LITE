@@ -134,7 +134,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         }
 
     results_slim = {}
-    early_stopping = EarlyStopping(patience=80)
+    early_stopping = EarlyStopping(patience=80) 
     timeouts = 0
     if algorithm is None:
         algorithms = ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
@@ -182,10 +182,11 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
                  ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
                  seed=seed_, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
                  struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
-                 p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1, callbacks=[early_stopping],
+                 p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1, 
+                 # callbacks=[early_stopping],
                  type_structure_mutation=type_structure_mutation, decay_rate=decay_rate, timeout=200,
                 )
-
+                
                 predictions_slim = slim_.predict(X_test)
                 rmse_score = float(rmse(y_true=y_test, y_pred=predictions_slim))
                 iteration = slim_.iteration
@@ -196,7 +197,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
                     print('Params:', p_inflate, max_depth, init_depth, prob_const, prob_replace, p_prune, p_xo, p_struct_xo, struct_mutation, tournament_size, ms_lower, ms_upper)
                     
             except Exception as e:
-                print(f"Exception occurred: {str(e)}")
+                print(f"Exception occurred in random search: {str(e)}")
                 print(f"Iteration {i} - Pattern: {pattern} - Seed: {seed_}")
                 print('Params:', p_inflate, max_depth, init_depth, prob_const, prob_replace, p_prune, p_xo, p_struct_xo, struct_mutation, tournament_size, ms_lower, ms_upper)
                 continue

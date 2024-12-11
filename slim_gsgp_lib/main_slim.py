@@ -328,7 +328,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     # ================================
     #       Running the Algorithm
     # ================================
-
+    
     optimizer = SLIM_GSGP(
         pi_init=slim_gsgp_pi_init,
         **slim_gsgp_parameters
@@ -342,7 +342,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         curr_dataset=dataset_name,
         **slim_gsgp_solve_parameters
     )
-
+    
     log_settings(
         path=os.path.join(os.getcwd(), "log", "slim_settings.csv"),
         settings_dict=[slim_gsgp_solve_parameters,
@@ -355,7 +355,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     optimizer.elite.version = slim_version
     optimizer.elite.iteration = optimizer.iteration
     optimizer.elite.early_stop = optimizer.stop_training
-
+    
     return optimizer.elite
 
 

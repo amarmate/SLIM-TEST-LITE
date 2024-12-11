@@ -195,6 +195,7 @@ class SLIM_GSGP:
         n_elites=1,
         reconstruct=True,
         n_jobs=1):
+        
         """
         Solve the optimization problem using SLIM_GSGP.
 
@@ -267,7 +268,7 @@ class SLIM_GSGP:
                 for tree in self.initializer(**self.pi_init)
             ]
         )
-
+        
         # calculating initial population semantics
         population.calculate_semantics(X_train)
         population.evaluate_no_parall(ffunction, y=y_train, operator=self.operator, 

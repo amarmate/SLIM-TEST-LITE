@@ -55,13 +55,14 @@ def process_dataset(args):
     dataset_loader, algorithm, scale, struct_mutation, xo, mut_xo = args
     X, y = dataset_loader()
     dataset_name = dataset_loader.__name__.split('load_')[1]
+    algorithm_suffix = algorithm.replace('*', '_MUL_').replace('+', '_SUM_')
 
     # Suffix for file naming
     scale_suffix = 'scaled' if scale else None
     xo_suffix = 'xo' if xo else None
     gp_xo_suffix = 'mutxo' if mut_xo else None
     struct_mutation_suffix = 'strucmut' if struct_mutation else None
-    pattern = '_'.join([i for i in [dataset_name, algorithm, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
+    pattern = '_'.join([i for i in [dataset_name, algorithm_suffix, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
     pattern += '_new'  # TEMPORARY
 
     # Random search
@@ -82,6 +83,7 @@ def process_dataset(args):
                 pickle.dump(results, f)
                 save_and_commit(f'params/{pattern}.pkl', results)
             print(f"Random search completed and saved: {pattern}.pkl")
+
         except Exception as e:
             print(f"Error during random search: {e}")
             return
@@ -107,7 +109,7 @@ def process_dataset(args):
         for algorithm in tqdm(params.keys(), desc=f"Testing {pattern}"):
             params_clean = {k: (v.item() if isinstance(v, (np.float64, np.int64)) else v) for k, v in params[algorithm].items()}
             
-            rm, mp, ma, rm_c, mp_c, ma_c, time_stats, train, test, size, reps = test_slim(
+            rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
                 X=X, y=y, args_dict=params_clean, dataset_name=dataset_loader.__name__,
                 n_iter=n_iter, pop_size=pop_size, n_elites=1, iterations=n_samples, scale=scale,
                 algorithm=algorithm, verbose=0, p_train=p_train, show_progress=False,
@@ -120,8 +122,6 @@ def process_dataset(args):
             test_results['mape_compare'][algorithm] = mp_c
             test_results['mae_compare'][algorithm] = ma_c
             test_results['time'][algorithm] = time_stats
-            test_results['train_fit'][algorithm] = train
-            test_results['test_fit'][algorithm] = test
             test_results['size'][algorithm] = size
             test_results['representations'][algorithm] = reps
 
@@ -136,6 +136,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process datasets with parallel workers.")
     parser.add_argument("--max-workers", type=int, default=96, help="Number of maximum workers for parallel processing.")
     args = parser.parse_args()
+    if args.max_workers == -1:
+        args.max_workers = os.cpu_count() - 1
+    elif args.max_workers > os.cpu_count() - 1:
+        print(f"Warning: Number of workers ({args.max_workers}) exceeds CPU count ({os.cpu_count()}).")
+        args.max_workers = min(args.max_workers, os.cpu_count()-1)
     
     # Ensure domains exist 
     if not os.path.exists('params'):
@@ -149,9 +154,9 @@ if __name__ == '__main__':
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
-    tasks = [(loader, algorithm, True, True, False, False) for loader,algorithm in zip(datasets, ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"])]
-
+    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]]
     random.shuffle(tasks)
+    tasks = tasks[:5]
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]

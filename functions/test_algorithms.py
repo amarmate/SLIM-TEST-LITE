@@ -80,16 +80,12 @@ def test_slim(X, y, args_dict=None,
         A list containing the MAE scores.
     time_stats: list
         A list containing the time taken to train the model.
-    train_fit: list
-        A list containing the training fitness scores.
-    test_fit: list
-        A list containing the test fitness scores.
     size: list
         A list containing the size of the trees.
     representations: list
         A list containing the tree representations.
     """    
-    rmse_, mae_, mape_, rmse_comp, mae_comp, mape_comp, time_stats, train_fit, test_fit, size, representations = [], [], [], [], [], [], [], [], [], [], []
+    rmse_, mae_, mape_, rmse_comp, mae_comp, mape_comp, time_stats, size, representations = [], [], [], [], [], [], [], [], []
 
     for it in tqdm(range(iterations), disable=not show_progress):
         X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=1-p_train, seed=it)
@@ -117,8 +113,6 @@ def test_slim(X, y, args_dict=None,
         # Get the node count of the tree
         nodes_count = final_tree.nodes_count
         time_taken = end - start
-        train_fitness_elite = final_tree.fitness.item()
-        test_fitness_elite = final_tree.test_fitness.item()
         
         # Calculate predictions and metrics
         y_pred = final_tree.predict(X_test)
@@ -151,12 +145,10 @@ def test_slim(X, y, args_dict=None,
         mape_comp.append(mape_compare)
         mae_comp.append(mae_compare)
         time_stats.append(time_taken)
-        train_fit.append(train_fitness_elite)
-        test_fit.append(test_fitness_elite)
         size.append(nodes_count)
         representations.append(final_tree.get_tree_representation())
         
-    return rmse_, mape_, mae_, rmse_comp, mape_comp, mae_comp, time_stats, train_fit, test_fit, size, representations
+    return rmse_, mape_, mae_, rmse_comp, mape_comp, mae_comp, time_stats, size, representations
 
 
 # ----------------------------------- GSGP ----------------------------------- #
