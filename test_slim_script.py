@@ -21,9 +21,9 @@ datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
 
 # Settings
-pop_size = 200
-n_iter = 250
-n_iter_rs = 100
+pop_size = 20
+n_iter = 25
+n_iter_rs = 10
 n_samples = 30
 p_train = 0.7
 
@@ -77,7 +77,7 @@ def process_dataset(args):
             results = random_search_slim(
                 X, y, dataset_name, scale=scale,
                 p_train=p_train, iterations=n_iter_rs, pop_size=pop_size, n_iter=n_iter,
-                struct_mutation=struct_mutation, show_progress=True,
+                struct_mutation=struct_mutation, show_progress=True, algorithm=algorithm,
                 x_o=xo, save=False, mut_xo=mut_xo, pattern=pattern, force_params=True,
             )
             with open(f'params/{pattern}.pkl', 'wb') as f:
