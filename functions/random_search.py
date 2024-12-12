@@ -117,21 +117,21 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         'prob_replace': [0, 0.01, 0.015, 0.02] if struct_mutation==True else [0,0],
         }
     
-    else:
-        params = {
-        'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
-        'max_depth': [16,17,18,19,20,21,22,23,24],
-        'init_depth': [4,5,6,7,8,10,11],
-        'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
-        'tournament_size': [2, 3],
-        'ms_lower': [0, 0, 0, 0.05, 0.1] if not scale else [0,0],
-        'ms_upper': [1, 1, 1, 1, 0.8, 0.6, 0.4] if not scale else [1,1],
-        'p_prune': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
-        'p_xo': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
-        'p_struct_xo': [0, 0.10, 0.25, 0.35, 0.5, 0.6, 0.7, 0.8],
-        'prob_replace': [0, 0.01, 0.015, 0.02, 0.03],
-        'struct_mutation': [True, False],
-        }
+    # else:
+    #     params = {
+    #     'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
+    #     'max_depth': [16,17,18,19,20,21,22,23,24],
+    #     'init_depth': [4,5,6,7,8,10,11],
+    #     'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
+    #     'tournament_size': [2, 3],
+    #     'ms_lower': [0, 0, 0, 0.05, 0.1] if not scale else [0,0],
+    #     'ms_upper': [1, 1, 1, 1, 0.8, 0.6, 0.4] if not scale else [1,1],
+    #     'p_prune': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+    #     'p_xo': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+    #     'p_struct_xo': [0, 0.10, 0.25, 0.35, 0.5, 0.6, 0.7, 0.8],
+    #     'prob_replace': [0, 0.01, 0.015, 0.02, 0.03],
+    #     'struct_mutation': [True, False],
+    #     }
 
     results_slim = {}
     early_stopping = EarlyStopping(patience=80) 
@@ -172,6 +172,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
             struct_mutation = bool(np.random.choice(params['struct_mutation']))
             type_structure_mutation = np.random.choice(params['type_structure_mutation'])
             decay_rate = np.random.choice(params['decay_rate'])
+            p_struct = np.random.choice(params['p_struct'])
             
             if init_depth + 6 > max_depth:
                 max_depth = init_depth + 6
@@ -182,7 +183,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
                  ms_lower=ms_lower, ms_upper=ms_upper, p_inflate=p_inflate, max_depth=max_depth, init_depth=init_depth, 
                  seed=seed_, prob_const=prob_const, n_elites=1, log_level=0, verbose=0,
                  struct_mutation=struct_mutation, prob_replace=prob_replace, p_prune=p_prune, 
-                 p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1, 
+                 p_xo=p_xo, p_struct_xo=p_struct_xo, tournament_size=tournament_size, n_jobs=1, p_struct=p_struct,
                  # callbacks=[early_stopping],
                  type_structure_mutation=type_structure_mutation, decay_rate=decay_rate, timeout=200,
                 )
@@ -216,6 +217,7 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
                 'ms_lower': ms_lower,
                 'ms_upper': ms_upper,
                 'type_structure_mutation': type_structure_mutation,
+                'p_struct': p_struct,
                 'decay_rate': decay_rate,
             }
 
