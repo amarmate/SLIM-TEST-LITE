@@ -21,7 +21,7 @@ datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
 
 # Settings
-pop_size = 100
+pop_size = 200
 n_iter = 250
 n_iter_rs = 100
 n_samples = 50
@@ -157,7 +157,10 @@ if __name__ == '__main__':
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
     tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms]
+    tasks += [(loader, algorithm, True, False, False, False) for loader in datasets for algorithm in algorithms]
     # random.shuffle(tasks)
+    
+    tasks = tasks[:30]
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]
