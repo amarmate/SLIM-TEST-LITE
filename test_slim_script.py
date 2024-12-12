@@ -24,7 +24,7 @@ datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
 pop_size = 100
 n_iter = 250
 n_iter_rs = 100
-n_samples = 30
+n_samples = 50
 p_train = 0.7
 
 import os
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
-    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms[:2]]
+    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms[:3]]
     random.shuffle(tasks)
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
