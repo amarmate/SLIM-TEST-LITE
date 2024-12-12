@@ -82,7 +82,7 @@ def process_dataset(args):
             )
             with open(f'params/{pattern}.pkl', 'wb') as f:
                 pickle.dump(results, f)
-                save_and_commit(f'params/{pattern}.pkl', results)
+                # save_and_commit(f'params/{pattern}.pkl', results)
             print(f"Random search completed and saved: {pattern}.pkl")
 
         except Exception as e:
@@ -129,7 +129,7 @@ def process_dataset(args):
         with open(results_path, 'wb') as f:
             pickle.dump(test_results, f)
         print(f"Test results saved: {results_path}")
-        save_and_commit(results_path, test_results)
+        # save_and_commit(results_path, test_results)
     except Exception as e:
         print(f"Error during testing: {e}")
 
