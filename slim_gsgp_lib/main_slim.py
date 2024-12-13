@@ -53,6 +53,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          p_prune: int = slim_gsgp_parameters["p_prune"],
          decay_rate: float = slim_gsgp_parameters["decay_rate"],
          type_structure_mutation: str = 'old',
+         depth_distribution: str = 'norm',
          p_struct_xo: float = slim_gsgp_parameters["p_struct_xo"],
          mut_xo_operator: str = slim_gsgp_parameters["mut_xo_operator"],
          selector: str = slim_gsgp_parameters["selector"],
@@ -117,6 +118,10 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         Probability of selecting prune mutation when mutating the structure of an individual.
     decay_rate : float, optional
         The decay rate for structure mutation.
+    type_structure_mutation : str, optional
+        The type of structure mutation to use. Options are: 'old', 'new', 'new2'.
+    depth_distribution : str, optional
+        Distribution to choose the depth of the new tree (default: "norm"), options: "norm", "exp", "uniform", "max".
     p_struct_xo : float, optional
         Probability of selecting structural crossover when crossing two individuals.
     mut_xo_operator : str, optional
@@ -188,7 +193,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
                     tree_functions=tree_functions, tree_constants=tree_constants, log=log_level, verbose=verbose,
                     minimization=minimization, n_jobs=n_jobs, test_elite=test_elite, fitness_function=fitness_function,
                     initializer=initializer, tournament_size=tournament_size, ms_lower=ms_lower, ms_upper=ms_upper,
-                    p_inflate=p_inflate, p_struct=p_struct)
+                    p_inflate=p_inflate, p_struct=p_struct, depth_distribution=depth_distribution,)
 
     # Checking that both ms bounds are numerical
     assert isinstance(ms_lower, (int, float)) and isinstance(ms_upper, (int, float)), \
@@ -275,12 +280,15 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         operator=slim_gsgp_parameters['operator'],
         sig=sig
     )
+    
     slim_gsgp_parameters["structure_mutator"] = structure_mutation(
         FUNCTIONS=slim_gsgp_pi_init["FUNCTIONS"],
         TERMINALS=slim_gsgp_pi_init["TERMINALS"],
         CONSTANTS=slim_gsgp_pi_init["CONSTANTS"],
         type=type_structure_mutation,
-    )
+        depth_dist=depth_distribution,
+    ) 
+    
     slim_gsgp_parameters["xo_operator"] = xo_operator(
         p_struct_xo=p_struct_xo,
         mut_xo_op=mut_xo_operator,
@@ -288,13 +296,16 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         max_depth=max_depth,
         init_depth=init_depth,
     )
+    
     slim_gsgp_parameters["initializer"] = initializer_options[initializer]
     slim_gsgp_parameters["ms"] = ms
+    slim_gsgp_parameters["struct_mutation"] = struct_mutation
     slim_gsgp_parameters['p_inflate'] = p_inflate
+    
+    p_struct = p_struct if struct_mutation else 0
     slim_gsgp_parameters['p_struct'] = p_struct
     slim_gsgp_parameters['p_deflate'] = 1 - p_inflate - p_struct
     slim_gsgp_parameters['p_xo'] = p_xo
-    slim_gsgp_parameters["struct_mutation"] = struct_mutation
     slim_gsgp_parameters["seed"] = seed
     slim_gsgp_parameters["p_r"] = prob_replace
     slim_gsgp_parameters["p_g"] = prob_grow
@@ -356,7 +367,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     optimizer.elite.iteration = optimizer.iteration
     optimizer.elite.early_stop = optimizer.stop_training
     
-    return optimizer.elite
+    return optimizer.elite, optimizer.population
 
 
 if __name__ == "__main__":

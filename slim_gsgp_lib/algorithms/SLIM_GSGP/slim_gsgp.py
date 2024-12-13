@@ -271,10 +271,11 @@ class SLIM_GSGP:
         
         # calculating initial population semantics
         population.calculate_semantics(X_train)
-        population.evaluate_no_parall(ffunction, y=y_train, operator=self.operator, 
-                                      # n_jobs=n_jobs, 
-                                      #fitness_sharing=self.fitness_sharing
-                                      ) # CHANGED TO NO PARALLEL
+        population.calculate_errors_case(y_train)
+        population.evaluate(ffunction, y=y_train, operator=self.operator, 
+                                      n_jobs=n_jobs, 
+                                      fitness_sharing=self.fitness_sharing
+                                      )
 
         end = time.time()
 
@@ -351,10 +352,11 @@ class SLIM_GSGP:
             # turning the offspring population into a Population
             offs_pop = Population(offs_pop)
             offs_pop.calculate_semantics(X_train)
-            offs_pop.evaluate_no_parall(ffunction, y=y_train, operator=self.operator, 
-                                        # n_jobs=n_jobs, 
-                                        #fitness_sharing=self.fitness_sharing
-                                        )  # CHANGED TO NO PARALLEL
+            offs_pop.calculate_errors_case(y_train)
+            offs_pop.evaluate(ffunction, y=y_train, operator=self.operator, 
+                                        n_jobs=n_jobs, 
+                                        fitness_sharing=self.fitness_sharing
+                                        )
 
             # replacing the current population with the offspring population P = P'
             population = offs_pop

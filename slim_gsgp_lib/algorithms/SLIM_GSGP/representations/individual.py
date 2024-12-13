@@ -95,8 +95,8 @@ class Individual:
         self.test_semantics = test_semantics
         self.fitness = None
         self.test_fitness = None
-        self.errors_per_case = None
-        self.recently_mutated = False
+        self.errors_case = None
+        self.age = 0 
 
     def calculate_semantics(self, inputs, testing=False):
         """
@@ -372,8 +372,7 @@ class Individual:
 
         print(self.get_tree_representation())
 
-
-    def evaluate_per_case(self, target):
+    def calculate_errors_case(self, target):
         """
         Calculate the error for each test case (entry) in the dataset.
         
@@ -387,12 +386,12 @@ class Individual:
         torch.Tensor
             The error for each test case.
         """
-        # Assuming self.train_semantics contains predictions for all entries
-        if self.train_semantics is None:
-            raise ValueError("Individual has no training semantics. Can't calculate errors.")
+        # Assuming self.train_semantics contains predictions for all entries (TIME CONSUMING)
+        # if self.train_semantics is None:
+        #     raise ValueError("Individual has no training semantics. Can't calculate errors.")
         
         # Everytime an individual is mutated/born it's errors_per_case should be reset
-        if self.errors_per_case is None:
-            self.errors_per_case = torch.abs(self.train_semantics - target)
+        if self.errors_case is None:
+            self.errors_case = torch.abs(self.train_semantics - target)[0]
         
-        return self.errors_per_case
+        return self.errors_case

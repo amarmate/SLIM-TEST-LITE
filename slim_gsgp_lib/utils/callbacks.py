@@ -34,7 +34,7 @@ class SLIM_GSGP_Callback:
         """
         pass
 
-    def on_generation_end(self, slim_gsgp, iteration):
+    def on_generation_end(self, slim_gsgp, iteration, start, end):
         """
         Called at the end of each generation.
         """
@@ -120,6 +120,36 @@ class LogFitness(SLIM_GSGP_Callback):
         plt.legend()
         plt.show()
         
+class LogAge(SLIM_GSGP_Callback):
+    """
+    Callback to log the age of all the individuals in the population.
+
+    Attributes
+    ----------
+    age : list
+        List to store the age of all the individuals in the population in the last generation.
+
+    Methods
+    -------
+    on_train_end(slim_gsgp)
+        Called at the end of the training process.
+    plot_age()
+        Plot the age distribution of the population.    
+    """
+    def __init__(self):
+        self.age = []
+
+    def on_train_end(self, slim_gsgp, *args):
+        self.age.append([individual.age for individual in slim_gsgp.population.population])
+
+    def plot_age(self):
+        plt.figure(figsize=(10, 5))
+        plt.hist(self.age[-1], bins=20)
+        plt.xlabel('Age')
+        plt.ylabel('Number of individuals')
+        plt.show()
+        
+        
         
 def EarlyStopping(patience=10):
     """
@@ -157,3 +187,42 @@ def EarlyStopping(patience=10):
                 slim_gsgp.stop_training = True
 
     return EarlyStoppingCallback()
+
+
+def EarlyStopping_train(patience=10):
+    """
+    Callback to stop the training process when the train fitness of the best individual in the training set does not improve for a number of generations.
+
+    Attributes
+    ----------
+    patience : int
+        Number of generations without improvement to wait before stopping the training process.
+
+    Methods
+    -------
+    on_generation_end(slim_gsgp, generation)
+        Called at the end of each generation.
+    """
+
+    class EarlyStoppingCallback(SLIM_GSGP_Callback):
+        def __init__(self):
+            self.best_fitness = None
+            self.counter = 0
+
+        def on_generation_end(self, slim_gsgp, generation, *args):
+            if generation == 1:
+                # Reinicialize the counter and the best fitness
+                self.best_fitness = slim_gsgp.elite.fitness.item()
+                self.counter = 0
+                
+            elif self.best_fitness is None or slim_gsgp.elite.fitness.item() < self.best_fitness:
+                self.best_fitness = slim_gsgp.elite.fitness.item()
+                self.counter = 0
+            else:
+                self.counter += 1
+
+            if self.counter >= patience:
+                slim_gsgp.stop_training = True
+
+    return EarlyStoppingCallback()
+    

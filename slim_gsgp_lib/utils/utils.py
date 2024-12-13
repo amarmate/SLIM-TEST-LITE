@@ -435,7 +435,8 @@ def gs_size(y_true, y_pred):
 
 def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism, n_elites, init_depth, log_path,
                     prob_const, tree_functions, tree_constants, log, verbose, minimization, n_jobs, test_elite,
-                    fitness_function, initializer, tournament_size, ms_lower, ms_upper, p_inflate, p_struct):
+                    fitness_function, initializer, tournament_size, ms_lower, ms_upper, p_inflate, p_struct,
+                    depth_distribution,):
     """
     Validates the inputs based on the specified conditions.
 
@@ -490,6 +491,9 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
         The probability of inflating a tree.
     p_struct : float, optional
         The probability of structural mutation.
+    depth_distribution : list, optional
+        Distribution to choose the depth of the new tree (default: "norm"), options: "norm", "exp", "uniform", "max".
+
 
     """
     if not isinstance(X_train, torch.Tensor):
@@ -582,6 +586,9 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     
     if p_inflate + p_struct > 1:
         raise ValueError("p_inflate + p_struct must be smaller or equal to 1")
+    
+    if depth_distribution not in ["norm", "exp", "uniform", "max"]:
+        raise ValueError("depth_distribution must be one of: 'norm', 'exp', 'uniform', 'max'")
 
 
 def check_slim_version(slim_version):

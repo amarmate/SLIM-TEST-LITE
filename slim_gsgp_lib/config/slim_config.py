@@ -39,17 +39,17 @@ FUNCTIONS = {
     'divide': {'function': protected_div, 'arity': 2}
 }
 
-CONSTANTS = {
-    'constant_2': lambda _: torch.tensor(2.0),
-    'constant_3': lambda _: torch.tensor(3.0),
-    'constant_4': lambda _: torch.tensor(4.0),
-    'constant_5': lambda _: torch.tensor(5.0),
-    'constant__1': lambda _: torch.tensor(-1.0)
-}
+# CONSTANTS = {
+#     'constant_2': lambda _: torch.tensor(2.0),
+#     'constant_3': lambda _: torch.tensor(3.0),
+#     'constant_4': lambda _: torch.tensor(4.0),
+#     'constant_5': lambda _: torch.tensor(5.0),
+#     'constant__1': lambda _: torch.tensor(-1.0)
+# }
 
-# # Changed constants to a list of 200 values between -1 and 1
-# constants = [round(-1 + (2 * i) / (200 - 1), 2) for i in range(200)]
-# CONSTANTS = {f'constant_{i}': lambda _: torch.tensor(i) for i in constants}
+# Changed constants to a list of 200 values between -1 and 1
+constants = [round(-1 + (2 * i) / (200 - 1), 2) for i in range(200)]
+CONSTANTS = {f'constant_{i}': lambda _: torch.tensor(i) for i in constants}
 
 
 # Set parameters

@@ -444,6 +444,8 @@ def inflate_mutation(FUNCTIONS, TERMINALS, CONSTANTS, two_trees=True, operator="
                 for i, depth in enumerate(offs.depth_collection)
             ]
         ) + (offs.size - 1)
+        
+        offs.age = individual.age + 1
 
         return offs
 
@@ -516,6 +518,8 @@ def deflate_mutation(individual, reconstruct):
             for i, depth in enumerate(offs.depth_collection)
         ]
     ) + (offs.size - 1)
+    
+    offs.age = individual.age + 1
 
     return offs
 
@@ -583,7 +587,7 @@ def choose_depth_norm(max_depth, random_index, mean=None, std_dev=None):
     return chosen_depth
 
 
-def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
+def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old", depth_dist="norm"):
     """
     Generate a function for the structure mutation.
 
@@ -597,6 +601,16 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         The dictionary of constants used in the mutation.
     type : str
         The type of structure mutation to be used.
+    depth_dist : str, optional
+        Distribution to choose the depth of the new tree (default: "norm"), options: "norm", "exp", "uniform", "max".
+
+    
+    Returns
+    -------
+    
+    Callable
+        A structure mutation function (`structure`).
+        
     """
     
     # def structure_old(individual,
@@ -825,20 +839,24 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
         probs = exp_decay_prob(max(valid_levels) + 1, decay_rate=decay_rate)
         level_probs = [probs[level] for level in valid_levels]
         random_index = random.choices(valid_indices, weights=level_probs)[0]
-         
+
+        if depth_dist == "norm":
+            depth = choose_depth_norm(max_depth, random_index, mean=None, std_dev=None)
             
-        # depth = max_depth - len(random_index)
-        # depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
-        
-        # Random choice of depth
-        # depth = random.choice(depths)  # Uniform distribution
-        
-        # Use exponential decay to choose the depth
-        # depth_probs = exp_decay_prob(len(depths), decay_rate=decay_rate)
-        # depth = random.choices(depths, weights=depth_probs)[0]
-        
-        # Use normal distribution to choose the depth
-        depth = choose_depth_norm(max_depth, random_index, mean=None, std_dev=None) 
+        else:
+            depth = max_depth - len(random_index)   
+            depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
+            
+            if depth_dist == "exp":
+                probs = exp_decay_prob(len(depths), decay_rate=decay_rate)
+                depth = random.choices(depths, weights=probs)[0]    
+                
+            elif depth_dist == "uniform":
+                depth = random.choice(depths)
+                
+            elif depth_dist == "max":
+                depth = depths[-1]
+                
         
         # If just a node is selected
         if depth == 1:
@@ -905,8 +923,6 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, type="old"):
 
         offs.depth_collection = [new_block.depth, *individual.depth_collection[1:]]
         offs.depth = max(offs.depth_collection) + offs.size - 1
-
-        offs.recently_mutated = True
 
         return offs    
 

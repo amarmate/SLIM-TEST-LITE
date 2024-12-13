@@ -19,8 +19,8 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2, seed=seed)
 
     example_tree = slim(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name='test',
-                    max_depth=22, init_depth=10, pop_size=200, n_iter=100, seed=seed,
-                    p_inflate=0.6, p_struct=0.3, test_elite=True,
+                    max_depth=22, init_depth=10, pop_size=200, n_iter=10, seed=seed,
+                    p_inflate=0.6, p_struct=0.3, test_elite=True, selector='lexicase',
                     struct_mutation=True, decay_rate=0.4, p_xo=0, type_structure_mutation='new', verbose=1)
     
     profiler.disable()

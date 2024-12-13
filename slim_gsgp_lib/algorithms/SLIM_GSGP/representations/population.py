@@ -50,6 +50,7 @@ class Population:
         self.fit = None
         self.train_semantics = None
         self.test_semantics = None
+        self.errors_case = None
 
     def calculate_semantics(self, inputs, testing=False):
         """
@@ -84,6 +85,28 @@ class Population:
             self.train_semantics = [
                 individual.train_semantics for individual in self.population
             ]
+            
+    def calculate_errors_case(self, target):
+        """
+        Calculate the errors case for each individual in the population.
+
+        Parameters
+        ----------
+        y_train : torch.Tensor
+            Expected output (target) values for training.
+
+        Returns
+        -------
+        None
+        """
+        # computing the errors case for all the individuals in the population
+        [
+            individual.calculate_errors_case(target)
+            for individual in self.population
+        ]
+
+        # defining the errors case of the population to be a list with the errors case of all individuals in the population
+        self.errors_case = np.array([individual.errors_case for individual in self.population])
 
     def __len__(self):
         """
@@ -162,10 +185,11 @@ class Population:
         self.fit = Parallel(n_jobs=n_jobs)(
             delayed(_evaluate_slim_individual)(individual, ffunction=ffunction, y=y, operator=operator
             ) for individual in self.population)
-        
+    
 
         # ----------------------- CHANGED ---------------------------
         if fitness_sharing: 
+            elite_id, elite_fit = np.argmin(self.fit), np.min(self.fit)     
             seen = {}
             for individual in self.population:
                 if individual.structure[0] not in seen:
@@ -179,8 +203,13 @@ class Population:
 
         # ----------------------- END ---------------------------
 
-        
-
-        # Assigning individuals' fitness as an attribute
-        [self.population[i].__setattr__('fitness', f) for i, f in enumerate(self.fit)]
+            # Assigning individuals' fitness as an attribute
+            for i, f in enumerate(self.fit):
+                if i != elite_id:
+                    self.population[i].__setattr__('fitness', f)
+                else: 
+                    self.population[i].__setattr__('fitness', elite_fit)
+                    
+                
+            
 

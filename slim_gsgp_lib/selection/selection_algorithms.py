@@ -24,7 +24,6 @@ Selection operator implementation.
 """
 
 import random
-
 import numpy as np
 
 def selector(problem='min', 
@@ -174,94 +173,6 @@ def tournament_selection_max(pool_size):
 
     return ts
 
-
-def epsilon_lexicase_selection(targets, eps_fraction=1e-4, mode='min'):
-    """
-    Returns a function that performs epsilon lexicase selection to select an individual with the lowest fitness
-    from a population.
-
-    Parameters
-    ----------
-    targets : torch.Tensor
-        The true target values for each entry in the dataset (y_train)
-    eps_fraction : float, optional
-        The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-4.
-    mode : str, optional
-        The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
-
-    Returns
-    -------
-    Callable
-        A function ('els') that elects the individual with the lowest fitness from a randomly chosen pool.
-
-        Parameters
-        ----------
-        pop : Population
-            The population from which individuals are drawn.
-
-        Returns
-        -------
-        Individual
-            The individual with the lowest fitness in the pool.
-
-    Notes
-    -----
-    The returned function performs lexicase selection by receiving a population and returning the individual with the
-    lowest fitness in the pool.
-    """
-
-    def els(pop):
-        """
-        Perform epsilon lexicase selection on a population of individuals.
-        
-        Parameters
-        ----------
-        pop : list of Individual
-            The population from which to select parents.
-        targets : torch.Tensor
-            The true target values for each entry in the dataset.
-        epsilon : float, optional
-            The epsilon threshold for lexicase selection. Defaults to 1e-6.
-
-        Returns
-        -------
-        Individual
-            The selected parent individual.
-        """
-        # Get errors for each individual on each test case
-        errors = [ind.evaluate_per_case(targets) for ind in pop.population]
-        fitness_values = [ind.fitness for ind in pop.population]
-        fitness_std = np.std(fitness_values)
-        epsilon = eps_fraction * fitness_std
-        
-        # Randomly shuffle the order of test cases
-        num_cases = targets.shape[0]
-        case_order = list(range(num_cases))
-        random.shuffle(case_order)
-        
-        # Start with all individuals in the pool
-        pool = pop.copy()
-        
-        # Iterate over test cases and filter individuals based on epsilon threshold
-        for case_idx in case_order:
-            # Get the best error on this test case across all individuals in the pool
-            if mode == 'min':
-                best_error = min(errors[i][case_idx] for i, ind in enumerate(pool))
-                pool = [ind for i, ind in enumerate(pool) if errors[i][case_idx] <= best_error + epsilon]
-            elif mode == 'max':
-                best_error = max(errors[i][case_idx] for i, ind in enumerate(pool))
-                pool = [ind for i, ind in enumerate(pool) if errors[i][case_idx] >= best_error - epsilon]
-            
-            # If only one individual remains, return it as the selected parent
-            if len(pool) == 1:
-                return pool[0]
-        
-        # If multiple individuals remain after all cases, return one at random
-        return random.choice(pool)
-
-    return els
-
-
 def lexicase_selection(targets, mode='min'):
     """
     Returns a function that performs lexicase selection to select an individual with the lowest fitness
@@ -311,32 +222,127 @@ def lexicase_selection(targets, mode='min'):
         """
         
         # Get errors for each individual on each test case
-        errors = [ind.error_per_case(targets) for ind in population.population]
-        
-        # Randomly shuffle the order of test cases
+        errors = population.errors_case
         num_cases = targets.shape[0]
-        case_order = list(range(num_cases))
-        random.shuffle(case_order)
-        
+                
         # Start with all individuals in the pool
         pool = population.population.copy()
-        
+        case_order = random.sample(range(num_cases), 5)
+                        
         # Iterate over test cases and filter individuals based on exact performance (no epsilon)
-        for case_idx in case_order:
+        for i in range(5):
+            # Generate an int from 0 to num_cases
+            case_errors = errors[:, case_order[i]]
+            
             # Get the best error on this test case across all individuals in the pool
-            if mode == 'min':
-                best_error = min(errors[i][case_idx] for i, ind in enumerate(pool))
+            if mode == 'min':                
+                best_individuals = np.where(case_errors == np.min(case_errors))[0]
             elif mode == 'max':
-                best_error = max(errors[i][case_idx] for i, ind in enumerate(pool))
-            
-            # Filter out individuals whose error exceeds best_error (strict comparison)
-            pool = [ind for i, ind in enumerate(pool) if errors[i][case_idx] == best_error]
-            
+                best_individuals = np.where(case_errors == np.max(case_errors))[0]
+                                                          
             # If only one individual remains, return it as the selected parent
-            if len(pool) == 1:
-                return pool[0]
-        
+            if len(best_individuals) == 1:
+                return pool[best_individuals[0]]
+            
+            # Filter individuals based on exact performance and error
+            pool = [pool[i] for i in best_individuals]
+            errors = np.array([np.array(ind.errors_case) for ind in pool])
+                    
         # If multiple individuals remain after all cases, return one at random
         return random.choice(pool)
 
     return ls  # Return the function that performs lexicase selection
+
+
+
+def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
+    """
+    Returns a function that performs epsilon lexicase selection to select an individual with the lowest fitness
+    from a population.
+
+    Parameters
+    ----------
+    targets : torch.Tensor
+        The true target values for each entry in the dataset (y_train)
+    eps_fraction : float, optional
+        The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-6.
+    mode : str, optional
+        The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
+
+    Returns
+    -------
+    Callable
+        A function ('els') that elects the individual with the lowest fitness from a randomly chosen pool.
+
+        Parameters
+        ----------
+        pop : Population
+            The population from which individuals are drawn.
+
+        Returns
+        -------
+        Individual
+            The individual with the lowest fitness in the pool.
+
+    Notes
+    -----
+    The returned function performs lexicase selection by receiving a population and returning the individual with the
+    lowest fitness in the pool.
+    """
+
+    def els(pop):
+        """
+        Perform epsilon lexicase selection on a population of individuals.
+
+        Parameters
+        ----------
+        pop : list of Individual
+            The population from which to select parents.
+        targets : torch.Tensor
+            The true target values for each entry in the dataset.
+        epsilon : float, optional
+            The epsilon threshold for lexicase selection. Defaults to 1e-6.
+
+        Returns
+        -------
+        Individual
+            The selected parent individual.
+        """
+        # Get errors for each individual on each test case
+        errors = pop.errors_case
+        fitness_values = pop.fit
+        fitness_std = np.mean(fitness_values)
+        epsilon = eps_fraction * fitness_std
+    
+        num_cases = targets.shape[0]
+
+        # Start with all individuals in the pool
+        pool = pop.population.copy()
+
+        # Iterate over test cases and filter individuals based on epsilon threshold
+        for i in range(5):
+            # Generate an int from 0 to num_cases
+            case_idx = random.randint(0, num_cases - 1)
+            
+            # Extract case errors for the current test case
+            case_errors = errors[:, case_idx]
+
+            # Get the best error on this test case across all individuals in the pool
+            if mode == 'min':
+                best_individuals = np.where(case_errors <= np.min(case_errors) + epsilon)[0]
+            elif mode == 'max':
+                best_individuals = np.where(case_errors >= np.max(case_errors) - epsilon)[0]
+
+            # If only one individual remains, return it as the selected parent
+            if len(best_individuals) == 1:
+                return pool[best_individuals[0]]
+            
+            # Filter individuals based on epsilon threshold
+            pool = [pool[i] for i in best_individuals]
+            errors = np.array([np.array(ind.errors_case) for ind in pool])
+
+        # If multiple individuals remain after all cases, return one at random
+        return random.choice(pool)
+
+    return els
+
