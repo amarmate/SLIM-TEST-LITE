@@ -96,11 +96,11 @@ def random_search_slim(X,y,dataset,pattern,scale=False, p_train=0.7,
         params = {
         'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
         'max_depth': [17,18,19,20,21,22,23,24],
-        'init_depth': [5,6,7,8,10,11,12],
+        'init_depth': [5,6,7,8,10,11],
         'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
         'tournament_size': [2, 3],
-        'decay_rate': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4],
-        'p_struct': [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
+        'decay_rate': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35],
+        'p_struct': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3] if struct_mutation==True else [0,0],
         
         # NOT IMPORTANT. NEED TO REMOVE SOME OF THEM AND SIMPLIFY
         'type_structure_mutation': ['new', 'new'],
