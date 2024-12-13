@@ -571,10 +571,10 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     if ms_lower > ms_upper:
         raise ValueError("ms_lower must be smaller than ms_upper")
     
-    if not isinstance(p_inflate, float):
+    if not isinstance(p_inflate, float) and p_inflate != 0:
         raise TypeError("p_inflate must be a float")
     
-    if not isinstance(p_struct, float):
+    if not isinstance(p_struct, float) and p_struct != 0:
         raise TypeError("p_struct must be a float")
     
     if p_inflate < 0 or p_struct < 0:
