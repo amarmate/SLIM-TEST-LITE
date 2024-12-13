@@ -52,14 +52,12 @@ class SLIM_GSGP:
         ms,
         find_elit_func,
         p_xo=0.2,
-        p_r=0.2,
         p_g=1,
         p_inflate=0.3,
         p_deflate=0.6,
         p_struct=0.1,
         decay_rate=0.2,
         pop_size=100,
-        p_prune=0.4,
         fitness_sharing=False,
         seed=0,
         operator="sum",
@@ -98,8 +96,6 @@ class SLIM_GSGP:
             Function to find elite individuals.
         p_xo : float
             Probability of crossover. Default is 0.
-        p_r : float
-            Probability of replacing the GP tree. Default is 0.2.
         p_g : float
             Probability of grow mutation. Default is 1.
         p_inflate : float
@@ -110,8 +106,6 @@ class SLIM_GSGP:
             Probability of structure mutation. Default is 0.1.
         decay_rate : float
             Decay rate for exponential decay. Default is 0.2.
-        p_prune : float
-            Probability of prune mutation. Default is 0.4.
         pop_size : int
             Size of the population. Default is 100.
         fitness_sharing : bool
@@ -147,11 +141,9 @@ class SLIM_GSGP:
         self.xo_operator = xo_operator
         self.ms = ms
         self.p_xo = p_xo
-        self.p_r = p_r
         self.p_g = p_g
         self.initializer = initializer
         self.pop_size = pop_size
-        self.p_prune = p_prune
         self.fitness_sharing = fitness_sharing
         self.seed = seed
         self.operator = operator
@@ -423,8 +415,6 @@ class SLIM_GSGP:
                         p_c=self.pi_init["p_c"],
                         X_test=X_test,
                         grow_probability=self.p_g,
-                        replace_probability=self.p_r,
-                        p_prune=self.p_prune,
                         reconstruct=reconstruct,
                         decay_rate=self.decay_rate, 
                         exp_decay=True)
@@ -464,8 +454,6 @@ class SLIM_GSGP:
                         p_c=self.pi_init["p_c"],
                         X_test=X_test,
                         grow_probability=self.p_g,
-                        replace_probability=self.p_r,
-                        p_prune=self.p_prune,
                         reconstruct=reconstruct,
                         decay_rate=self.decay_rate, 
                         exp_decay=True)
@@ -492,8 +480,6 @@ class SLIM_GSGP:
                     p_c=self.pi_init["p_c"],
                     X_test=X_test,
                     grow_probability=self.p_g,
-                    replace_probability=self.p_r,
-                    p_prune=self.p_prune,
                     reconstruct=reconstruct,
                     decay_rate=self.decay_rate,
                     exp_decay=False,
@@ -529,8 +515,6 @@ class SLIM_GSGP:
                     p_c=self.pi_init["p_c"],
                     X_test=X_test,
                     grow_probability=self.p_g,
-                    replace_probability=self.p_r,
-                    p_prune=self.p_prune,
                     reconstruct=reconstruct,
                     decay_rate=self.decay_rate,
                     exp_decay=False,)

@@ -15,11 +15,9 @@ from functions.test_funcs import mape, nrmse, r_squared, mae, standardized_rmse
 # ----------------------------------- SLIM ----------------------------------- #
 def test_slim(X, y, args_dict=None,
             dataset_name='dataset_1', 
-            pop_size=100, 
-            n_iter=100, 
             n_elites=1,
             initializer='rhh',
-            iterations=30,
+            n_samples=30,
             scale=True,
             algorithm="SLIM+SIG1",
             verbose=0,
@@ -39,18 +37,14 @@ def test_slim(X, y, args_dict=None,
         A dictionary containing the hyperparameters for the SLIM algorithm.
     dataset_name: str
         The name of the dataset.
-    pop_size: int
-        The population size.
-    n_iter: int     
-        The number of iterations to perform.
+    n_samples: int     
+        The number of samples to generate.
     n_elites: int
         The number of elites.
     initializer: str
         The initializer to use.
     iterations: int
         The number of iterations to perform.
-    struct_mutation: bool
-        Whether to use structural mutation or not.
     scale: bool
         Whether to scale the data or not.
     algorithm: str
@@ -87,7 +81,7 @@ def test_slim(X, y, args_dict=None,
     """    
     rmse_, mae_, mape_, rmse_comp, mae_comp, mape_comp, time_stats, size, representations = [], [], [], [], [], [], [], [], []
 
-    for it in tqdm(range(iterations), disable=not show_progress):
+    for it in tqdm(range(n_samples), disable=not show_progress):
         X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=1-p_train, seed=it)
 
         if scale:
@@ -104,8 +98,9 @@ def test_slim(X, y, args_dict=None,
                 os.makedirs(os.path.dirname(path))
             
         start = time.time()
+        print(args_dict)
         final_tree = slim(X_train=X_train, y_train=y_train,
-                            dataset_name=dataset_name, slim_version=algorithm, pop_size=pop_size, n_iter=n_iter, seed=it,
+                            dataset_name=dataset_name, slim_version=algorithm, seed=it,
                             reconstruct=True, n_jobs=1, initializer=initializer, test_elite=False,
                             verbose=verbose, n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None))
         end = time.time()
