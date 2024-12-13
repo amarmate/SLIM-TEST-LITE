@@ -156,11 +156,10 @@ if __name__ == '__main__':
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
-    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms]
-    tasks += [(loader, algorithm, True, False, False, False) for loader in datasets for algorithm in algorithms]
+    # tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms]
+    tasks = [(loader, algorithm, True, False, False, False) for loader in datasets for algorithm in algorithms]
     # random.shuffle(tasks)
-    
-    tasks = tasks[:30]
+
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]
