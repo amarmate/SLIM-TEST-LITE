@@ -43,7 +43,7 @@ if __name__ == '__main__':
         futures = [executor.submit(slim, 
                                     X_train=X_train, y_train=y_train, test_elite=False, dataset_name='test',
                                     max_depth=22, init_depth=10, pop_size=200, n_iter=250, p_inflate=0.1, seed=seed,
-                                    struct_mutation=True, decay_rate=0.05, type_structure_mutation='new', 
+                                    struct_mutation=True, decay_rate=0.05,
                                     timeout=200, verbose=0) 
                 for _ in range(5)]
         
