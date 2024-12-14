@@ -8,7 +8,6 @@ import time
 from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.mutators import *
 from slim_gsgp_lib.utils.utils import *
 from functions.test_algorithms import *
-from functions.random_search import * 
 from slim_gsgp_lib.datasets.data_loader import *
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
