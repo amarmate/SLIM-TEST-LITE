@@ -36,13 +36,14 @@ def random_search_slim_cv(X, y, dataset, pattern, scale=False,
     
     params = {
     'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
-    'max_depth': [10,11,12,13],
-    'init_depth': [4,5,6,7],
+    'max_depth': [10,11,12,13, 14,15,16,17,18,19,20,21,22],
+    'init_depth': [4,5,6,7, 8,9,10,11,12],
     'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
     'tournament_size': [2, 3],
     'decay_rate': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35],
     'p_struct': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
     'depth_distribution': ['exp', 'uniform', 'norm'],
+    'pop_size': [30, 40, 50, 60, 70, 80, 90, 100],
     
     # ----------------------- OTHER ---------------------------
     'p_xo': [0.1, 0.2, 0.3, 0.4, 0.5] if x_o==True or mut_xo==True else [0,0],  # If x_o or mut_xo is False, will be 0
@@ -61,7 +62,7 @@ def random_search_slim_cv(X, y, dataset, pattern, scale=False,
     else:
         algorithms = [algorithm]
         
-    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    kf = KFold(n_splits=4, shuffle=True, random_state=42)
         
     for algo in algorithms:
         results = {}
@@ -89,7 +90,7 @@ def random_search_slim_cv(X, y, dataset, pattern, scale=False,
                 'p_struct': np.random.choice(params['p_struct']),
                 'depth_distribution': np.random.choice(params['depth_distribution']),
                 'n_iter': n_iter,   
-                'pop_size': pop_size,
+                'pop_size': int(np.random.choice(params['pop_size'])),
             }
 
             # Ensure consistency between init_depth and max_depth
@@ -111,8 +112,8 @@ def random_search_slim_cv(X, y, dataset, pattern, scale=False,
             
                 try:
                     slim_ = slim(X_train=X_train, y_train=y_train, dataset_name=dataset,
-                                 slim_version=algo, **hyperparams, timeout=timeout, test_elite=False,
-                                 verbose=0,
+                                 slim_version=algo, **hyperparams, timeout=timeout, 
+                                 test_elite=False, verbose=0,
                                  )
                     
                     predictions = slim_.predict(X_test)
@@ -121,8 +122,8 @@ def random_search_slim_cv(X, y, dataset, pattern, scale=False,
 
                     if iteration != n_iter and not slim_.early_stop:
                         timeouts += 1
-                        print(f"Timeout {timeouts} ({iteration}) - Iteration {i} - Pattern: {pattern} - Seed: {seed_}")
-                        print('Params:', hyperparams)
+                        # print(f"Timeout {timeouts} ({iteration}) - Iteration {i} - Pattern: {pattern} - Seed: {seed_}")
+                        # print('Params:', hyperparams)
                         
                 except Exception as e:
                     print(f"Exception occurred in random search: {str(e)}")
@@ -138,7 +139,7 @@ def random_search_slim_cv(X, y, dataset, pattern, scale=False,
         # Get the best hyperparameters
         best_hyperparameters = list(results.values())[0]
         results_slim[algo] = best_hyperparameters
-        print(f'Best RMSE for dataset {dataset} and algorithm {algo}: {list(results.keys())[0]}')
+        # print(f'Best RMSE for dataset {dataset} and algorithm {algo}: {list(results.keys())[0]}')
 
     return results_slim
 
@@ -190,7 +191,7 @@ def process_dataset(args):
                 X, y, dataset_name, scale=scale,
                 runs=n_iter_rs, pop_size=pop_size, n_iter=n_iter,
                 struct_mutation=struct_mutation, algorithm=algorithm,
-                x_o=xo, mut_xo=mut_xo, pattern=pattern,
+                x_o=xo, mut_xo=mut_xo, pattern=pattern, timeout=30,
             )
             with open(f'params/{pattern}.pkl', 'wb') as f:
                 pickle.dump(results, f)
@@ -225,7 +226,7 @@ def process_dataset(args):
             rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
                 X=X, y=y, args_dict=params_clean, dataset_name=dataset_loader.__name__,
                 n_samples=n_samples, n_elites=1, scale=scale,
-                algorithm=algorithm, verbose=0, p_train=p_train, show_progress=True,
+                algorithm=algorithm, verbose=0, p_train=p_train, show_progress=True, timeout=40,
             )
             
             test_results['rmse'][algorithm] = rm
@@ -272,10 +273,8 @@ if __name__ == '__main__':
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
     tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms]
-    tasks += [(loader, algorithm, True, False, False, False) for loader in datasets for algorithm in algorithms]
+    # tasks += [(loader, algorithm, True, False, False, False) for loader in datasets for algorithm in algorithms]
     # random.shuffle(tasks)
-    
-    tasks = tasks[59:]
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]

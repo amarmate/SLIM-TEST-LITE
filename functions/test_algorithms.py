@@ -23,7 +23,8 @@ def test_slim(X, y, args_dict=None,
             verbose=0,
             p_train=0.7,
             show_progress=True,
-            log = False
+            log = False, 
+            timeout = 100,
 ):    
     """
 
@@ -57,6 +58,8 @@ def test_slim(X, y, args_dict=None,
         Whether to show the progress bar or not.
     log: bool
         Whether to log the results or not.
+    timeout: int
+        The maximum time to train the model.
 
     Returns
     -------
@@ -102,7 +105,9 @@ def test_slim(X, y, args_dict=None,
         final_tree = slim(X_train=X_train, y_train=y_train,
                             dataset_name=dataset_name, slim_version=algorithm, seed=it,
                             reconstruct=True, n_jobs=1, initializer=initializer, test_elite=False,
-                            verbose=verbose, n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None))
+                            verbose=verbose, n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
+                            timeout=timeout,
+        )
         end = time.time()
                 
         # Get the node count of the tree
