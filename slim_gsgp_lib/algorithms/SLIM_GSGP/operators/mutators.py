@@ -570,12 +570,18 @@ def choose_depth_norm(max_depth, random_index, mean=None, std_dev=None):
     """
     depth = max_depth - len(random_index)
     depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
+
+    # Ensure that depths has more than one element
+    if len(depths) == 1:
+        return depths[0]    
     
     # Set mean and standard deviation
     if mean is None:
         mean = depths.mean()  # Default mean: middle of the range
     if std_dev is None:
         std_dev = (depths[-1] - depths[0]) / 4 
+        if std_dev == 0:
+            print("Warning: std_dev is zero")
     
     # Generate probabilities using the normal distribution formula
     probabilities = np.exp(-((depths - mean) ** 2) / (2 * std_dev ** 2))

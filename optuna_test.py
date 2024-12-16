@@ -30,108 +30,79 @@ n_iter_rs = 50
 n_samples = 30
 p_train = 0.7
 
-def random_search_slim_cv(X, y, dataset, pattern, algorithm,
-                        scale=False, runs=50,struct_mutation=False, 
-                        x_o=False, mut_xo=False, 
-                        test_elite=False, timeout=200):
-    
-    params = {
-    'max_depth': [10,11,12,13, 14,15,16,17,18,19,20,21,22,23,24],
-    'init_depth': [4,5,6,7, 8,9,10,11,12], 
-    'tournament_size': [2, 3, 4, 5, 6],
-    'depth_distribution': ['exp', 'uniform', 'norm'],
-    'pop_size': [40, 60, 80, 100, 150, 200],
-    
-    # Float parameters
-    'p_inflate': [0.1, 0.2, 0.4, 0.5, 0.6, 0.7],
-    'p_struct': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3],  # 1 - p_struct + p_inflate = p_deflate >= 0 
-    'prob_const': [0.05, 0.1, 0.15, 0.2, 0.3],
-    'decay_rate': [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35],
-    
-    # Other params that will not be used in random search
-    'p_xo': [0.1, 0.2, 0.3, 0.4, 0.5] if x_o==True or mut_xo==True else [0,0],  # If x_o or mut_xo is False, will be 0
-    'p_struct_xo': (
-        [0.25, 0.35, 0.5, 0.6, 0.7, 0.8] if x_o and mut_xo
-        else [1, 1] if not mut_xo and x_o
-        else [0, 0]
-        ),
-    }
-
-        
-    results_slim = {}
-    timeouts = 0
-        
-    kf = KFold(n_splits=4, shuffle=True, random_state=42)
-        
-    results = {}
-    seed_ = random.randint(0, 10000)
-
-    for i in tqdm(range(runs)):
-        # Randomly select parameters
+def optuna_slim_cv(X, y, dataset, pattern, algorithm, scale=False, timeout=200, n_trials=50, struct_mutation=False):
+    def objective(trial):
+        # Define hyperparameter search space
         hyperparams = {
-            'p_inflate': np.random.choice(params['p_inflate']),
-            'max_depth': int(np.random.choice(params['max_depth'])),
-            'init_depth': int(np.random.choice(params['init_depth'])),
-            'tournament_size': int(np.random.choice(params['tournament_size'])),
-            'prob_const': np.random.choice(params['prob_const']),
+            'p_inflate': trial.suggest_float('p_inflate', 0, 0.7, step=0.05),
+            'max_depth': trial.suggest_int('max_depth', 9, 24),
+            'init_depth': trial.suggest_int('init_depth', 3, 12),
+            'tournament_size': trial.suggest_int('tournament_size', 2, 6),
+            'prob_const': trial.suggest_float('prob_const', 0.05, 0.3, step=0.025),
             'struct_mutation': struct_mutation,
-            'decay_rate': np.random.choice(params['decay_rate']),
-            'p_struct': np.random.choice(params['p_struct']),
-            'depth_distribution': np.random.choice(params['depth_distribution']),
-            'pop_size': int(np.random.choice(params['pop_size'])),
-            'p_xo': 0, 
-            'p_struct_xo': 0,
+            'decay_rate': trial.suggest_float('decay_rate', 0.05, 0.35, step=0.05),
+            'p_struct': trial.suggest_float('p_struct', 0, 0.4, step=0.05),
+            'depth_distribution': trial.suggest_categorical('depth_distribution', ['exp', 'uniform', 'norm']),
+            'pop_size': trial.suggest_int('pop_size', 40, 200, step=10),
         }
-        
-        hyperparams['n_iter'] = 80000/hyperparams['pop_size']
 
         # Ensure consistency between init_depth and max_depth
         if hyperparams['init_depth'] + 6 > hyperparams['max_depth']:
             hyperparams['max_depth'] = hyperparams['init_depth'] + 6
 
-        
+        hyperparams['n_iter'] = 125000 / hyperparams['pop_size']**{1.2}
+
+        # Perform K-fold cross-validation
+        kf = KFold(n_splits=4, shuffle=True, random_state=42)
         scores = []
+
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
-            
+
+            # Scale the data if needed
             if scale:
                 scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
                 X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
                 X_test = torch.tensor(scaler_x.transform(X_test), dtype=torch.float32)
                 y_train = torch.tensor(scaler_y.fit_transform(y_train.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
                 y_test = torch.tensor(scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
-        
+
             try:
-                slim_ = slim(X_train=X_train, y_train=y_train, dataset_name=dataset,
-                                slim_version=algorithm, **hyperparams, timeout=timeout, 
-                                test_elite=False, verbose=0,
-                                )
-                
+                slim_ = slim(
+                    X_train=X_train,
+                    y_train=y_train,
+                    dataset_name=dataset,
+                    slim_version=algorithm,
+                    **hyperparams,
+                    timeout=timeout,
+                    test_elite=False,
+                    verbose=0,
+                )
+
                 predictions = slim_.predict(X_test)
                 scores.append(rmse(y_test, predictions))
-                iteration = slim_.iteration
-
-                if iteration != n_iter and not slim_.early_stop:
-                    timeouts += 1
-                    # print(f"Timeout {timeouts} ({iteration}) - Iteration {i} - Pattern: {pattern} - Seed: {seed_}")
-                    # print('Params:', hyperparams)
-                    
             except Exception as e:
-                print(f"Exception occurred in random search: {str(e)}")
-                print(f"Iteration {i} - Pattern: {pattern} - Seed: {seed_}")
-                print('Params:', hyperparams)
-                continue
-        
-        rmse_score = np.mean(scores)
-                    
-        results[rmse_score] = hyperparams
+                print(f"Exception: {e}")
+                return float("inf")  # Penalize failed trials
 
-        results = {k: v for k, v in sorted(results.items(), key=lambda item: item[0])}
-        best_hyperparameters = list(results.values())[0]
-        results_slim[algorithm] = best_hyperparameters
+        # Return the average RMSE across all folds
+        return np.mean(scores)
 
-    return results_slim
+    # Create an Optuna study
+    study = optuna.create_study(direction="minimize")
+    study.optimize(objective, n_trials=n_trials) 
+
+    # Get the best results
+    best_hyperparams = study.best_params
+    best_score = study.best_value
+
+    print("Best RMSE:", best_score)
+    print("Best hyperparameters:", best_hyperparams)
+
+    return best_hyperparams
+
+
 
 def save_and_commit(filepath, data):
     """
