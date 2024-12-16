@@ -30,6 +30,9 @@ n_iter_rs = 50
 n_samples = 30
 p_train = 0.7
 
+
+# TODO : CHANGE FILE SAVING STRUCTURE FOR PARAMS AND FOR RESULTS
+
 def optuna_slim_cv(X, y, dataset, pattern, algorithm, scale=False, timeout=200, n_trials=50, struct_mutation=False):
     def objective(trial):
         # Define hyperparameter search space
