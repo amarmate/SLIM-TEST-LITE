@@ -13,7 +13,8 @@ from functions.test_funcs import mape, nrmse, r_squared, mae, standardized_rmse
 
 
 # ----------------------------------- SLIM ----------------------------------- #
-def test_slim(X, y, args_dict=None,
+def test_slim(X_train, y_train, X_test, y_test,
+            args_dict=None,
             dataset_name='dataset_1', 
             n_elites=1,
             initializer='rhh',
@@ -25,15 +26,20 @@ def test_slim(X, y, args_dict=None,
             show_progress=True,
             log = False, 
             timeout = 100,
+            callbacks = None,
 ):    
     """
 
     Arguments
     ---------
-    X: torch.tensor
-        The input data.
-    y: torch.tensor
-        The target data.
+    X_train: torch.tensor
+        The input training data.
+    y_train: torch.tensor
+        The target training data.
+    X_test: torch.tensor
+        The input test data.
+    y_test: torch.tensor
+        The target test data.
     args_dict: dict
         A dictionary containing the hyperparameters for the SLIM algorithm.
     dataset_name: str
@@ -60,6 +66,8 @@ def test_slim(X, y, args_dict=None,
         Whether to log the results or not.
     timeout: int
         The maximum time to train the model.
+    callbacks: list
+        A list containing the callbacks to use.
 
     Returns
     -------
@@ -84,15 +92,15 @@ def test_slim(X, y, args_dict=None,
     """    
     rmse_, mae_, mape_, rmse_comp, mae_comp, mape_comp, time_stats, size, representations = [], [], [], [], [], [], [], [], []
 
-    for it in tqdm(range(n_samples), disable=not show_progress):
-        X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=1-p_train, seed=it)
+    if scale:
+        scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
+        X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
+        X_test = torch.tensor(scaler_x.transform(X_test), dtype=torch.float32)
+        y_train = torch.tensor(scaler_y.fit_transform(y_train.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
+        y_test = torch.tensor(scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
 
-        if scale:
-            scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
-            X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
-            X_test = torch.tensor(scaler_x.transform(X_test), dtype=torch.float32)
-            y_train = torch.tensor(scaler_y.fit_transform(y_train.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
-            y_test = torch.tensor(scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
+    for it in tqdm(range(n_samples), disable=not show_progress):
+        # X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, p_test=1-p_train, seed=it)
 
         if log:
             algorithm_name = 'MUL-' + algorithm.split('*')[1] if '*' in algorithm else 'ADD-' + algorithm.split('+')[1]
@@ -100,14 +108,21 @@ def test_slim(X, y, args_dict=None,
             if not os.path.exists(os.path.dirname(path)):
                 os.makedirs(os.path.dirname(path))
             
-        start = time.time()
-        print(args_dict)
-        final_tree = slim(X_train=X_train, y_train=y_train,
-                            dataset_name=dataset_name, slim_version=algorithm, seed=it,
-                            reconstruct=True, n_jobs=1, initializer=initializer, test_elite=False,
-                            verbose=verbose, n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
-                            timeout=timeout,
-        )
+        start = time.time()        
+        try:
+            final_tree = slim(X_train=X_train, y_train=y_train,
+                                dataset_name=dataset_name, slim_version=algorithm, seed=it,
+                                reconstruct=True, n_jobs=1, initializer=initializer, test_elite=False,
+                                verbose=verbose, n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
+                                timeout=timeout, callbacks=callbacks,
+            )
+        except Exception as e:
+            print('Error during testing SLIM:', e)
+            print('Args:', args_dict)
+            continue
+
+        print('executed')
+
         end = time.time()
                 
         # Get the node count of the tree

@@ -6,11 +6,13 @@ import random
 import pickle
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
 from functions.test_algorithms import *
 from slim_gsgp_lib.datasets.data_loader import *
-from slim_gsgp_lib.utils.callbacks import EarlyStopping
+from slim_gsgp_lib.utils.callbacks import EarlyStopping_train
 from sklearn.model_selection import KFold
 import optuna
+optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 # Limit threads for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -22,48 +24,79 @@ os.environ["BLIS_NUM_THREADS"] = "1"
 
 datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
+dataset_dict = {}
+for i, dataset in enumerate(datasets):
+    X,y = dataset()
+    name = dataset.__name__.split('load_')[1]
+    id = 'DA' + str(i).zfill(2)
+    dataset_dict[name] = id 
 
 # Settings
-pop_size = 40
-n_iter = 2000
-n_iter_rs = 50
-n_samples = 30
-p_train = 0.7
+max_iter = 20  # 2000
+p_train = 0.8
+n_trials = 4  # 40
+n_samples = 3 # 3
+
+cv = 2 # 4
+seed = 40
+timeout = 100
 
 
-# TODO : CHANGE FILE SAVING STRUCTURE FOR PARAMS AND FOR RESULTS
-
-def optuna_slim_cv(X, y, dataset, pattern, algorithm, scale=False, timeout=200, n_trials=50, struct_mutation=False):
+def optuna_slim_cv(X, y, dataset, 
+                   algorithm, 
+                   scale=True, 
+                   timeout=100, 
+                   n_trials=50, 
+                   max_iter=2000,
+                   cv=4,
+                   struct_mutation=False, 
+                   xo=False, 
+                   struct_xo=False, 
+                   mut_xo=False):
+    
     def objective(trial):
-        # Define hyperparameter search space
+        init_depth = trial.suggest_int('init_depth', 3, 12)
+        max_depth = trial.suggest_int('max_depth', init_depth + 6, 24)
+        pop_size = trial.suggest_int('pop_size', 25, 200, step=25)
+        p_struct = trial.suggest_float('p_struct', 0, 0.3, step=0.05)
+
+        if xo: 
+            p_xo = trial.suggest_float('p_xo', 0, 0.5, step=0.05)
+            if struct_xo and mut_xo:
+                p_struct_xo = trial.suggest_float('p_struct_xo', 0, 1, step=0.1)
+            elif struct_xo:
+                p_struct_xo = 1
+            elif mut_xo:
+                p_struct_xo = 0
+        else: 
+            p_xo, p_struct_xo = 0, 0
+
         hyperparams = {
             'p_inflate': trial.suggest_float('p_inflate', 0, 0.7, step=0.05),
-            'max_depth': trial.suggest_int('max_depth', 9, 24),
-            'init_depth': trial.suggest_int('init_depth', 3, 12),
-            'tournament_size': trial.suggest_int('tournament_size', 2, 6),
+            'max_depth': max_depth,
+            'init_depth': init_depth,
+            'tournament_size': trial.suggest_int('tournament_size', 2, 5),
             'prob_const': trial.suggest_float('prob_const', 0.05, 0.3, step=0.025),
             'struct_mutation': struct_mutation,
-            'decay_rate': trial.suggest_float('decay_rate', 0.05, 0.35, step=0.05),
-            'p_struct': trial.suggest_float('p_struct', 0, 0.4, step=0.05),
+            'decay_rate': trial.suggest_float('decay_rate', 0, 0.35, step=0.05),
+            'p_struct': p_struct,
             'depth_distribution': trial.suggest_categorical('depth_distribution', ['exp', 'uniform', 'norm']),
-            'pop_size': trial.suggest_int('pop_size', 40, 200, step=10),
+            'pop_size': pop_size,
+            'n_iter': max_iter,
+            'p_xo' : p_xo,
+            'p_struct_xo': p_struct_xo,
         }
 
-        # Ensure consistency between init_depth and max_depth
-        if hyperparams['init_depth'] + 6 > hyperparams['max_depth']:
-            hyperparams['max_depth'] = hyperparams['init_depth'] + 6
-
-        hyperparams['n_iter'] = 125000 / hyperparams['pop_size']**{1.2}
-
         # Perform K-fold cross-validation
-        kf = KFold(n_splits=4, shuffle=True, random_state=42)
+        kf = KFold(n_splits=cv, shuffle=True, random_state=42)
         scores = []
+        nodes_count = []
+        EarlyStopping = EarlyStopping_train(patience=int(8_000/pop_size))
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
-            # Scale the data if needed
             if scale:
                 scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
                 X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
@@ -81,30 +114,44 @@ def optuna_slim_cv(X, y, dataset, pattern, algorithm, scale=False, timeout=200, 
                     timeout=timeout,
                     test_elite=False,
                     verbose=0,
+                    callbacks=[EarlyStopping]
                 )
 
+                slim_ = simplify_individual(slim_, y_train, X_train, threshold=0)
                 predictions = slim_.predict(X_test)
                 scores.append(rmse(y_test, predictions))
+                nodes_count.append(slim_.nodes_count)
             except Exception as e:
                 print(f"Exception: {e}")
-                return float("inf")  # Penalize failed trials
+                return float("inf")
 
-        # Return the average RMSE across all folds
-        return np.mean(scores)
+        return np.mean(scores), np.mean(nodes_count)
 
     # Create an Optuna study
-    study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=n_trials) 
+    study = optuna.create_study(directions=['minimize', 'minimize'], study_name='SLIM_GSGP')
+    study.optimize(objective, n_trials=n_trials, n_jobs=1)
 
     # Get the best results
-    best_hyperparams = study.best_params
-    best_score = study.best_value
+    pareto_trials = study.best_trials
+    rmse_values = np.array([trial.values[0] for trial in pareto_trials])
+    size_values = np.array([trial.values[1] for trial in pareto_trials])
 
-    print("Best RMSE:", best_score)
-    print("Best hyperparameters:", best_hyperparams)
+    # Normalize RMSE and size using min-max scaling
+    rmse_min, rmse_max = rmse_values.min(), rmse_values.max()
+    size_min, size_max = size_values.min(), size_values.max()
+    rmse_normalized = (rmse_values - rmse_min) / (rmse_max - rmse_min)
+    size_normalized = (size_values - size_min) / (size_max - size_min)
 
-    return best_hyperparams
+    # Compute combined scores
+    combined_scores = rmse_normalized + 0.5 * size_normalized
+    best_index = np.argmin(combined_scores)
+    best_trial = pareto_trials[best_index]
 
+    # print("Best RMSE:", best_trial.values[0])
+    # print("Best Size:", best_trial.values[1])
+    # print("Best Hyperparameters:", best_trial.params)
+
+    return best_trial.params
 
 
 def save_and_commit(filepath, data):
@@ -118,48 +165,56 @@ def save_and_commit(filepath, data):
 
     # Commit the change to GitHub
     try:
-        # Stage the file
         subprocess.run(['git', 'add', filepath], check=True)
-        # Commit with a message
         subprocess.run(['git', 'commit', '-m', f"Updated {os.path.basename(filepath)}"], check=True)
-        # Push to the remote repository
         subprocess.run(['git', 'push'], check=True)
         print(f"File committed and pushed to GitHub: {filepath}")
+
     except subprocess.CalledProcessError as e:
+
         print(f"Git operation failed: {e}")
 
 
 def process_dataset(args):
-    dataset_loader, algorithm, scale, struct_mutation, xo, mut_xo = args
+    dataset_loader, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo = args
     X, y = dataset_loader()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=1-p_train, shuffle=True, seed=seed)
+
     dataset_name = dataset_loader.__name__.split('load_')[1]
-    algorithm_suffix = algorithm.replace('*', '_MUL_').replace('+', '_SUM_')
+    dataset_id = dataset_dict[dataset_name]
+    algorithm_suffix = algorithm.replace('*', 'MUL_').replace('+', 'SUM_').replace('SLIM', '')
 
     # Suffix for file naming
-    scale_suffix = 'scaled' if scale else None
+    scale_suffix = 'sc' if scale else None
     xo_suffix = 'xo' if xo else None
-    gp_xo_suffix = 'mutxo' if mut_xo else None
-    struct_mutation_suffix = 'strucmut' if struct_mutation else None
-    pattern = '_'.join([i for i in [dataset_name, algorithm_suffix, scale_suffix, xo_suffix, gp_xo_suffix, struct_mutation_suffix] if i])
-    pattern += '_new'  # TEMPORARY
+    gp_xo_suffix = 'gx' if gp_xo else None
+    mut_xo_suffix = 'mx' if mut_xo else None
+    struct_mutation_suffix = 'sm' if struct_mutation else None
+    pattern = algorithm_suffix + '_' + ''.join([i for i in [scale_suffix, xo_suffix, gp_xo_suffix, mut_xo_suffix, struct_mutation_suffix] if i])
+
+    # Ensure the domain exists
+    if not os.path.exists(f'params/{dataset_id}'):
+        os.makedirs(f'params/{dataset_id}')
+    if not os.path.exists(f'results/slim/{dataset_id}'):
+        os.makedirs(f'results/slim/{dataset_id}')
 
     # Random search
     try:
-        with open(f'params/{pattern}.pkl', 'rb') as f:
+        with open(f'params/{dataset_id}/{pattern}.pkl', 'rb') as f:
             results = pickle.load(f)
         print(f"Random search results already exist: {pattern}.pkl")
     except FileNotFoundError:
         print(f"Performing random search for: {pattern}")
         try:
-            results = random_search_slim_cv(
-                X, y, dataset_name, scale=scale,
-                runs=n_iter_rs, pop_size=pop_size, n_iter=n_iter,
-                struct_mutation=struct_mutation, algorithm=algorithm,
-                x_o=xo, mut_xo=mut_xo, pattern=pattern, timeout=30,
+            results = optuna_slim_cv(
+                X=X_train, y=y_train, dataset=dataset_name, algorithm=algorithm, scale=scale, timeout=timeout,
+                n_trials=n_trials, max_iter=max_iter, struct_mutation=struct_mutation, xo=xo, 
+                struct_xo=gp_xo, mut_xo=mut_xo, cv=cv, 
             )
-            with open(f'params/{pattern}.pkl', 'wb') as f:
+
+            with open(f'params/{dataset_id}/{pattern}.pkl', 'wb') as f:
                 pickle.dump(results, f)
-                # save_and_commit(f'params/{pattern}.pkl', results)
+                # save_and_commit(f'params/{dataset_id}/{pattern}.pkl', results)
             print(f"Random search completed and saved: {pattern}.pkl")
 
         except Exception as e:
@@ -168,7 +223,7 @@ def process_dataset(args):
 
     # Load parameters for testing
     try:
-        with open(f'params/{pattern}.pkl', 'rb') as f:
+        with open(f'params/{dataset_id}/{pattern}.pkl', 'rb') as f:
             params = pickle.load(f)
     except Exception as e:
         print(f"Failed to load parameters for {dataset_name}: {e}")
@@ -176,7 +231,7 @@ def process_dataset(args):
 
     # Testing phase
     try:
-        results_path = f'results/slim/{pattern}.pkl'
+        results_path = f'results/slim/{dataset_id}/{pattern}.pkl'
         if os.path.exists(results_path):
             print(f"Test results already exist: {results_path}")
             return
@@ -184,24 +239,25 @@ def process_dataset(args):
         metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
         test_results = {metric: {} for metric in metrics}
 
-        for algorithm in tqdm(params.keys(), desc=f"Testing {pattern}"):
-            params_clean = {k: (v.item() if isinstance(v, (np.float64, np.int64)) else v) for k, v in params[algorithm].items()}
+        EarlyStopping = EarlyStopping_train(patience=int(8_000/params['pop_size']))
             
-            rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
-                X=X, y=y, args_dict=params_clean, dataset_name=dataset_loader.__name__,
-                n_samples=n_samples, n_elites=1, scale=scale,
-                algorithm=algorithm, verbose=0, p_train=p_train, show_progress=True, timeout=40,
-            )
-            
-            test_results['rmse'][algorithm] = rm
-            test_results['mape'][algorithm] = mp
-            test_results['mae'][algorithm] = ma
-            test_results['rmse_compare'][algorithm] = rm_c
-            test_results['mape_compare'][algorithm] = mp_c
-            test_results['mae_compare'][algorithm] = ma_c
-            test_results['time'][algorithm] = time_stats
-            test_results['size'][algorithm] = size
-            test_results['representations'][algorithm] = reps
+        rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
+            X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
+            args_dict=params, dataset_name=dataset_loader.__name__,
+            n_samples=n_samples, n_elites=1, scale=scale,
+            algorithm=algorithm, verbose=0, p_train=p_train, show_progress=True, timeout=timeout,
+            callbacks=[EarlyStopping],
+        )
+
+        test_results['rmse'][algorithm] = rm
+        test_results['mape'][algorithm] = mp
+        test_results['mae'][algorithm] = ma
+        test_results['rmse_compare'][algorithm] = rm_c
+        test_results['mape_compare'][algorithm] = mp_c
+        test_results['mae_compare'][algorithm] = ma_c
+        test_results['time'][algorithm] = time_stats
+        test_results['size'][algorithm] = size
+        test_results['representations'][algorithm] = reps
 
         with open(results_path, 'wb') as f:
             pickle.dump(test_results, f)
@@ -209,7 +265,6 @@ def process_dataset(args):
         # save_and_commit(results_path, test_results)
     except Exception as e:
         print(f"Error during testing: {e}")
-
 
 
 # ------------------------------ MAIN ------------------------------
@@ -235,10 +290,11 @@ if __name__ == '__main__':
     # tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]
     # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
     
-            # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO
-    tasks = [(loader, algorithm, True, True, False, False) for loader in datasets for algorithm in algorithms]
-    # tasks += [(loader, algorithm, True, False, False, False) for loader in datasets for algorithm in algorithms]
+            # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO, GP_XO
+    tasks = [(loader, algorithm, True, True, False, False, False) for loader in datasets for algorithm in algorithms]
+    # tasks += [(loader, algorithm, True, False, False, False, False) for loader in datasets for algorithm in algorithms]
     # random.shuffle(tasks)
+    tasks = tasks[:6]
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]
@@ -247,6 +303,58 @@ if __name__ == '__main__':
                 future.result()
             except Exception as e:
                 print(f"Error in processing: {e}")
+            
+    # Aggregate the dictionary of params and results, as they were saved in separate files
+    params_dict = {}
+    results_dict = {}
+
+    for dataset in datasets:
+        try:
+            dataset_name = dataset.__name__.split('load_')[1]
+            dataset_id = dataset_dict[dataset_name]
+
+            # The file will have this pattern: algorithm_scxo.pkl. 
+            # We need to ensure only that for some settings (ex.: scxo) all the algorithms are present
+            avalaible_settings = []
+            for file in os.listdir(f'params/{dataset_id}'):
+                # Get the different settings available 
+                settings = file.split('_')[2].split('.')[0]
+                if settings not in avalaible_settings:
+                    avalaible_settings.append(settings)
+            
+            for settings in avalaible_settings:
+                dict_params = {}
+                dict_results = {}
+                for suffix in ['MUL_ABS', 'MUL_SIG1', 'MUL_SIG2', 'SUM_ABS', 'SUM_SIG1', 'SUM_SIG2']:
+                    try:
+                        params = pickle.load(open(f'params/{dataset_id}/{suffix}_{settings}.pkl', 'rb'))
+                        dict_params.update(params)
+                        results = pickle.load(open(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl', 'rb'))
+                        for k, v in results.items():
+                            if k not in dict_results:
+                                dict_results[k] = {}
+                            dict_results[k].update(v)
+
+                        # Delete the loaded pickle files 
+                        os.remove(f'params/{dataset_id}/{suffix}_{settings}.pkl')
+                        os.remove(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl')
+                    except Exception as e:
+                        print(f"Error in loading or deleting files: {e}")
+                        continue
+                
+                print(dict_params)
+                print(dict_results)
+
+                # Dump the results
+                pickle.dump(dict_params, open(f'params/{dataset_id}/{settings}.pkl', 'wb'))
+                pickle.dump(dict_results, open(f'results/slim/{dataset_id}/{settings}.pkl', 'wb')) 
+
+        except Exception as e:
+            print(f"Error in processing dataset: {e}")
+            continue       
+
+
+        
     
     
 

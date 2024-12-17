@@ -129,3 +129,70 @@ def simplify_individual(individual,
 
     return individual
 
+
+
+# ----------------- TO IMPLEMENT ----------------- #
+def simplify_structure(
+        individual, 
+        y_train,
+        X_train=None,
+        ffunction=None,
+        op=None,
+        reconstruct=True,
+        threshold=0.01):
+    
+    """
+    Simplify an Individual by removing branches of its GP tree
+
+    Parameters
+    ----------
+    individual : Individual
+        The individual to be simplified.
+    y_train : torch.Tensor
+        The training set.
+    X_train : torch.Tensor
+        The training set.
+    ffunction : function    
+        The fitness function. If None, RMSE is used.
+    op : str
+        The operator to be used in the evaluation.. If None, RMSE is used.
+    reconstruct : bool
+        If True, the individual is reconstructed after removing blocks.
+    threshold : float
+        The threshold below which blocks are removed.
+        
+    Returns
+    -------
+    Individual
+        The simplified individual
+    """
+
+    def best_branch_index(parent):
+        """
+        Find the best branch to remove from the individual.
+
+        Parameters
+        ----------
+
+        parent : Individual
+            The individual to be simplified.
+            
+        Returns
+        -------
+        int
+            The best branch to remove.
+        """
+
+        pass
+
+    while True:
+        try:
+            branch_index = best_branch_index(individual)
+        except:
+            branch_index = None
+
+        if branch_index is None:
+            break
+        
+        # MUTATE 
+        pass 

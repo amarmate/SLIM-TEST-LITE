@@ -411,39 +411,12 @@ class SLIM_GSGP:
         ms_ = self.ms()
         
         if max_depth is not None and p1.size > 1 and p1.depth > max_depth:
-            # if self.struct_mutation:
-                # Half of the times, we perform a structure mutation
-                # if random.random() < 1 and p1.size > 1:
-
-            # IF THIS DOESNT WORK, AND WE NEED A p1.size > 1 condition 
-            # THEN PROBABLY WE WILL BE USING STRUCTURE MUTATION JUST TO FORCE THE 
-            # INDIVIDUAL OUT OF THE POPULATION, AS IT CANT BE USED 
-            # THIS COULD BE INDICATING A PROBLEM!!
+            # Previously we had structure mutation here, but it was removed
             start = time.time()
             result = self.deflate_mutator(p1, reconstruct=reconstruct)
             self.time_dict['deflate'].append(time.time() - start)
             return result
                         
-                # else:
-                #     start = time.time()
-                #     result = self.structure_mutator(
-                #         individual=p1,
-                #         X=X_train,
-                #         max_depth=self.pi_init["init_depth"],
-                #         p_c=self.pi_init["p_c"],
-                #         X_test=X_test,
-                #         grow_probability=self.p_g,
-                #         reconstruct=reconstruct,
-                #         decay_rate=self.decay_rate, 
-                #         exp_decay=True)
-                #     self.time_dict['struct'].append(time.time() - start)
-                #     return result
-            # else:
-            #     start = time.time()
-            #     result = self.deflate_mutator(p1, reconstruct=reconstruct)
-            #     self.time_dict['deflate'].append(time.time() - start)
-            #     return result
-
         start = time.time()
         off1 = self.inflate_mutator(
             p1,
@@ -457,27 +430,7 @@ class SLIM_GSGP:
         )
 
         if max_depth is not None and off1.depth > max_depth:
-            # if self.struct_mutation:
-            #     if random.random() < 1:
-            #         start = time.time()
-            #         result = self.deflate_mutator(p1, reconstruct=reconstruct)
-            #         self.time_dict['deflate'].append(time.time() - start)
-            #         return result
-            #     else:
-            #         start = time.time()
-            #         result = self.structure_mutator(
-            #             individual=p1,
-            #             X=X_train,
-            #             max_depth=self.pi_init["init_depth"],
-            #             p_c=self.pi_init["p_c"],
-            #             X_test=X_test,
-            #             grow_probability=self.p_g,
-            #             reconstruct=reconstruct,
-            #             decay_rate=self.decay_rate, 
-            #             exp_decay=True)
-            #         self.time_dict['struct'].append(time.time() - start)
-            #         return result
-            # else:
+            # Previously we had structure mutation here, but it was removed
             start = time.time()
             result = self.deflate_mutator(p1, reconstruct=reconstruct)
             self.time_dict['deflate'].append(time.time() - start)
@@ -489,35 +442,20 @@ class SLIM_GSGP:
 
     def deflate_mutation_step(self, p1, X_train, X_test, reconstruct):
         if p1.size == 1:
-            if self.struct_mutation:
-                start = time.time()
-                result = self.structure_mutator(
-                    individual=p1,
-                    X=X_train,
-                    max_depth=self.pi_init["init_depth"],
-                    p_c=self.pi_init["p_c"],
-                    X_test=X_test,
-                    grow_probability=self.p_g,
-                    reconstruct=reconstruct,
-                    decay_rate=self.decay_rate,
-                    exp_decay=False,
-                )
-                self.time_dict['struct'].append(time.time() - start)
-                return result
-            else:
-                start = time.time()
-                result = self.inflate_mutator(
-                    p1,
-                    self.ms(),
-                    X_train,
-                    max_depth=self.pi_init["init_depth"],
-                    p_c=self.pi_init["p_c"],
-                    X_test=X_test,
-                    reconstruct=reconstruct,
-                    grow_probability=self.p_g,
-                )
-                self.time_dict['inflate'].append(time.time() - start)   
-                return result
+            # Previsously we had structure mutation here, but it was removed
+            start = time.time()
+            result = self.inflate_mutator(
+                p1,
+                self.ms(),
+                X_train,
+                max_depth=self.pi_init["init_depth"],
+                p_c=self.pi_init["p_c"],
+                X_test=X_test,
+                reconstruct=reconstruct,
+                grow_probability=self.p_g,
+            )
+            self.time_dict['inflate'].append(time.time() - start)   
+            return result
         
         start = time.time()
         result = self.deflate_mutator(p1, reconstruct=reconstruct)
