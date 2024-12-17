@@ -32,12 +32,12 @@ for i, dataset in enumerate(datasets):
     dataset_dict[name] = id 
 
 # Settings
-max_iter = 20  # 2000
+max_iter = 2000  # 2000
 p_train = 0.8
-n_trials = 4  # 40
-n_samples = 3 # 3
+n_trials = 40  # 40
+n_samples = 30 # 3
 
-cv = 2 # 4
+cv = 4 # 4
 seed = 40
 timeout = 100
 
@@ -292,9 +292,8 @@ if __name__ == '__main__':
     
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO, GP_XO
     tasks = [(loader, algorithm, True, True, False, False, False) for loader in datasets for algorithm in algorithms]
-    # tasks += [(loader, algorithm, True, False, False, False, False) for loader in datasets for algorithm in algorithms]
+    tasks += [(loader, algorithm, True, False, False, False, False) for loader in datasets for algorithm in algorithms]
     # random.shuffle(tasks)
-    tasks = tasks[:6]
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
         futures = [executor.submit(process_dataset, task) for task in tasks]
