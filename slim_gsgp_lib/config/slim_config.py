@@ -81,6 +81,7 @@ slim_gsgp_parameters = {
     "p_xo": 0.2,
     "settings_dict": settings_dict,
     "find_elit_func": get_best_min,
+    "pressure_size": 0.5,
     "p_inflate": 0.2,
     "p_struct": 0.1,
     "struct_mutation": True,

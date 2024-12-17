@@ -44,6 +44,7 @@ class SLIM_GSGP:
         pi_init,
         initializer,
         selector,
+        pressure_size, 
         inflate_mutator,
         deflate_mutator,
         structure_mutator,
@@ -80,6 +81,8 @@ class SLIM_GSGP:
             Function to initialize the population.
         selector : Callable
             Function to select individuals.
+        pressure_size : float
+            Pressure size for rank selection.
         inflate_mutator : Callable
             Function for inflate mutation.
         deflate_mutator : Callable
@@ -132,6 +135,8 @@ class SLIM_GSGP:
         """
         self.pi_init = pi_init
         self.selector = selector
+        self.pressure_size = pressure_size
+        self.rank_selection = False if not pressure_size else True
         self.p_inflate = p_inflate
         self.p_deflate = p_deflate
         self.p_struct = p_struct
@@ -260,13 +265,16 @@ class SLIM_GSGP:
                 for tree in self.initializer(**self.pi_init)
             ]
         )
+        population.set_unique_id()
         
         # calculating initial population semantics
         population.calculate_semantics(X_train)
         population.calculate_errors_case(y_train)
         population.evaluate(ffunction, y=y_train, operator=self.operator, 
                                       n_jobs=n_jobs, 
-                                      fitness_sharing=self.fitness_sharing
+                                      fitness_sharing=self.fitness_sharing,
+                                      rank_selection=self.rank_selection,
+                                      pressure_size=self.pressure_size,
                                       )
 
         end = time.time()
@@ -347,8 +355,12 @@ class SLIM_GSGP:
             offs_pop.calculate_errors_case(y_train)
             offs_pop.evaluate(ffunction, y=y_train, operator=self.operator, 
                                         n_jobs=n_jobs, 
-                                        fitness_sharing=self.fitness_sharing
-                                        )
+                                        fitness_sharing=self.fitness_sharing,
+                                        rank_selection=self.rank_selection,
+                                        pressure_size=self.pressure_size,
+                            )
+            
+                                        
 
             # replacing the current population with the offspring population P = P'
             population = offs_pop
@@ -398,7 +410,7 @@ class SLIM_GSGP:
     def inflate_mutation_step(self, p1, X_train, X_test, reconstruct, max_depth):
         ms_ = self.ms()
         
-        if max_depth is not None and p1.depth >= max_depth-1:
+        if max_depth is not None and p1.size > 1 and p1.depth > max_depth:
             # if self.struct_mutation:
                 # Half of the times, we perform a structure mutation
                 # if random.random() < 1 and p1.size > 1:
@@ -411,7 +423,7 @@ class SLIM_GSGP:
             result = self.deflate_mutator(p1, reconstruct=reconstruct)
             self.time_dict['deflate'].append(time.time() - start)
             return result
-            
+                        
                 # else:
                 #     start = time.time()
                 #     result = self.structure_mutator(

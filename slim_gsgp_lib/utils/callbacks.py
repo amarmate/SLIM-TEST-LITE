@@ -226,3 +226,25 @@ def EarlyStopping_train(patience=10):
 
     return EarlyStoppingCallback()
     
+
+class LogDescendance(SLIM_GSGP_Callback):
+    """
+    Callback to log the descendance of the individuals in the population.
+    
+    Attributes
+    """
+    def __init__(self):
+        self.id_dist = []
+        
+    def on_generation_end(self, slim_gsgp, generation, *args):
+        descendance = [individual.id for individual in slim_gsgp.population.population]
+        self.id_dist.append(len(set(descendance)))
+    
+    def plot_descendance(self):
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.id_dist)
+        plt.xlabel('Generation')
+        plt.ylabel('Number of different individuals')
+        plt.show()
+
+    

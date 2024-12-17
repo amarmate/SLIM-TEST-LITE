@@ -55,6 +55,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          p_struct_xo: float = slim_gsgp_parameters["p_struct_xo"],
          mut_xo_operator: str = slim_gsgp_parameters["mut_xo_operator"],
          selector: str = slim_gsgp_parameters["selector"],
+         pressure_size: float = slim_gsgp_parameters["pressure_size"],
          fitness_sharing: bool = slim_gsgp_parameters["fitness_sharing"],
          log_path: str = None,
          seed: int = slim_gsgp_parameters["seed"],
@@ -74,7 +75,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
          tournament_size: int = 2,
          test_elite: bool = slim_gsgp_solve_parameters["test_elite"],
          callbacks: list = None, 
-         timeout: int = 100,):
+         timeout: int = 100,
+         full_return: bool = False):
 
     """
     Main function to execute the SLIM GSGP algorithm on specified datasets.
@@ -121,7 +123,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         The operator to use for crossing two individuals during mutation xo. 
     selector : str, optional
         The selection algorithm to use for selecting individuals for the next generation.
-        Default is tournament selection, options are: 'tournament', 'lexicase', 'e_lexicase'.
+        Default is tournament selection, options are: 'tournament', 'lexicase', 'e_lexicase', 'rank_based'
     fitness_sharing : bool, optional
         Whether to use fitness sharing to evaluate the fitness of the individuals.
     log_path : str, optional
@@ -164,6 +166,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         List of callbacks to use during the optimization process.
     timeout : int, optional
         Time in seconds to run the algorithm. If 0, the algorithm will run until the n_iter is reached.
+    full_return : bool, optional
+        Whether to return the full population or just the best individual.
 
     Returns
     -------
@@ -186,7 +190,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
                     tree_functions=tree_functions, tree_constants=tree_constants, log=log_level, verbose=verbose,
                     minimization=minimization, n_jobs=n_jobs, test_elite=test_elite, fitness_function=fitness_function,
                     initializer=initializer, tournament_size=tournament_size, ms_lower=ms_lower, ms_upper=ms_upper,
-                    p_inflate=p_inflate, p_struct=p_struct, depth_distribution=depth_distribution,)
+                    p_inflate=p_inflate, p_struct=p_struct, depth_distribution=depth_distribution,
+    )
 
     # Checking that both ms bounds are numerical
     assert isinstance(ms_lower, (int, float)) and isinstance(ms_upper, (int, float)), \
@@ -310,6 +315,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
                                                 targets=y_train)
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
     slim_gsgp_parameters['timeout'] = timeout
+    slim_gsgp_parameters['pressure_size'] = pressure_size if selector == 'rank_based' else None
 
     #   *************** SLIM_GSGP_SOLVE_PARAMETERS ***************
 
@@ -351,11 +357,14 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
                        slim_gsgp_pi_init,
                        settings_dict],
         unique_run_id=UNIQUE_RUN_ID
-    )
+    ) if log_level > 0 else None
 
     optimizer.elite.version = slim_version
     optimizer.elite.iteration = optimizer.iteration
     optimizer.elite.early_stop = optimizer.stop_training
+    
+    if full_return: 
+        return optimizer.elite, optimizer.population
     
     return optimizer.elite
 

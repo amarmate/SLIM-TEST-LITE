@@ -97,6 +97,7 @@ class Individual:
         self.test_fitness = None
         self.errors_case = None
         self.age = 0 
+        self.id = None
 
     def calculate_semantics(self, inputs, testing=False):
         """

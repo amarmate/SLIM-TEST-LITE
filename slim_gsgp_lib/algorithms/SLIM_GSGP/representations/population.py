@@ -51,6 +51,18 @@ class Population:
         self.train_semantics = None
         self.test_semantics = None
         self.errors_case = None
+        self.sizes = [ind.nodes_count for ind in population]
+
+    def set_unique_id(self): 
+        """
+        Set a unique id for each individual in the population.
+
+        Returns
+        -------
+        None
+        """
+        for i, individual in enumerate(self.population):
+            individual.__setattr__('id', i)
 
     def calculate_semantics(self, inputs, testing=False):
         """
@@ -162,9 +174,17 @@ class Population:
         # defining the fitness of the population to be a list with the fitnesses of all individuals in the population
         self.fit = [individual.fitness for individual in self.population]
 
-    def evaluate(self, ffunction, y, operator="sum", n_jobs=1, fitness_sharing=False):
+    def evaluate(self, 
+                ffunction, 
+                y, 
+                operator="sum", 
+                n_jobs=1, 
+                fitness_sharing=False,
+                rank_selection=False, 
+                pressure_size=0.5,
+                ):
         """
-        Evaluate the population using a fitness function.
+        Evaluate the population using a fitness function and calculate ranks for fitness and size.
 
         Parameters
         ----------
@@ -176,40 +196,65 @@ class Population:
             Operator to apply to the semantics ("sum" or "prod"). Default is "sum".
         n_jobs : int, optional
             The maximum number of concurrently running jobs for joblib parallelization. Default is 1.
+        fitness_sharing : bool, optional
+            Boolean indicating if fitness sharing is used. Default is False.
+        rank_selection : bool, optional
+            Boolean indicating if rank selection is used. Default is False.
+        pressure_size : float, optional
+            Pressure for size in rank selection. Default is 0.5.
 
         Returns
         -------
         None
         """
-        # Evaluates individuals' fitnesses
+        # Evaluate individuals' fitnesses
         self.fit = Parallel(n_jobs=n_jobs)(
-            delayed(_evaluate_slim_individual)(individual, ffunction=ffunction, y=y, operator=operator
-            ) for individual in self.population)
-    
+            delayed(_evaluate_slim_individual)(
+                individual, ffunction=ffunction, y=y, operator=operator
+            ) for individual in self.population
+        )
 
-        # ----------------------- CHANGED ---------------------------
-        if fitness_sharing: 
-            elite_id, elite_fit = np.argmin(self.fit), np.min(self.fit)     
-            seen = {}
-            for individual in self.population:
-                if individual.structure[0] not in seen:
-                    seen[individual.structure[0]] = 1
-                else:
-                    seen[individual.structure[0]] += 1
+        [self.population[i].__setattr__('fitness', f) for i, f in enumerate(self.fit)]
+        
+
+        # Sort the population based on fitness and optionally calculate ranks
+        if rank_selection:
+            individuals_with_fitness = list(zip(self.population, self.fit, self.sizes))
+            individuals_with_fitness.sort(key=lambda x: x[1])
+            self.population, self.fit, self.sizes = zip(*individuals_with_fitness)
+            self.population = list(self.population)
+            self.fit = list(self.fit)
+            self.sizes = list(self.sizes)
             
-            for i, individual in enumerate(self.population):
-                # individual.fitness = self.fit[i] * (np.log(seen[individual.structure[0]]+1))
-                self.fit[i] = self.fit[i] * (np.log(seen[individual.structure[0]]+10))
+            # Calculate ranks
+            fitness_ranks = list(range(len(self.population)))
+            size_ranking_indices = np.argsort(self.sizes)
+            size_ranks = np.empty(len(self.sizes), dtype=int)
+            size_ranks[size_ranking_indices] = np.arange(len(self.sizes))
 
-        # ----------------------- END ---------------------------
+            self.combined_ranks = [
+                fitness_rank + pressure_size * size_rank
+                for fitness_rank, size_rank in zip(fitness_ranks, size_ranks)
+            ]
 
-            # Assigning individuals' fitness as an attribute
-            for i, f in enumerate(self.fit):
-                if i != elite_id:
-                    self.population[i].__setattr__('fitness', f)
-                else: 
-                    self.population[i].__setattr__('fitness', elite_fit)
-                    
+            # # ----------------------- CHANGED ---------------------------
+            # if fitness_sharing: 
+            #     elite_id, elite_fit = np.argmin(self.fit), np.min(self.fit)     
+            #     seen = {}
+            #     for individual in self.population:
+            #         if individual.structure[0] not in seen:
+            #             seen[individual.structure[0]] = 1
+            #         else:
+            #             seen[individual.structure[0]] += 1
+                
+            #     for i, individual in enumerate(self.population):
+            #         # individual.fitness = self.fit[i] * (np.log(seen[individual.structure[0]]+1))
+            #         self.fit[i] = self.fit[i] * (np.log(seen[individual.structure[0]]+10))
+
+            # ----------------------- END ---------------------------
+
+                # Assigning individuals' fitness as an attribute
+                        
                 
             
 

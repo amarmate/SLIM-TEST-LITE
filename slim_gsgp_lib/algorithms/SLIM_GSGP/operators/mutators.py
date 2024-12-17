@@ -446,13 +446,14 @@ def inflate_mutation(FUNCTIONS, TERMINALS, CONSTANTS, two_trees=True, operator="
         ) + (offs.size - 1)
         
         offs.age = individual.age + 1
+        offs.id = individual.id
 
         return offs
 
     return inflate
 
 
-def deflate_mutation(individual, reconstruct):
+def deflate_mutation(individual, reconstruct, mut_point_idx=None):
     """
     Perform deflate mutation on a given Individual by removing a random 'block'.
 
@@ -462,6 +463,8 @@ def deflate_mutation(individual, reconstruct):
         The Individual to be mutated.
     reconstruct : bool
         Whether to store the Individual's structure after mutation.
+    mut_point_idx : int, optional
+        The index of the block to be removed (default: None).
 
     Returns
     -------
@@ -469,7 +472,7 @@ def deflate_mutation(individual, reconstruct):
         The mutated individual
     """
     # choosing the block that will be removed
-    mut_point = random.randint(1, individual.size - 1)
+    mut_point = random.randint(1, individual.size - 1) if mut_point_idx is None else mut_point_idx
 
     # removing the block from the individual and creating a new Individual
     offs = Individual(
@@ -519,7 +522,8 @@ def deflate_mutation(individual, reconstruct):
         ]
     ) + (offs.size - 1)
     
-    offs.age = individual.age + 1
+    offs.age = individual.age + 1 if mut_point_idx is None else individual.age
+    offs.id = individual.id
 
     return offs
 
@@ -688,7 +692,7 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, depth_dist="norm"):
                 
             elif depth_dist == "max":
                 depth = depths[-1]
-                
+                            
         
         # If just a node is selected
         if depth == 1:
@@ -755,6 +759,8 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, depth_dist="norm"):
 
         offs.depth_collection = [new_block.depth, *individual.depth_collection[1:]]
         offs.depth = max(offs.depth_collection) + offs.size - 1
+
+        offs.id = individual.id
 
         return offs    
     

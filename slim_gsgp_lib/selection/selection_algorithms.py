@@ -43,7 +43,7 @@ def selector(problem='min',
     pool_size : int, optional
         Number of individuals participating in the tournament. Defaults to 2.
     eps_fraction : float, optional
-        The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults
+        The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-4.
     targets : torch.Tensor, optional
         The true target values for each entry in the dataset. Required for lexicase selection and epsilon lexicase
 
@@ -60,6 +60,8 @@ def selector(problem='min',
             return epsilon_lexicase_selection(targets, eps_fraction, mode='min')
         elif type == 'lexicase':
             return lexicase_selection(targets, mode='min')
+        elif type == 'rank_based':
+            return rank_based(mode='min', pool_size=pool_size)
         else:
             raise ValueError(f"Invalid selection type: {type}")
     elif problem == 'max':
@@ -69,6 +71,8 @@ def selector(problem='min',
             return epsilon_lexicase_selection(targets, eps_fraction, mode='max')
         elif type == 'lexicase':
             return lexicase_selection(targets, mode='max')
+        elif type == 'rank_based':
+            return rank_based(mode='max', pool_size=pool_size)
         else:
             raise ValueError(f"Invalid selection type: {type}")
     else:
@@ -346,3 +350,66 @@ def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
 
     return els
 
+
+def rank_based(mode='min', pool_size=2):
+    """
+    Returns a tournament function that performs rank-based selection to select an 
+    individual with the lowest fitness and size from a population.
+
+    Parameters
+    ----------
+    mode : str, optional
+        The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
+    pool_size : int, optional
+        Number of individuals participating in the tournament. Defaults to 2.
+
+    Returns
+    -------
+    Callable
+        A function ('rs') that elects the individual with the lowest fitness from a randomly chosen pool.
+
+        Parameters
+        ----------
+        pop : Population
+            The population from which individuals are drawn.
+
+        Returns
+        -------
+        Individual
+            The individual with the combined lowest fitness and size in the pool.
+
+    Notes
+    -----
+    The returned function performs rank-based selection by receiving a population and returning the individual with the
+    lowest fitness 
+    """
+
+    if mode == 'max': 
+        raise ValueError("Rank-based selection is only available for minimization problems.")
+
+    def double_tournament(pop):
+        """
+        Perform rank-based selection on a population of individuals.
+
+        Parameters
+        ----------
+        pop : list of Individual
+            The population from which to select parents.
+
+        Returns
+        -------
+        Individual
+            The selected parent individual.
+        """
+        population, combined_ranks = pop.population, pop.combined_ranks
+                
+        # Randomly select `pool_size` individuals for the tournament
+        selected_indices = np.random.choice(len(population), pool_size, replace=False)
+        
+        # Find the individual with the best combined rank in the pool
+        best_index = min(selected_indices, key=lambda idx: combined_ranks[idx])
+        
+        return population[best_index]
+    
+    return double_tournament
+ 

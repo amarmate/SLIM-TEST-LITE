@@ -436,7 +436,7 @@ def gs_size(y_true, y_pred):
 def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism, n_elites, init_depth, log_path,
                     prob_const, tree_functions, tree_constants, log, verbose, minimization, n_jobs, test_elite,
                     fitness_function, initializer, tournament_size, ms_lower, ms_upper, p_inflate, p_struct,
-                    depth_distribution,):
+                    depth_distribution):
     """
     Validates the inputs based on the specified conditions.
 
@@ -589,7 +589,7 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     
     if depth_distribution not in ["norm", "exp", "uniform", "max"]:
         raise ValueError("depth_distribution must be one of: 'norm', 'exp', 'uniform', 'max'")
-
+    
 
 def check_slim_version(slim_version):
     """
