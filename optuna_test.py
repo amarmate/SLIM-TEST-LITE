@@ -1,6 +1,6 @@
 import os
 import time
-import subprocess  # For running Git commands
+import subprocess  
 import argparse
 import random
 import pickle
@@ -177,13 +177,10 @@ def save_and_commit(filepath, data):
 
 
 def process_dataset(args):
-    dataset_loader, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo = args
-    X, y = dataset_loader()
-    X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=1-p_train, shuffle=True, seed=seed)
-
-    dataset_name = dataset_loader.__name__.split('load_')[1]
+    dataset, dataset_name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo = args
     dataset_id = dataset_dict[dataset_name]
     algorithm_suffix = algorithm.replace('*', 'MUL_').replace('+', 'SUM_').replace('SLIM', '')
+    X_train, X_test, y_train, y_test = dataset
 
     # Suffix for file naming
     scale_suffix = 'sc' if scale else None
@@ -203,9 +200,9 @@ def process_dataset(args):
     try:
         with open(f'params/{dataset_id}/{pattern}.pkl', 'rb') as f:
             results = pickle.load(f)
-        print(f"Random search results already exist: {pattern}.pkl")
+        print(f"Random search results already exist: {dataset_name} - {pattern}.pkl")
     except FileNotFoundError:
-        print(f"Performing random search for: {pattern}")
+        print(f"Performing random search for: {dataset_name} - {pattern}")
         try:
             results = optuna_slim_cv(
                 X=X_train, y=y_train, dataset=dataset_name, algorithm=algorithm, scale=scale, timeout=timeout,
@@ -227,7 +224,7 @@ def process_dataset(args):
         with open(f'params/{dataset_id}/{pattern}.pkl', 'rb') as f:
             params = pickle.load(f)
     except Exception as e:
-        print(f"Failed to load parameters for {dataset_name}: {e}")
+        print(f"Failed to load parameters for {dataset_name} - {pattern}: {e}")
         return
 
     # Testing phase
@@ -244,7 +241,7 @@ def process_dataset(args):
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
-            args_dict=params, dataset_name=dataset_loader.__name__,
+            args_dict=params, dataset_name=dataset_name,
             n_samples=n_samples, n_elites=1, scale=scale,
             algorithm=algorithm, verbose=0, p_train=p_train, show_progress=True, timeout=timeout,
             callbacks=[EarlyStopping],
@@ -285,15 +282,15 @@ if __name__ == '__main__':
     if not os.path.exists('results/slim'):
         os.makedirs('results/slim')
 
+    # Create a list of loaded split datasets
+    data = [(dataset_loader(), dataset_loader.__name__.split('load_')[1]) for dataset_loader in datasets]
+    data_split = [(train_test_split(X, y, p_test=1-p_train, shuffle=True, seed=seed), name) for (X, y), name in data]
+
     algorithms = ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
-    # tasks = [(loader, True, False, False, False) for loader in datasets] + [(loader, False, False, False, False) for loader in datasets]
-    # tasks += [(loader, True, True, False, False) for loader in datasets] + [(loader, True, False, True, False) for loader in datasets]
-    # tasks += [(loader, True, True, True, False) for loader in datasets] + [(loader, True, True, False, True) for loader in datasets]
-    # tasks += [(loader, False, False, False, True) for loader in datasets] + [(loader, True, True, True, True) for loader in datasets]
-    
+
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO, GP_XO
-    tasks = [(loader, algorithm, True, True, False, False, False) for loader in datasets for algorithm in algorithms]
-    tasks += [(loader, algorithm, True, False, False, False, False) for loader in datasets for algorithm in algorithms]
+    tasks = [(dataset, name, algorithm, True, True, False, False, False) for (dataset, name) in data_split for algorithm in algorithms]
+    tasks += [(dataset, name, algorithm, True, False, False, False, False) for (dataset, name) in data_split for algorithm in algorithms]
     # random.shuffle(tasks)
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
@@ -352,11 +349,3 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Error in processing dataset: {e}")
             continue       
-
-
-        
-    
-    
-
-
-
