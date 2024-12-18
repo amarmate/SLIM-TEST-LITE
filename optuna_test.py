@@ -289,8 +289,8 @@ if __name__ == '__main__':
     algorithms = ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
 
             # DATA  ,    ALGO  ,SCALE,STRUCT, XO,  MUT_XO, GP_XO
-    tasks = [(dataset, name, algorithm, True, True, False, False, False) for (dataset, name) in data_split for algorithm in algorithms]
-    tasks += [(dataset, name, algorithm, True, False, False, False, False) for (dataset, name) in data_split for algorithm in algorithms]
+    # tasks = [(dataset, name, algorithm, True, True, False, False, False) for (dataset, name) in data_split for algorithm in algorithms]
+    tasks = [(dataset, name, algorithm, True, False, False, False, False) for (dataset, name) in data_split for algorithm in algorithms]
     # random.shuffle(tasks)
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as executor:
