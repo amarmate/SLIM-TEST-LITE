@@ -12,7 +12,7 @@ from slim_gsgp_lib.datasets.data_loader import *
 from slim_gsgp_lib.utils.callbacks import EarlyStopping_train
 from sklearn.model_selection import KFold
 import optuna
-optuna.logging.set_verbosity(optuna.logging.WARNING)
+# optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 # Limit threads for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -21,6 +21,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["BLIS_NUM_THREADS"] = "1"
+os.environ["OPTUNA_THREAD_COUNT"] = "1"
 
 datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
