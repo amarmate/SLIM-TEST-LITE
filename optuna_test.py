@@ -1,8 +1,6 @@
 import os
-import time
 import subprocess  
 import argparse
-import random
 import pickle
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -11,7 +9,9 @@ from functions.test_algorithms import *
 from slim_gsgp_lib.datasets.data_loader import *
 from slim_gsgp_lib.utils.callbacks import EarlyStopping_train
 from sklearn.model_selection import KFold
-import optuna
+from skopt import gp_minimize
+from skopt.space import Integer, Real, Categorical
+# import optuna
 # optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 # Limit threads for NumPy and other multi-threaded libraries
@@ -21,7 +21,6 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["BLIS_NUM_THREADS"] = "1"
-os.environ["OPTUNA_THREAD_COUNT"] = "1"
 
 datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 datasets = datasets[:12] + datasets[13:]  # EXCLUDE PARKINSONS
@@ -34,70 +33,57 @@ for i, dataset in enumerate(datasets):
 
 # Settings
 max_iter = 2000  # 2000
-p_train = 0.8
+p_train = 0.85
 n_trials = 40  # 40
 n_samples = 30 # 3
 
-cv = 4 # 4
+cv = 5 # 4
 seed = 40
 timeout = 100
 
+def skopt_slim_cv(X, y, dataset, 
+                  algorithm, 
+                  scale=True, 
+                  timeout=100, 
+                  n_trials=50, 
+                  max_iter=2000,
+                  cv=4,
+                  struct_mutation=False, 
+                  struct_xo=False, 
+                  mut_xo=False,
+                  seed=0):
+    trial_results = []  # To store mean RMSE and node counts for each trial
 
-def optuna_slim_cv(X, y, dataset, 
-                   algorithm, 
-                   scale=True, 
-                   timeout=100, 
-                   n_trials=50, 
-                   max_iter=2000,
-                   cv=4,
-                   struct_mutation=False, 
-                   xo=False, 
-                   struct_xo=False, 
-                   mut_xo=False):
-    
-    def objective(trial):
-        init_depth = trial.suggest_int('init_depth', 3, 12)
-        max_depth = trial.suggest_int('max_depth', init_depth + 6, 24)
-        pop_size = trial.suggest_int('pop_size', 25, 200, step=25)
-        p_struct = trial.suggest_float('p_struct', 0, 0.3, step=0.05)
-
-        if xo: 
-            p_xo = trial.suggest_float('p_xo', 0, 0.5, step=0.05)
-            if struct_xo and mut_xo:
-                p_struct_xo = trial.suggest_float('p_struct_xo', 0, 1, step=0.1)
-            elif struct_xo:
-                p_struct_xo = 1
-            elif mut_xo:
-                p_struct_xo = 0
-        else: 
-            p_xo, p_struct_xo = 0, 0
+    def objective(params):
+        init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo = params
+        if max_depth < init_depth + 6:
+            return 10000000
 
         hyperparams = {
-            'p_inflate': trial.suggest_float('p_inflate', 0, 0.7, step=0.05),
-            'max_depth': max_depth,
-            'init_depth': init_depth,
-            'tournament_size': trial.suggest_int('tournament_size', 2, 5),
-            'prob_const': trial.suggest_float('prob_const', 0.05, 0.3, step=0.025),
+            'p_inflate': p_inflate,
+            'max_depth': int(max_depth),
+            'init_depth': int(init_depth),
+            'tournament_size': int(tournament_size),
+            'prob_const': prob_const,
             'struct_mutation': struct_mutation,
-            'decay_rate': trial.suggest_float('decay_rate', 0, 0.35, step=0.05),
+            'decay_rate': decay_rate,
             'p_struct': p_struct,
-            'depth_distribution': trial.suggest_categorical('depth_distribution', ['exp', 'uniform', 'norm']),
-            'pop_size': pop_size,
-            'n_iter': max_iter,
-            'p_xo' : p_xo,
+            'depth_distribution': depth_distribution,
+            'pop_size': int(pop_size),
+            'n_iter': int(max_iter),
+            'p_xo': p_xo,
             'p_struct_xo': p_struct_xo,
         }
 
         # Perform K-fold cross-validation
-        kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+        kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        EarlyStopping = EarlyStopping_train(patience=int(8_000/pop_size))
+        early_stopping = EarlyStopping_train(patience=int(8_000 / pop_size))
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
-
             if scale:
                 scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
                 X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
@@ -115,7 +101,8 @@ def optuna_slim_cv(X, y, dataset,
                     timeout=timeout,
                     test_elite=False,
                     verbose=0,
-                    callbacks=[EarlyStopping]
+                    callbacks=[early_stopping],
+                    seed=seed
                 )
 
                 slim_ = simplify_individual(slim_, y_train, X_train, threshold=0)
@@ -126,33 +113,181 @@ def optuna_slim_cv(X, y, dataset,
                 print(f"Exception: {e}")
                 return float("inf")
 
-        return np.mean(scores), np.mean(nodes_count)
+        mean_rmse = np.mean(scores)
+        mean_node_count = np.mean(nodes_count)
 
-    # Create an Optuna study
-    study = optuna.create_study(directions=['minimize', 'minimize'], study_name='SLIM_GSGP')
-    study.optimize(objective, n_trials=n_trials, n_jobs=1)
+        # Store results for later processing
+        trial_results.append((mean_rmse, mean_node_count, hyperparams))
+        return mean_rmse
 
-    # Get the best results
-    pareto_trials = study.best_trials
-    rmse_values = np.array([trial.values[0] for trial in pareto_trials])
-    size_values = np.array([trial.values[1] for trial in pareto_trials])
+    # Define search space with parameter names
+    space = [
+        Integer(3, 12, name='init_depth'),
+        Integer(9, 24, name='max_depth'),
+        Integer(25, 200, name='pop_size', prior='uniform'),
+        Real(0, 0.3, name='p_struct', prior='uniform'),
+        Real(0, 0.7, name='p_inflate', prior='uniform'),
+        Integer(2, 5, name='tournament_size'),
+        Real(0.05, 0.3, name='prob_const', prior='uniform'),
+        Real(0, 0.35, name='decay_rate', prior='uniform'),
+        Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
+]
 
-    # Normalize RMSE and size using min-max scaling
-    rmse_min, rmse_max = rmse_values.min(), rmse_values.max()
-    size_min, size_max = size_values.min(), size_values.max()
-    rmse_normalized = (rmse_values - rmse_min) / (rmse_max - rmse_min)
-    size_normalized = (size_values - size_min) / (size_max - size_min)
+    if mut_xo and struct_xo:
+        space.append(Real(0, 1, name='p_xo', prior='uniform'))
+        space.append(Real(0, 1, name='p_struct_xo', prior='uniform'))
+    
+    elif struct_xo:
+        space.append(Real(0, 1, name='p_xo', prior='uniform'))
+        space.append(Real(1, 1, name='p_struct_xo', prior='uniform'))
+    
+    elif mut_xo:
+        space.append(Real(1, 1, name='p_xo', prior='uniform'))
+        space.append(Categorical([0], name='p_struct_xo'))
 
-    # Compute combined scores
-    combined_scores = rmse_normalized + 0.5 * size_normalized
-    best_index = np.argmin(combined_scores)
-    best_trial = pareto_trials[best_index]
+    else: 
+        space.append(Categorical([0], name='p_xo'))
+        space.append(Categorical([0], name='p_struct_xo'))
 
-    # print("Best RMSE:", best_trial.values[0])
-    # print("Best Size:", best_trial.values[1])
-    # print("Best Hyperparameters:", best_trial.params)
 
-    return best_trial.params
+    result = gp_minimize(
+        func=lambda params: objective(params),
+        dimensions=space,
+        n_calls=n_trials,
+        random_state=seed,
+    )
+
+    # Post-processing to find the best parameters
+    rmses, nodes, params_list = zip(*trial_results)
+    rmses = np.array(rmses)
+    nodes = np.array(nodes)
+
+    # Standardize both metrics
+    standardized_rmse = (rmses - rmses.mean()) / rmses.std()
+    standardized_nodes = (nodes - nodes.mean()) / nodes.std()
+
+    # Combine metrics and find the best parameters
+    combined_metric = standardized_rmse + 0.5 * standardized_nodes
+    best_index = np.argmin(combined_metric)
+    best_params = params_list[best_index]
+
+    # print(f"Best parameters: {best_params}")
+    # print(f"Best RMSE: {rmses[best_index]}")
+    # print(f"Best size: {nodes[best_index]}")
+
+    return best_params
+
+
+# def optuna_slim_cv(X, y, dataset, 
+#                    algorithm, 
+#                    scale=True, 
+#                    timeout=100, 
+#                    n_trials=50, 
+#                    max_iter=2000,
+#                    cv=4,
+#                    struct_mutation=False, 
+#                    xo=False, 
+#                    struct_xo=False, 
+#                    mut_xo=False):
+    
+#     def objective(trial):
+#         init_depth = trial.suggest_int('init_depth', 3, 12)
+#         max_depth = trial.suggest_int('max_depth', init_depth + 6, 24)
+#         pop_size = trial.suggest_int('pop_size', 25, 200, step=25)
+#         p_struct = trial.suggest_float('p_struct', 0, 0.3, step=0.05)
+
+#         if xo: 
+#             p_xo = trial.suggest_float('p_xo', 0, 0.5, step=0.05)
+#             if struct_xo and mut_xo:
+#                 p_struct_xo = trial.suggest_float('p_struct_xo', 0, 1, step=0.1)
+#             elif struct_xo:
+#                 p_struct_xo = 1
+#             elif mut_xo:
+#                 p_struct_xo = 0
+#         else: 
+#             p_xo, p_struct_xo = 0, 0
+
+#         hyperparams = {
+#             'p_inflate': trial.suggest_float('p_inflate', 0, 0.7, step=0.05),
+#             'max_depth': max_depth,
+#             'init_depth': init_depth,
+#             'tournament_size': trial.suggest_int('tournament_size', 2, 5),
+#             'prob_const': trial.suggest_float('prob_const', 0.05, 0.3, step=0.025),
+#             'struct_mutation': struct_mutation,
+#             'decay_rate': trial.suggest_float('decay_rate', 0, 0.35, step=0.05),
+#             'p_struct': p_struct,
+#             'depth_distribution': trial.suggest_categorical('depth_distribution', ['exp', 'uniform', 'norm']),
+#             'pop_size': pop_size,
+#             'n_iter': max_iter,
+#             'p_xo' : p_xo,
+#             'p_struct_xo': p_struct_xo,
+#         }
+
+#         # Perform K-fold cross-validation
+#         kf = KFold(n_splits=cv, shuffle=True, random_state=42)
+#         scores = []
+#         nodes_count = []
+#         EarlyStopping = EarlyStopping_train(patience=int(8_000/pop_size))
+
+#         for train_index, test_index in kf.split(X):
+#             X_train, X_test = X[train_index], X[test_index]
+#             y_train, y_test = y[train_index], y[test_index]
+
+#             if scale:
+#                 scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
+#                 X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
+#                 X_test = torch.tensor(scaler_x.transform(X_test), dtype=torch.float32)
+#                 y_train = torch.tensor(scaler_y.fit_transform(y_train.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
+#                 y_test = torch.tensor(scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
+
+#             try:
+#                 slim_ = slim(
+#                     X_train=X_train,
+#                     y_train=y_train,
+#                     dataset_name=dataset,
+#                     slim_version=algorithm,
+#                     **hyperparams,
+#                     timeout=timeout,
+#                     test_elite=False,
+#                     verbose=0,
+#                     callbacks=[EarlyStopping]
+#                 )
+
+#                 slim_ = simplify_individual(slim_, y_train, X_train, threshold=0)
+#                 predictions = slim_.predict(X_test)
+#                 scores.append(rmse(y_test, predictions))
+#                 nodes_count.append(slim_.nodes_count)
+#             except Exception as e:
+#                 print(f"Exception: {e}")
+#                 return float("inf")
+
+#         return np.mean(scores), np.mean(nodes_count)
+
+#     # Create an Optuna study
+#     study = optuna.create_study(directions=['minimize', 'minimize'], study_name='SLIM_GSGP')
+#     study.optimize(objective, n_trials=n_trials, n_jobs=1)
+
+#     # Get the best results
+#     pareto_trials = study.best_trials
+#     rmse_values = np.array([trial.values[0] for trial in pareto_trials])
+#     size_values = np.array([trial.values[1] for trial in pareto_trials])
+
+#     # Normalize RMSE and size using min-max scaling
+#     rmse_min, rmse_max = rmse_values.min(), rmse_values.max()
+#     size_min, size_max = size_values.min(), size_values.max()
+#     rmse_normalized = (rmse_values - rmse_min) / (rmse_max - rmse_min)
+#     size_normalized = (size_values - size_min) / (size_max - size_min)
+
+#     # Compute combined scores
+#     combined_scores = rmse_normalized + 0.5 * size_normalized
+#     best_index = np.argmin(combined_scores)
+#     best_trial = pareto_trials[best_index]
+
+#     # print("Best RMSE:", best_trial.values[0])
+#     # print("Best Size:", best_trial.values[1])
+#     # print("Best Hyperparameters:", best_trial.params)
+
+#     return best_trial.params
 
 
 def save_and_commit(filepath, data):
@@ -204,10 +339,20 @@ def process_dataset(args):
     except FileNotFoundError:
         print(f"Performing random search for: {dataset_name} - {pattern}")
         try:
-            results = optuna_slim_cv(
-                X=X_train, y=y_train, dataset=dataset_name, algorithm=algorithm, scale=scale, timeout=timeout,
-                n_trials=n_trials, max_iter=max_iter, struct_mutation=struct_mutation, xo=xo, 
-                struct_xo=gp_xo, mut_xo=mut_xo, cv=cv, 
+            results = skopt_slim_cv(
+                X=X_train,
+                y=y_train,
+                dataset=dataset_name,
+                algorithm=algorithm,
+                scale=scale,
+                timeout=timeout,
+                n_trials=n_trials,
+                max_iter=max_iter,
+                cv=cv,
+                struct_mutation=struct_mutation,
+                struct_xo=xo,
+                mut_xo=mut_xo,
+                seed=seed
             )
 
             with open(f'params/{dataset_id}/{pattern}.pkl', 'wb') as f:
