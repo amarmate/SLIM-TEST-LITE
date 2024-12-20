@@ -2,6 +2,7 @@ from slim_gsgp_lib.main_slim import slim
 from slim_gsgp_lib.main_gsgp import gsgp 
 from slim_gsgp_lib.main_gp import gp
 from slim_gsgp_lib.utils.utils import train_test_split
+from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
 from slim_gsgp_lib.evaluators.fitness_functions import rmse
 import numpy as np
 import torch
@@ -22,11 +23,11 @@ def test_slim(X_train, y_train, X_test, y_test,
             scale=True,
             algorithm="SLIM+SIG1",
             verbose=0,
-            p_train=0.7,
             show_progress=True,
             log = False, 
             timeout = 100,
             callbacks = None,
+            simplify_threshold = None,
 ):    
     """
 
@@ -58,8 +59,6 @@ def test_slim(X_train, y_train, X_test, y_test,
         The SLIM algorithm to use.
     verbose: int
         The verbosity level.
-    p_train: float
-        The percentage of the training set.
     show_progress: bool
         Whether to show the progress bar or not.
     log: bool
@@ -68,6 +67,8 @@ def test_slim(X_train, y_train, X_test, y_test,
         The maximum time to train the model.
     callbacks: list
         A list containing the callbacks to use.
+    simplify_threshold: float
+        The threshold to use for simplification. 
 
     Returns
     -------
@@ -100,8 +101,6 @@ def test_slim(X_train, y_train, X_test, y_test,
         y_test = torch.tensor(scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
 
     for it in tqdm(range(n_samples), disable=not show_progress):
-        # X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, p_test=1-p_train, seed=it)
-
         if log:
             algorithm_name = 'MUL-' + algorithm.split('*')[1] if '*' in algorithm else 'ADD-' + algorithm.split('+')[1]
             path = f"logs/{dataset_name}/{algorithm_name}_{it}.log"
@@ -121,10 +120,10 @@ def test_slim(X_train, y_train, X_test, y_test,
             print('Args:', args_dict)
             continue
 
-        print('executed')
-
-        end = time.time()
-                
+        end = time.time()   
+        if simplify_threshold is not None:
+            final_tree = simplify_individual(final_tree, y_train=y_train, X_train=X_train, threshold=simplify_threshold)
+            
         # Get the node count of the tree
         nodes_count = final_tree.nodes_count
         time_taken = end - start

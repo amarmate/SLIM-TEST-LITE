@@ -31,11 +31,11 @@ for i, dataset in enumerate(datasets):
 
 # Settings
 max_iter = 2000  # 2000
-p_train = 0.85
-n_trials = 40  # 40
-n_samples = 30 # 3
+p_train = 0.8
+n_trials = 50  # 40
+n_samples = 50 # 3
 
-cv = 5 # 4
+cv = 6 # 4
 seed = 40
 timeout = 100
 
@@ -49,7 +49,8 @@ def skopt_slim_cv(X, y, dataset,
                   struct_mutation=False, 
                   struct_xo=False, 
                   mut_xo=False,
-                  seed=0):
+                  seed=0, 
+                  simplify_threshold=None):
     trial_results = []  # To store mean RMSE and node counts for each trial
 
     def objective(params):
@@ -77,7 +78,7 @@ def skopt_slim_cv(X, y, dataset,
         kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        early_stopping = EarlyStopping_train(patience=int(8_000 / pop_size))
+        early_stopping = EarlyStopping_train(patience=int(10_000 / pop_size))
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -103,7 +104,7 @@ def skopt_slim_cv(X, y, dataset,
                     seed=seed
                 )
 
-                slim_ = simplify_individual(slim_, y_train, X_train, threshold=0)
+                slim_ = simplify_individual(slim_, y_train, X_train, threshold=simplify_threshold) if simplify_threshold else slim_
                 predictions = slim_.predict(X_test)
                 scores.append(rmse(y_test, predictions))
                 nodes_count.append(slim_.nodes_count)
@@ -148,7 +149,7 @@ def skopt_slim_cv(X, y, dataset,
         space.append(Categorical([0], name='p_struct_xo'))
 
 
-    result = gp_minimize(
+    gp_minimize(
         func=lambda params: objective(params),
         dimensions=space,
         n_calls=n_trials,
@@ -165,7 +166,7 @@ def skopt_slim_cv(X, y, dataset,
     standardized_nodes = (nodes - nodes.mean()) / nodes.std()
 
     # Combine metrics and find the best parameters
-    combined_metric = standardized_rmse + 0.5 * standardized_nodes
+    combined_metric = standardized_rmse + 0.75 * standardized_nodes
     best_index = np.argmin(combined_metric)
     best_params = params_list[best_index]
 
@@ -175,7 +176,7 @@ def skopt_slim_cv(X, y, dataset,
 
     return best_params
 
-def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo):
+def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold=None):
     dataset_id = dataset_dict[name]
     algorithm_suffix = algorithm.replace('*', 'MUL_').replace('+', 'SUM_').replace('SLIM', '')
     X_train, X_test, y_train, y_test = dataset
@@ -186,7 +187,10 @@ def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo
     gp_xo_suffix = 'gx' if gp_xo else None
     mut_xo_suffix = 'mx' if mut_xo else None
     struct_mutation_suffix = 'sm' if struct_mutation else None
-    pattern = algorithm_suffix + '_' + ''.join([i for i in [scale_suffix, xo_suffix, gp_xo_suffix, mut_xo_suffix, struct_mutation_suffix] if i])
+    simplify_threshold_suffix = 'sp' if simplify_threshold else None
+    pattern = algorithm_suffix + '_' + ''.join([i for i in [scale_suffix, xo_suffix, gp_xo_suffix, 
+                                                            mut_xo_suffix, struct_mutation_suffix,
+                                                            simplify_threshold_suffix] if i])
 
     # Ensure the domain exists
     if not os.path.exists(f'params/{dataset_id}'):
@@ -215,7 +219,8 @@ def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo
                 struct_mutation=struct_mutation,
                 struct_xo=xo,
                 mut_xo=mut_xo,
-                seed=seed
+                seed=seed,
+                simplify_threshold=simplify_threshold, 
             )
 
             with open(f'params/{dataset_id}/{pattern}.pkl', 'wb') as f:
@@ -244,12 +249,14 @@ def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo
         metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
         test_results = {metric: {} for metric in metrics}
 
-        EarlyStopping = EarlyStopping_train(patience=int(8_000/params['pop_size']))
+        early_stopping = EarlyStopping_train(patience=int(10_000/params['pop_size']))
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
             args_dict=params, dataset_name=name,
-            n_samples=n_samples, n_elites=1        )
+            n_samples=n_samples, n_elites=1, simplify_individual=False,
+            callbacks=[early_stopping],
+        )
 
         # Store results in the dictionary
         test_results['rmse'] = rm
@@ -271,17 +278,29 @@ def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo
     except Exception as e:
         print(f"Error during testing for {name} - {pattern}: {e}")
 
+
+def divide_tasks(tasks, num_chunks):
+    """Divide tasks into specified number of chunks."""
+    chunk_size = (len(tasks) + num_chunks - 1) // num_chunks  # Ceiling division
+    return [tasks[i:i + chunk_size] for i in range(0, len(tasks), chunk_size)]
+
+
 # Parallel execution
 def main():
     parser = argparse.ArgumentParser(description="Run SLIM-GSGP experiments.")
-    parser.add_argument('--n_jobs', type=int, default=-1, help="Number of parallel jobs (default: -1 for all available cores)")
+    parser.add_argument('--max-workers', type=int, default=-1, help="Number of parallel workers.")
+    parser.add_argument('--divide', type=str, default="1:0", 
+                        help="Format: NUM_CHUNKS:CHUNK_INDEX (e.g., 3:1 for the second chunk of 3).")
     args = parser.parse_args()
 
     # Create a list of loaded split datasets
     data = [(dataset_loader(), dataset_loader.__name__.split('load_')[1]) for dataset_loader in datasets]
     data_split = [(train_test_split(X, y, p_test=1-p_train, shuffle=True, seed=seed), name) for (X, y), name in data]
 
-    parallel_jobs = args.n_jobs
+    parallel_jobs = args.max_workers if args.max_workers > 0 else os.cpu_count()
+    num_chunks = int(args.divide.split(':')[0])
+    chunk_index = int(args.divide.split(':')[1])
+    
     print(f"Running experiments with {parallel_jobs} parallel jobs...")
 
     # Define dataset and algorithm combinations
@@ -296,7 +315,10 @@ def main():
         for gp_xo in [False]
     ]
 
-    experiments = experiments[90:]
+    # Divide tasks into chunks
+    chunks = divide_tasks(experiments, num_chunks)
+    experiments = chunks[chunk_index]
+    
     print(f"Total number of experiments: {len(experiments)}")
 
     # Execute experiments in parallel
@@ -307,3 +329,60 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # Aggregate the dictionary of params and results, as they were saved in separate files
+    params_dict = {}
+    results_dict = {}
+
+    for dataset in datasets:
+        try:
+            dataset_name = dataset.__name__.split('load_')[1]
+            dataset_id = dataset_dict[dataset_name]
+
+            # The file will have this pattern: algorithm_scxo.pkl. 
+            # We need to ensure only that for some settings (ex.: scxo) all the algorithms are present
+            avalaible_settings = []
+            for file in os.listdir(f'results/slim/{dataset_id}'):
+                # Get the different settings available 
+                if len(file.split('_')) < 3:
+                    continue
+                settings = file.split('_')[2].split('.')[0]
+                if settings not in avalaible_settings:
+                    avalaible_settings.append(settings)
+            
+            for settings in avalaible_settings:
+                dict_params = {}
+                dict_results = {}
+                for suffix in ['MUL_ABS', 'MUL_SIG1', 'MUL_SIG2', 'SUM_ABS', 'SUM_SIG1', 'SUM_SIG2']:
+                    try:
+                        # Parameters
+                        with open(f'params/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
+                            params = pickle.load(f)
+                        params = {suffix : params}
+                        dict_params.update(params)
+                        os.remove(f'params/{dataset_id}/{suffix}_{settings}.pkl')
+                    except Exception as e:
+                        print(f"Error in parameters {dataset_id} - {settings}: {e}")
+
+                    try:
+                        # Results
+                        with open(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
+                            results = pickle.load(f)
+                        for k, v in results.items():
+                            if k not in dict_results:
+                                dict_results[k] = {}
+                            v = {suffix : v}
+                            dict_results[k].update(v)
+                        os.remove(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl')
+
+                    except Exception as e:
+                        print(f"Error in results {dataset_id} - {settings}: {e}")
+                        continue
+                
+                # Dump the results
+                pickle.dump(dict_params, open(f'params/{dataset_id}/{settings}.pkl', 'wb'))
+                pickle.dump(dict_results, open(f'results/slim/{dataset_id}/{settings}.pkl', 'wb')) 
+
+        except Exception as e:
+            print(f"Error in processing dataset: {e}")
+            continue       
