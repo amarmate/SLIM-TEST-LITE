@@ -296,7 +296,7 @@ def main():
         for gp_xo in [False]
     ]
 
-    experiments = experiments[:90]
+    experiments = experiments[90:]
     print(f"Total number of experiments: {len(experiments)}")
 
     # Execute experiments in parallel
