@@ -253,7 +253,7 @@ def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
             args_dict=params, dataset_name=name,
-            n_samples=n_samples, n_elites=1, simplify_individual=False,
+            n_samples=n_samples, n_elites=1, simplify_threshold=simplify_threshold,
             callbacks=[early_stopping],
         )
 
