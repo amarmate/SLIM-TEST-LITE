@@ -1,8 +1,6 @@
 import os
-import subprocess  
 import argparse
 import pickle
-from tqdm import tqdm
 from joblib import Parallel, delayed
 from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
 from functions.test_algorithms import *
@@ -154,6 +152,7 @@ def skopt_slim_cv(X, y, dataset,
         dimensions=space,
         n_calls=n_trials,
         random_state=seed,
+        verbose=True
     )
 
     # Post-processing to find the best parameters
@@ -330,59 +329,59 @@ def main():
 if __name__ == "__main__":
     main()
 
-    # Aggregate the dictionary of params and results, as they were saved in separate files
-    params_dict = {}
-    results_dict = {}
+    # # Aggregate the dictionary of params and results, as they were saved in separate files
+    # params_dict = {}
+    # results_dict = {}
 
-    for dataset in datasets:
-        try:
-            dataset_name = dataset.__name__.split('load_')[1]
-            dataset_id = dataset_dict[dataset_name]
+    # for dataset in datasets:
+    #     try:
+    #         dataset_name = dataset.__name__.split('load_')[1]
+    #         dataset_id = dataset_dict[dataset_name]
 
-            # The file will have this pattern: algorithm_scxo.pkl. 
-            # We need to ensure only that for some settings (ex.: scxo) all the algorithms are present
-            avalaible_settings = []
-            for file in os.listdir(f'results/slim/{dataset_id}'):
-                # Get the different settings available 
-                if len(file.split('_')) < 3:
-                    continue
-                settings = file.split('_')[2].split('.')[0]
-                if settings not in avalaible_settings:
-                    avalaible_settings.append(settings)
+    #         # The file will have this pattern: algorithm_scxo.pkl. 
+    #         # We need to ensure only that for some settings (ex.: scxo) all the algorithms are present
+    #         avalaible_settings = []
+    #         for file in os.listdir(f'results/slim/{dataset_id}'):
+    #             # Get the different settings available 
+    #             if len(file.split('_')) < 3:
+    #                 continue
+    #             settings = file.split('_')[2].split('.')[0]
+    #             if settings not in avalaible_settings:
+    #                 avalaible_settings.append(settings)
             
-            for settings in avalaible_settings:
-                dict_params = {}
-                dict_results = {}
-                for suffix in ['MUL_ABS', 'MUL_SIG1', 'MUL_SIG2', 'SUM_ABS', 'SUM_SIG1', 'SUM_SIG2']:
-                    try:
-                        # Parameters
-                        with open(f'params/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
-                            params = pickle.load(f)
-                        params = {suffix : params}
-                        dict_params.update(params)
-                        os.remove(f'params/{dataset_id}/{suffix}_{settings}.pkl')
-                    except Exception as e:
-                        print(f"Error in parameters {dataset_id} - {settings}: {e}")
+    #         for settings in avalaible_settings:
+    #             dict_params = {}
+    #             dict_results = {}
+    #             for suffix in ['MUL_ABS', 'MUL_SIG1', 'MUL_SIG2', 'SUM_ABS', 'SUM_SIG1', 'SUM_SIG2']:
+    #                 try:
+    #                     # Parameters
+    #                     with open(f'params/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
+    #                         params = pickle.load(f)
+    #                     params = {suffix : params}
+    #                     dict_params.update(params)
+    #                     os.remove(f'params/{dataset_id}/{suffix}_{settings}.pkl')
+    #                 except Exception as e:
+    #                     print(f"Error in parameters {dataset_id} - {settings}: {e}")
 
-                    try:
-                        # Results
-                        with open(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
-                            results = pickle.load(f)
-                        for k, v in results.items():
-                            if k not in dict_results:
-                                dict_results[k] = {}
-                            v = {suffix : v}
-                            dict_results[k].update(v)
-                        os.remove(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl')
+    #                 try:
+    #                     # Results
+    #                     with open(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
+    #                         results = pickle.load(f)
+    #                     for k, v in results.items():
+    #                         if k not in dict_results:
+    #                             dict_results[k] = {}
+    #                         v = {suffix : v}
+    #                         dict_results[k].update(v)
+    #                     os.remove(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl')
 
-                    except Exception as e:
-                        print(f"Error in results {dataset_id} - {settings}: {e}")
-                        continue
+    #                 except Exception as e:
+    #                     print(f"Error in results {dataset_id} - {settings}: {e}")
+    #                     continue
                 
-                # Dump the results
-                pickle.dump(dict_params, open(f'params/{dataset_id}/{settings}.pkl', 'wb'))
-                pickle.dump(dict_results, open(f'results/slim/{dataset_id}/{settings}.pkl', 'wb')) 
+    #             # Dump the results
+    #             pickle.dump(dict_params, open(f'params/{dataset_id}/{settings}.pkl', 'wb'))
+    #             pickle.dump(dict_results, open(f'results/slim/{dataset_id}/{settings}.pkl', 'wb')) 
 
-        except Exception as e:
-            print(f"Error in processing dataset: {e}")
-            continue       
+    #     except Exception as e:
+    #         print(f"Error in processing dataset: {e}")
+    #         continue       
