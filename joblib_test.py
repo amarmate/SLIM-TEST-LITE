@@ -29,12 +29,12 @@ for i, dataset in enumerate(datasets):
 
 # Settings
 max_iter = 2000  # 2000
-p_train = 0.8
-n_trials = 50  # 40
-n_samples = 50 # 3
+p_train = 0.8    # 0.85
+n_trials = 40    # 40
+n_samples = 50   # 50
 
-cv = 6 # 4
-seed = 40
+cv = 6           # 6
+seed = 0         # 40
 timeout = 100
 
 def skopt_slim_cv(X, y, dataset, 
@@ -47,14 +47,17 @@ def skopt_slim_cv(X, y, dataset,
                   struct_mutation=False, 
                   struct_xo=False, 
                   mut_xo=False,
-                  seed=0, 
+                  random_state=0, 
                   simplify_threshold=None):
-    trial_results = []  # To store mean RMSE and node counts for each trial
+    trial_results = []
 
     def objective(params):
         init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo = params
         if max_depth < init_depth + 6:
-            return 10000000
+            return 100000
+        
+        if p_struct + p_inflate > 1:
+            return 100000
 
         hyperparams = {
             'p_inflate': p_inflate,
@@ -76,7 +79,7 @@ def skopt_slim_cv(X, y, dataset,
         kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        early_stopping = EarlyStopping_train(patience=int(10_000 / pop_size))
+        early_stopping = EarlyStopping_train(patience=int(7_000 / pop_size**0.9))   # 10_000
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -111,22 +114,23 @@ def skopt_slim_cv(X, y, dataset,
                 return float("inf")
 
         mean_rmse = np.mean(scores)
+        std_rmse = np.std(scores)
         mean_node_count = np.mean(nodes_count)
 
         # Store results for later processing
         trial_results.append((mean_rmse, mean_node_count, hyperparams))
-        return mean_rmse
+        return mean_rmse / (1+std_rmse)
 
     # Define search space with parameter names
     space = [
         Integer(3, 12, name='init_depth'),
         Integer(9, 24, name='max_depth'),
         Integer(25, 200, name='pop_size', prior='uniform'),
-        Real(0, 0.3, name='p_struct', prior='uniform'),
+        Real(0, 0.5, name='p_struct', prior='uniform'),
         Real(0, 0.7, name='p_inflate', prior='uniform'),
         Integer(2, 5, name='tournament_size'),
-        Real(0.05, 0.3, name='prob_const', prior='uniform'),
-        Real(0, 0.35, name='decay_rate', prior='uniform'),
+        Real(0, 0.3, name='prob_const', prior='uniform'),
+        Real(0, 0.4, name='decay_rate', prior='uniform'),
         Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
 ]
 
@@ -151,7 +155,7 @@ def skopt_slim_cv(X, y, dataset,
         func=lambda params: objective(params),
         dimensions=space,
         n_calls=n_trials,
-        random_state=seed,
+        random_state=random_state,
         verbose=True
     )
 
@@ -165,7 +169,7 @@ def skopt_slim_cv(X, y, dataset,
     standardized_nodes = (nodes - nodes.mean()) / nodes.std()
 
     # Combine metrics and find the best parameters
-    combined_metric = standardized_rmse + 0.75 * standardized_nodes
+    combined_metric = standardized_rmse + 0.7 * standardized_nodes
     best_index = np.argmin(combined_metric)
     best_params = params_list[best_index]
 
@@ -175,7 +179,11 @@ def skopt_slim_cv(X, y, dataset,
 
     return best_params
 
-def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold=None):
+def process_dataset(dataset, name, algorithm, 
+                    scale, struct_mutation, xo, 
+                    mut_xo, gp_xo, simplify_threshold=None,
+                    random_state=0):
+    
     dataset_id = dataset_dict[name]
     algorithm_suffix = algorithm.replace('*', 'MUL_').replace('+', 'SUM_').replace('SLIM', '')
     X_train, X_test, y_train, y_test = dataset
@@ -218,7 +226,7 @@ def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo
                 struct_mutation=struct_mutation,
                 struct_xo=xo,
                 mut_xo=mut_xo,
-                seed=seed,
+                random_state=random_state,
                 simplify_threshold=simplify_threshold, 
             )
 
@@ -248,7 +256,7 @@ def process_dataset(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo
         metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
         test_results = {metric: {} for metric in metrics}
 
-        early_stopping = EarlyStopping_train(patience=int(10_000/params['pop_size']))
+        early_stopping = EarlyStopping_train(patience=int(7_000/params['pop_size']**0.9))    # Added
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
@@ -304,7 +312,7 @@ def main():
 
     # Define dataset and algorithm combinations
     experiments = [
-        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo)
+        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold)
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
         for scale in [True]
@@ -312,7 +320,12 @@ def main():
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
+        for simplify_threshold in [None]
     ]
+
+    # Add to each experiment a random_state 
+    for i,_ in enumerate(experiments):
+        experiments[i] += (seed+i,)
 
     # Divide tasks into chunks
     chunks = divide_tasks(experiments, num_chunks)
@@ -322,8 +335,8 @@ def main():
 
     # Execute experiments in parallel
     Parallel(n_jobs=parallel_jobs)(
-        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo)
-        for dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo in experiments
+        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold, random_state)
+        for dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold, random_state in experiments
     )
 
 if __name__ == "__main__":
