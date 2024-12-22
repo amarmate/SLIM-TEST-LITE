@@ -119,7 +119,7 @@ def skopt_slim_cv(X, y, dataset,
 
         # Store results for later processing
         trial_results.append((mean_rmse, mean_node_count, hyperparams))
-        return mean_rmse / (1+std_rmse)
+        return mean_rmse + 0.4 * std_rmse
 
     # Define search space with parameter names
     space = [
