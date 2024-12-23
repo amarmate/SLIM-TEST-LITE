@@ -84,6 +84,7 @@ def skopt_slim_cv(X, y, dataset,
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
+
             if scale:
                 scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
                 X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
@@ -322,6 +323,21 @@ def main():
         for gp_xo in [False]
         for simplify_threshold in [None]
     ]
+
+    experiments_2 = [
+        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold)
+        for dataset, name in data_split
+        for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
+        for scale in [True]
+        for struct_mutation in [True, False]
+        for xo in [False]
+        for mut_xo in [False]
+        for gp_xo in [False]
+        for simplify_threshold in [0.05]
+    ]
+
+    experiments += experiments_2
+
 
     # Add to each experiment a random_state 
     for i,_ in enumerate(experiments):
