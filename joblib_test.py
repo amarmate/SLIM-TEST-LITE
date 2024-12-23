@@ -337,7 +337,11 @@ def main():
     ]
 
     experiments += experiments_2
+    # Shuffle the experiments with a fixed seed
+    np.random.seed(seed)
+    np.random.shuffle(experiments)
 
+    print(experiments)
 
     # Add to each experiment a random_state 
     for i,_ in enumerate(experiments):
