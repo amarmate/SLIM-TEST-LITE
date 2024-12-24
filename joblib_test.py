@@ -35,7 +35,7 @@ n_samples = 50   # 50
 
 cv = 6           # 6
 seed = 0         # 40
-timeout = 100
+timeout = 30
 
 def skopt_slim_cv(X, y, dataset, 
                   algorithm, 
@@ -48,11 +48,11 @@ def skopt_slim_cv(X, y, dataset,
                   struct_xo=False, 
                   mut_xo=False,
                   random_state=0, 
-                  simplify_threshold=None):
+                  simplify=False):
     trial_results = []
 
     def objective(params):
-        init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo = params
+        init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo, simplify_threshold = params
         if max_depth < init_depth + 6:
             return 100000
         
@@ -79,7 +79,7 @@ def skopt_slim_cv(X, y, dataset,
         kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        early_stopping = EarlyStopping_train(patience=int(7_000 / pop_size**0.9))   # 10_000
+        early_stopping = EarlyStopping_train(patience=int(8_000 / pop_size**0.9))   # 10_000
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -118,16 +118,18 @@ def skopt_slim_cv(X, y, dataset,
         std_rmse = np.std(scores)
         mean_node_count = np.mean(nodes_count)
 
+        hyperparams['simplify_threshold'] = simplify_threshold
+
         # Store results for later processing
         trial_results.append((mean_rmse, mean_node_count, hyperparams))
-        return mean_rmse + 0.4 * std_rmse
+        return mean_rmse + 0.1 * std_rmse
 
     # Define search space with parameter names
     space = [
         Integer(3, 12, name='init_depth'),
         Integer(9, 24, name='max_depth'),
         Integer(25, 200, name='pop_size', prior='uniform'),
-        Real(0, 0.5, name='p_struct', prior='uniform'),
+        Real(0, 0.35, name='p_struct', prior='uniform'),
         Real(0, 0.7, name='p_inflate', prior='uniform'),
         Integer(2, 5, name='tournament_size'),
         Real(0, 0.3, name='prob_const', prior='uniform'),
@@ -151,6 +153,11 @@ def skopt_slim_cv(X, y, dataset,
         space.append(Categorical([0], name='p_xo'))
         space.append(Categorical([0], name='p_struct_xo'))
 
+    if simplify:
+        space.append(Real(-0.01, 0.05, name='simplify_threshold', prior='uniform'))
+
+    else:
+        space.append(Categorical([-100], name='simplify_threshold'))
 
     gp_minimize(
         func=lambda params: objective(params),
@@ -182,7 +189,7 @@ def skopt_slim_cv(X, y, dataset,
 
 def process_dataset(dataset, name, algorithm, 
                     scale, struct_mutation, xo, 
-                    mut_xo, gp_xo, simplify_threshold=None,
+                    mut_xo, gp_xo, simplify=None,
                     random_state=0):
     
     dataset_id = dataset_dict[name]
@@ -195,7 +202,7 @@ def process_dataset(dataset, name, algorithm,
     gp_xo_suffix = 'gx' if gp_xo else None
     mut_xo_suffix = 'mx' if mut_xo else None
     struct_mutation_suffix = 'sm' if struct_mutation else None
-    simplify_threshold_suffix = 'sp' if simplify_threshold else None
+    simplify_threshold_suffix = 'sp' if simplify else None
     pattern = algorithm_suffix + '_' + ''.join([i for i in [scale_suffix, xo_suffix, gp_xo_suffix, 
                                                             mut_xo_suffix, struct_mutation_suffix,
                                                             simplify_threshold_suffix] if i])
@@ -228,7 +235,7 @@ def process_dataset(dataset, name, algorithm,
                 struct_xo=xo,
                 mut_xo=mut_xo,
                 random_state=random_state,
-                simplify_threshold=simplify_threshold, 
+                simplify=simplify,
             )
 
             with open(f'params/{dataset_id}/{pattern}.pkl', 'wb') as f:
@@ -257,11 +264,16 @@ def process_dataset(dataset, name, algorithm,
         metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
         test_results = {metric: {} for metric in metrics}
 
-        early_stopping = EarlyStopping_train(patience=int(7_000/params['pop_size']**0.9))    # Added
+        early_stopping = EarlyStopping_train(patience=int(8_000/params['pop_size']**0.9))    # Added
+
+        # Remove the simplify_threshold from the parameters
+        params_test = params.copy()
+        params_test = params_test.pop('simplify_threshold')
+        simplify_threshold = params['simplify_threshold']
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
-            args_dict=params, dataset_name=name,
+            args_dict=params_test, dataset_name=name,
             n_samples=n_samples, n_elites=1, simplify_threshold=simplify_threshold,
             callbacks=[early_stopping],
         )
@@ -313,19 +325,7 @@ def main():
 
     # Define dataset and algorithm combinations
     experiments = [
-        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold)
-        for dataset, name in data_split
-        for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
-        for scale in [True, False]
-        for struct_mutation in [True, False]
-        for xo in [False]
-        for mut_xo in [False]
-        for gp_xo in [False]
-        for simplify_threshold in [None]
-    ]
-
-    experiments_2 = [
-        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold)
+        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify)
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
         for scale in [True]
@@ -333,10 +333,8 @@ def main():
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
-        for simplify_threshold in [0.05]
+        for simplify in [True]
     ]
-
-    experiments += experiments_2
 
     # Add to each experiment a random_state 
     for i,_ in enumerate(experiments):
@@ -350,8 +348,8 @@ def main():
 
     # Execute experiments in parallel
     Parallel(n_jobs=parallel_jobs)(
-        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold, random_state)
-        for dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify_threshold, random_state in experiments
+        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, random_state)
+        for dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, random_state in experiments
     )
 
 if __name__ == "__main__":
