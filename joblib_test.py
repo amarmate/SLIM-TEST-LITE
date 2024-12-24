@@ -9,6 +9,7 @@ from slim_gsgp_lib.utils.callbacks import EarlyStopping_train
 from sklearn.model_selection import KFold
 from skopt import gp_minimize
 from skopt.space import Integer, Real, Categorical
+import time 
 
 # Limit threads for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -30,15 +31,16 @@ for i, dataset in enumerate(datasets):
 # Settings
 max_iter = 2000  # 2000
 p_train = 0.8    # 0.85
-n_trials = 40    # 40
+n_trials = 50    # 40  75
 n_samples = 50   # 50
 
-cv = 6           # 6
+cv = 4           # 5
 seed = 0         # 40
-timeout = 30
+timeout = 45     # 45
 
 def skopt_slim_cv(X, y, dataset, 
                   algorithm, 
+                  pattern,
                   scale=True, 
                   timeout=100, 
                   n_trials=50, 
@@ -48,10 +50,15 @@ def skopt_slim_cv(X, y, dataset,
                   struct_xo=False, 
                   mut_xo=False,
                   random_state=0, 
-                  simplify=False):
+                  simplify=False
+                  ):
     trial_results = []
+    calls_count = 0
 
     def objective(params):
+        nonlocal calls_count
+        start = time.time()
+
         init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo, simplify_threshold = params
         if max_depth < init_depth + 6:
             return 100000
@@ -106,7 +113,7 @@ def skopt_slim_cv(X, y, dataset,
                     seed=seed
                 )
 
-                slim_ = simplify_individual(slim_, y_train, X_train, threshold=simplify_threshold) if simplify_threshold else slim_
+                slim_ = simplify_individual(slim_, y_train, X_train, threshold=simplify_threshold) if simplify else slim_
                 predictions = slim_.predict(X_test)
                 scores.append(rmse(y_test, predictions))
                 nodes_count.append(slim_.nodes_count)
@@ -119,18 +126,22 @@ def skopt_slim_cv(X, y, dataset,
         mean_node_count = np.mean(nodes_count)
 
         hyperparams['simplify_threshold'] = simplify_threshold
-
-        # Store results for later processing
         trial_results.append((mean_rmse, mean_node_count, hyperparams))
-        return mean_rmse + 0.1 * std_rmse
+        best_trial = min(trial_results, key=lambda x: x[0])
+
+        print(f"Trial {calls_count + 1}/{n_trials} - Pattern: {dataset}-{pattern} - Time: {time.time() - start:.2f}s")
+        print(f"RMSE: {mean_rmse:.4f} (Best: {best_trial[0]:.4f}) - Nodes: {mean_node_count:.2f} (Best: {best_trial[1]:.2f})")
+        calls_count += 1
+
+        return mean_rmse + 0.05 * std_rmse
 
     # Define search space with parameter names
     space = [
-        Integer(3, 12, name='init_depth'),
+        Integer(3, 12, name='init_depth', prior='uniform'),
         Integer(9, 24, name='max_depth'),
         Integer(25, 200, name='pop_size', prior='uniform'),
         Real(0, 0.35, name='p_struct', prior='uniform'),
-        Real(0, 0.7, name='p_inflate', prior='uniform'),
+        Real(0, 0.65, name='p_inflate', prior='uniform'),
         Integer(2, 5, name='tournament_size'),
         Real(0, 0.3, name='prob_const', prior='uniform'),
         Real(0, 0.4, name='decay_rate', prior='uniform'),
@@ -154,17 +165,17 @@ def skopt_slim_cv(X, y, dataset,
         space.append(Categorical([0], name='p_struct_xo'))
 
     if simplify:
-        space.append(Real(-0.01, 0.05, name='simplify_threshold', prior='uniform'))
+        space.append(Real(-0.02, 0.06, name='simplify_threshold', prior='uniform'))
 
     else:
-        space.append(Categorical([-100], name='simplify_threshold'))
+        space.append(Categorical([None], name='simplify_threshold'))
 
     gp_minimize(
         func=lambda params: objective(params),
         dimensions=space,
         n_calls=n_trials,
         random_state=random_state,
-        verbose=True
+        verbose=False
     )
 
     # Post-processing to find the best parameters
@@ -177,7 +188,7 @@ def skopt_slim_cv(X, y, dataset,
     standardized_nodes = (nodes - nodes.mean()) / nodes.std()
 
     # Combine metrics and find the best parameters
-    combined_metric = standardized_rmse + 0.7 * standardized_nodes
+    combined_metric = standardized_rmse + 0.75 * standardized_nodes
     best_index = np.argmin(combined_metric)
     best_params = params_list[best_index]
 
@@ -236,6 +247,7 @@ def process_dataset(dataset, name, algorithm,
                 mut_xo=mut_xo,
                 random_state=random_state,
                 simplify=simplify,
+                pattern=pattern,
             )
 
             with open(f'params/{dataset_id}/{pattern}.pkl', 'wb') as f:
@@ -264,12 +276,11 @@ def process_dataset(dataset, name, algorithm,
         metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
         test_results = {metric: {} for metric in metrics}
 
-        early_stopping = EarlyStopping_train(patience=int(8_000/params['pop_size']**0.9))    # Added
+        early_stopping = EarlyStopping_train(patience=int(8_000/params['pop_size']**0.95))    # Added
 
         # Remove the simplify_threshold from the parameters
         params_test = params.copy()
-        params_test = params_test.pop('simplify_threshold')
-        simplify_threshold = params['simplify_threshold']
+        simplify_threshold = params_test.pop('simplify_threshold')
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
@@ -333,7 +344,7 @@ def main():
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
-        for simplify in [True]
+        for simplify in [False, True]
     ]
 
     # Add to each experiment a random_state 
