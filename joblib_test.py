@@ -338,11 +338,6 @@ def main():
 
     experiments += experiments_2
 
-    np.random.seed(0)
-    np.random.shuffle(experiments)
-
-    print(experiments)
-
     # Add to each experiment a random_state 
     for i,_ in enumerate(experiments):
         experiments[i] += (seed+i,)
