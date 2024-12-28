@@ -112,8 +112,8 @@ def test_slim(X_train, y_train, X_test, y_test,
             final_tree = slim(X_train=X_train, y_train=y_train,
                                 dataset_name=dataset_name, slim_version=algorithm, seed=it,
                                 reconstruct=True, n_jobs=1, initializer=initializer, test_elite=False,
-                                verbose=verbose, n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
-                                timeout=timeout, callbacks=callbacks,
+                                n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
+                                timeout=timeout, callbacks=callbacks, verbose=0,
             )
         except Exception as e:
             print('Error during testing SLIM:', e)
@@ -161,6 +161,9 @@ def test_slim(X_train, y_train, X_test, y_test,
         time_stats.append(time_taken)
         size.append(nodes_count)
         representations.append(final_tree.get_tree_representation())
+
+        if verbose:
+            print(f"Iteration {it+1}/{n_samples} - RMSE: {rmse_score:.4f} - MAPE: {mape_score:.4f} - MAE: {mae_score:.4f} - Time: {time_taken:.2f}s")
         
     return rmse_, mape_, mae_, rmse_comp, mape_comp, mae_comp, time_stats, size, representations
 

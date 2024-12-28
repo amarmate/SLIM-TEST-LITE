@@ -11,6 +11,8 @@ from skopt import gp_minimize
 from skopt.space import Integer, Real, Categorical
 import time 
 
+from matplotlib import pyplot as plt
+
 # Limit threads for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -35,8 +37,18 @@ n_trials = 50    # 40  75
 n_samples = 50   # 50
 
 cv = 4           # 5
-seed = 0         # 40
+seed = 60        # 40
 timeout = 45     # 45
+
+iter_dict = {     # EarlyStop
+    '30' : 2000,  # 551 
+    '60' : 1500,  # 295
+    '90' : 1100,  # 205
+    '120': 900,  # 158 
+    '150': 750,   # 129
+    '175': 500,   # 95
+    '200': 400,   # 85
+}
 
 def skopt_slim_cv(X, y, dataset, 
                   algorithm, 
@@ -58,35 +70,39 @@ def skopt_slim_cv(X, y, dataset,
     def objective(params):
         nonlocal calls_count
         start = time.time()
-
         init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo, simplify_threshold = params
         if max_depth < init_depth + 6:
+            calls_count += 1
             return 100000
         
-        if p_struct + p_inflate > 1:
+        if p_struct + p_inflate*2 > 50:
+            calls_count += 1
             return 100000
+        
+        n_iter = int(pop_size * 30)
+        n_iter = iter_dict[str(n_iter)]
 
         hyperparams = {
-            'p_inflate': p_inflate,
+            'p_inflate': p_inflate / 25,
             'max_depth': int(max_depth),
             'init_depth': int(init_depth),
             'tournament_size': int(tournament_size),
-            'prob_const': prob_const,
-            'struct_mutation': struct_mutation,
-            'decay_rate': decay_rate,
-            'p_struct': p_struct,
+            'prob_const': prob_const / 50,
+            'struct_mutation': struct_mutation / 50,
+            'decay_rate': decay_rate / 50,
+            'p_struct': p_struct / 50,
             'depth_distribution': depth_distribution,
-            'pop_size': int(pop_size),
-            'n_iter': int(max_iter),
-            'p_xo': p_xo,
-            'p_struct_xo': p_struct_xo,
+            'pop_size': int(pop_size * 30),
+            'n_iter': int(n_iter),
+            'p_xo': p_xo / 25,
+            'p_struct_xo': p_struct_xo / 25,
         }
 
         # Perform K-fold cross-validation
         kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        early_stopping = EarlyStopping_train(patience=int(8_000 / pop_size**0.9))   # 10_000
+        early_stopping = EarlyStopping_train(patience=int(10_000 / pop_size**0.9))   # 10_000
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -113,7 +129,7 @@ def skopt_slim_cv(X, y, dataset,
                     seed=seed
                 )
 
-                slim_ = simplify_individual(slim_, y_train, X_train, threshold=simplify_threshold) if simplify else slim_
+                slim_ = simplify_individual(slim_, y_train, X_train, threshold=simplify_threshold/100) if simplify else slim_
                 predictions = slim_.predict(X_test)
                 scores.append(rmse(y_test, predictions))
                 nodes_count.append(slim_.nodes_count)
@@ -121,43 +137,44 @@ def skopt_slim_cv(X, y, dataset,
                 print(f"Exception: {e}")
                 return float("inf")
 
-        mean_rmse = np.mean(scores)
-        std_rmse = np.std(scores)
+        mean_score = np.mean(scores)
+        # std_score = np.std(scores)
         mean_node_count = np.mean(nodes_count)
 
-        hyperparams['simplify_threshold'] = simplify_threshold
-        trial_results.append((mean_rmse, mean_node_count, hyperparams))
+        hyperparams['simplify_threshold'] = simplify_threshold / 100 if simplify else None
+        trial_results.append((mean_score, mean_node_count, hyperparams))
         best_trial = min(trial_results, key=lambda x: x[0])
 
         print(f"Trial {calls_count + 1}/{n_trials} - Pattern: {dataset}-{pattern} - Time: {time.time() - start:.2f}s")
-        print(f"RMSE: {mean_rmse:.4f} (Best: {best_trial[0]:.4f}) - Nodes: {mean_node_count:.2f} (Best: {best_trial[1]:.2f})")
+        print(f"RMSE: {mean_score:.4f} (Best: {best_trial[0]:.4f}) - Nodes: {mean_node_count:.2f} (Best: {best_trial[1]:.2f})")
+        print(f"Parameters: {hyperparams}\n")
         calls_count += 1
-
-        return mean_rmse + 0.05 * std_rmse
+        return mean_score
 
     # Define search space with parameter names
     space = [
-        Integer(3, 12, name='init_depth', prior='uniform'),
-        Integer(9, 24, name='max_depth'),
-        Integer(25, 200, name='pop_size', prior='uniform'),
-        Real(0, 0.35, name='p_struct', prior='uniform'),
-        Real(0, 0.65, name='p_inflate', prior='uniform'),
-        Integer(2, 5, name='tournament_size'),
-        Real(0, 0.3, name='prob_const', prior='uniform'),
-        Real(0, 0.4, name='decay_rate', prior='uniform'),
+        Integer(3, 10, name='init_depth', prior='uniform'),
+        Integer(9, 22, name='max_depth'), 
+        Integer(1, 5, name='pop_size', prior='uniform'),     # * 30
+        Integer(0, int(35/2), name='p_struct', prior='uniform'),    # / 50
+        Integer(0, int(70/4), name='p_inflate', prior='uniform'),   # / 25
+        Integer(2, 4, name='tournament_size'),
+        Integer(0, int(30/2), name='prob_const', prior='uniform'),  # / 50
+        Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
         Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
 ]
 
+    # All to be divided by 25
     if mut_xo and struct_xo:
-        space.append(Real(0, 1, name='p_xo', prior='uniform'))
-        space.append(Real(0, 1, name='p_struct_xo', prior='uniform'))
+        space.append(Real(0, 25, name='p_xo', prior='uniform'))
+        space.append(Real(0, 25, name='p_struct_xo', prior='uniform'))
     
     elif struct_xo:
-        space.append(Real(0, 1, name='p_xo', prior='uniform'))
-        space.append(Real(1, 1, name='p_struct_xo', prior='uniform'))
+        space.append(Real(0, 25, name='p_xo', prior='uniform'))
+        space.append(Real(25, 25, name='p_struct_xo', prior='uniform'))
     
     elif mut_xo:
-        space.append(Real(1, 1, name='p_xo', prior='uniform'))
+        space.append(Real(25, 25, name='p_xo', prior='uniform'))
         space.append(Categorical([0], name='p_struct_xo'))
 
     else: 
@@ -165,7 +182,8 @@ def skopt_slim_cv(X, y, dataset,
         space.append(Categorical([0], name='p_struct_xo'))
 
     if simplify:
-        space.append(Real(-0.02, 0.06, name='simplify_threshold', prior='uniform'))
+        # space.append(Categorical([0.01], name='simplify_threshold'))
+        space.append(Integer(-1, 3, name='simplify_threshold'))
 
     else:
         space.append(Categorical([None], name='simplify_threshold'))
@@ -175,20 +193,32 @@ def skopt_slim_cv(X, y, dataset,
         dimensions=space,
         n_calls=n_trials,
         random_state=random_state,
-        verbose=False
+        verbose=False,
+        noise=1e-2,    # Noise level, check for better convergence
+        n_random_starts=20,
     )
 
     # Post-processing to find the best parameters
-    rmses, nodes, params_list = zip(*trial_results)
-    rmses = np.array(rmses)
+    scores, nodes, params_list = zip(*trial_results)
+    scores = np.array(scores)
     nodes = np.array(nodes)
 
+    # Find the pareto front
+    pareto_front = np.zeros(len(scores), dtype=bool)
+    for i, (score, node) in enumerate(zip(scores, nodes)):
+        pareto_front[i] = np.sum(np.logical_and(scores < score, nodes < node)) == 0
+
+    # Filtert the pareto front
+    scores = scores[pareto_front]
+    nodes = nodes[pareto_front]
+    params_list = np.array(params_list)[pareto_front]
+
     # Standardize both metrics
-    standardized_rmse = (rmses - rmses.mean()) / rmses.std()
+    standardized_rmse = (scores - scores.mean()) / scores.std()
     standardized_nodes = (nodes - nodes.mean()) / nodes.std()
 
     # Combine metrics and find the best parameters
-    combined_metric = standardized_rmse + 0.75 * standardized_nodes
+    combined_metric = standardized_rmse + 0.5 * standardized_nodes
     best_index = np.argmin(combined_metric)
     best_params = params_list[best_index]
 
@@ -197,6 +227,7 @@ def skopt_slim_cv(X, y, dataset,
     # print(f"Best size: {nodes[best_index]}")
 
     return best_params
+
 
 def process_dataset(dataset, name, algorithm, 
                     scale, struct_mutation, xo, 
@@ -276,7 +307,7 @@ def process_dataset(dataset, name, algorithm,
         metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
         test_results = {metric: {} for metric in metrics}
 
-        early_stopping = EarlyStopping_train(patience=int(8_000/params['pop_size']**0.95))    # Added
+        # early_stopping = EarlyStopping_train(patience=int(12_000/params['pop_size']))
 
         # Remove the simplify_threshold from the parameters
         params_test = params.copy()
@@ -284,9 +315,9 @@ def process_dataset(dataset, name, algorithm,
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
-            args_dict=params_test, dataset_name=name,
+            args_dict=params_test, dataset_name=name, verbose=0,
             n_samples=n_samples, n_elites=1, simplify_threshold=simplify_threshold,
-            callbacks=[early_stopping],
+            # callbacks=[early_stopping],
         )
 
         # Store results in the dictionary
@@ -350,7 +381,7 @@ def main():
     # Add to each experiment a random_state 
     for i,_ in enumerate(experiments):
         experiments[i] += (seed+i,)
-
+        
     # Divide tasks into chunks
     chunks = divide_tasks(experiments, num_chunks)
     experiments = chunks[chunk_index]
