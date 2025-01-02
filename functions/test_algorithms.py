@@ -163,7 +163,7 @@ def test_slim(X_train, y_train, X_test, y_test,
         representations.append(final_tree.get_tree_representation())
 
         if verbose:
-            print(f"Iteration {it+1}/{n_samples} - RMSE: {rmse_score:.4f} - MAPE: {mape_score:.4f} - MAE: {mae_score:.4f} - Time: {time_taken:.2f}s")
+            print(f"Iteration {it+1}/{n_samples} - RMSE: {rmse_score:.4f} - SIZE: {nodes_count:.1f} - MAE: {mae_score:.4f} - Time: {time_taken:.2f}s")
         
     return rmse_, mape_, mae_, rmse_comp, mape_comp, mae_comp, time_stats, size, representations
 

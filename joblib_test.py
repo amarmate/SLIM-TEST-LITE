@@ -34,7 +34,7 @@ for i, dataset in enumerate(datasets):
 max_iter = 2000  # 2000
 p_train = 0.8    # 0.85
 n_trials = 50    # 40  75
-n_samples = 50   # 50
+n_samples = 100   # 50
 
 cv = 4           # 5
 seed = 60        # 40
@@ -182,8 +182,8 @@ def skopt_slim_cv(X, y, dataset,
         space.append(Categorical([0], name='p_struct_xo'))
 
     if simplify:
-        # space.append(Categorical([0.01], name='simplify_threshold'))
-        space.append(Integer(-1, 3, name='simplify_threshold'))
+        space.append(Categorical([1], name='simplify_threshold'))
+        # space.append(Integer(-1, 3, name='simplify_threshold'))
 
     else:
         space.append(Categorical([None], name='simplify_threshold'))
@@ -195,7 +195,7 @@ def skopt_slim_cv(X, y, dataset,
         random_state=random_state,
         verbose=False,
         noise=1e-2,    # Noise level, check for better convergence
-        n_random_starts=20,
+        n_random_starts=15,
     )
 
     # Post-processing to find the best parameters
