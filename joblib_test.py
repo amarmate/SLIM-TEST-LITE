@@ -37,7 +37,7 @@ n_trials = 50    # 40  75
 n_samples = 100   # 50
 
 cv = 4           # 5
-seed = 60        # 40
+seed = 100        # 40
 timeout = 45     # 45
 
 iter_dict = {     # EarlyStop
