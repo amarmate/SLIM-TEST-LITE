@@ -159,17 +159,16 @@ def skopt_slim_cv(X, y, dataset,
         Integer(5, 10, name='init_depth', prior='uniform'),   # 3 - 10
         Integer(11, 23, name='max_depth'),                     # 9 - 22
         # Integer(1, 5, name='pop_size', prior='uniform'),     # * 30
+        Categorical([100], name='pop_size'),
         Integer(0, int(35/2), name='p_struct', prior='uniform'),    # / 50
         Integer(0, int(70/4), name='p_inflate', prior='uniform'),   # / 25
         # Integer(2, 4, name='tournament_size'),
+        Categorical([2], name='tournament_size'),
         Integer(0, int(30/2), name='prob_const', prior='uniform'),  # / 50
         # Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
-        # Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
-
-        Categorical(['diz'], name='depth_distribution'),
         Categorical([0], name='decay_rate'),
-        Categorical([2], name='tournament_size'),
-        Categorical([100], name='pop_size'),
+        # Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
+        Categorical(['diz'], name='depth_distribution'),
 ]
 
     # All to be divided by 25
