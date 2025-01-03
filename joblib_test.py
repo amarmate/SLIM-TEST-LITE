@@ -33,10 +33,10 @@ for i, dataset in enumerate(datasets):
 # Settings
 max_iter = 2000  # 2000
 p_train = 0.8    # 0.85
-n_trials = 50    # 40  75
+n_trials = 40    # 40  75
 n_samples = 100   # 50
 
-cv = 4           # 5
+cv = 3           # 5
 seed = 100        # 40
 timeout = 45     # 45
 
@@ -79,8 +79,9 @@ def skopt_slim_cv(X, y, dataset,
             calls_count += 1
             return 100000
         
-        n_iter = int(pop_size * 30)
-        n_iter = iter_dict[str(n_iter)]
+        # n_iter = int(pop_size * 30)
+        # n_iter = iter_dict[str(n_iter)]
+        n_iter = 2000
 
         hyperparams = {
             'p_inflate': p_inflate / 25,
@@ -92,7 +93,8 @@ def skopt_slim_cv(X, y, dataset,
             'decay_rate': decay_rate / 50,
             'p_struct': p_struct / 50,
             'depth_distribution': depth_distribution,
-            'pop_size': int(pop_size * 30),
+            # 'pop_size': int(pop_size * 30),
+            'pop_size': int(pop_size),
             'n_iter': int(n_iter),
             'p_xo': p_xo / 25,
             'p_struct_xo': p_struct_xo / 25,
@@ -102,7 +104,8 @@ def skopt_slim_cv(X, y, dataset,
         kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        early_stopping = EarlyStopping_train(patience=int(12_000 / pop_size**0.9))   # 10_000
+        # early_stopping = EarlyStopping_train(patience=int(12_000 / pop_size**0.9))   # 10_000
+        early_stopping = EarlyStopping_train(patience=250)
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -154,14 +157,19 @@ def skopt_slim_cv(X, y, dataset,
     # Define search space with parameter names
     space = [
         Integer(5, 10, name='init_depth', prior='uniform'),   # 3 - 10
-        Integer(11, 22, name='max_depth'),                     # 9 - 22
-        Integer(1, 5, name='pop_size', prior='uniform'),     # * 30
+        Integer(11, 23, name='max_depth'),                     # 9 - 22
+        # Integer(1, 5, name='pop_size', prior='uniform'),     # * 30
         Integer(0, int(35/2), name='p_struct', prior='uniform'),    # / 50
         Integer(0, int(70/4), name='p_inflate', prior='uniform'),   # / 25
         # Integer(2, 4, name='tournament_size'),
         Integer(0, int(30/2), name='prob_const', prior='uniform'),  # / 50
-        Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
-        Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
+        # Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
+        # Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
+
+        Categorical(['diz'], name='depth_distribution'),
+        Categorical([0], name='decay_rate'),
+        Categorical([2], name='tournament_size'),
+        Categorical([100], name='pop_size'),
 ]
 
     # All to be divided by 25
@@ -195,7 +203,7 @@ def skopt_slim_cv(X, y, dataset,
         random_state=random_state,
         verbose=False,
         noise=1e-2,    # Noise level, check for better convergence
-        n_random_starts=15,
+        n_random_starts=20,
     )
 
     # Post-processing to find the best parameters
