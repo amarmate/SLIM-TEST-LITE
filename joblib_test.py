@@ -41,13 +41,13 @@ seed = 100        # 40
 timeout = 45     # 45
 
 iter_dict = {     # EarlyStop
-    '30' : 2000,  # 551 
-    '60' : 1500,  # 295
-    '90' : 1100,  # 205
-    '120': 900,  # 158 
-    '150': 750,   # 129
-    '175': 500,   # 95
-    '200': 400,   # 85
+    '30' : 2300,  # 551 
+    '60' : 1900,  # 295
+    '90' : 1600,  # 205
+    '120': 1400,  # 158 
+    '150': 1200,   # 129
+    '175': 1000,   # 95
+    '200': 800,   # 85
 }
 
 def skopt_slim_cv(X, y, dataset, 
@@ -88,7 +88,7 @@ def skopt_slim_cv(X, y, dataset,
             'init_depth': int(init_depth),
             'tournament_size': int(tournament_size),
             'prob_const': prob_const / 50,
-            'struct_mutation': struct_mutation / 50,
+            'struct_mutation': struct_mutation,
             'decay_rate': decay_rate / 50,
             'p_struct': p_struct / 50,
             'depth_distribution': depth_distribution,
@@ -102,7 +102,7 @@ def skopt_slim_cv(X, y, dataset,
         kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        early_stopping = EarlyStopping_train(patience=int(10_000 / pop_size**0.9))   # 10_000
+        early_stopping = EarlyStopping_train(patience=int(12_000 / pop_size**0.9))   # 10_000
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -153,12 +153,12 @@ def skopt_slim_cv(X, y, dataset,
 
     # Define search space with parameter names
     space = [
-        Integer(3, 10, name='init_depth', prior='uniform'),
-        Integer(9, 22, name='max_depth'), 
+        Integer(5, 10, name='init_depth', prior='uniform'),   # 3 - 10
+        Integer(11, 22, name='max_depth'),                     # 9 - 22
         Integer(1, 5, name='pop_size', prior='uniform'),     # * 30
         Integer(0, int(35/2), name='p_struct', prior='uniform'),    # / 50
         Integer(0, int(70/4), name='p_inflate', prior='uniform'),   # / 25
-        Integer(2, 4, name='tournament_size'),
+        # Integer(2, 4, name='tournament_size'),
         Integer(0, int(30/2), name='prob_const', prior='uniform'),  # / 50
         Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
         Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),

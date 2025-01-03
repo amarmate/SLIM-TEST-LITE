@@ -472,7 +472,12 @@ def deflate_mutation(individual, reconstruct, mut_point_idx=None):
         The mutated individual
     """
     # choosing the block that will be removed
-    mut_point = random.randint(1, individual.size - 1) if mut_point_idx is None else mut_point_idx
+    try:
+        mut_point = random.randint(1, individual.size - 1) if mut_point_idx is None else mut_point_idx
+    except:
+        print("Error: ", individual.size, mut_point_idx)
+        print("Individual: ", individual.structure)
+        raise ValueError("Error: ", individual.size, mut_point_idx)
 
     # removing the block from the individual and creating a new Individual
     offs = Individual(
@@ -610,9 +615,8 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, depth_dist="norm"):
     CONSTANTS : dict
         The dictionary of constants used in the mutation.
     depth_dist : str, optional
-        Distribution to choose the depth of the new tree (default: "norm"), options: "norm", "exp", "uniform", "max".
-
-    
+        Distribution to choose the depth of the new tree (default: "norm"), options: "norm", "exp", "uniform", "max", "diz"
+        If diz is chosen, then we can only decrease/increase the depth by 1 or not change it at all.
     Returns
     -------
     
@@ -666,32 +670,56 @@ def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, depth_dist="norm"):
         """
 
         indices_with_levels = get_indices_with_levels(individual.structure[0])
-        valid_indices_with_levels = [(index, level) for index, level in indices_with_levels if max_depth - len(index) >= 2]
 
-        if not valid_indices_with_levels:
-            raise ValueError("No valid indices satisfy the condition max_depth - len(index) >= 2")
+        if depth_dist == "diz": 
+            # Can only choose either an index with max depth, or the one before
+            individual_depth = individual.depth_collection[0]
+            if random.random() < 0.5:
+                chosen_level = individual_depth - 2
+                if chosen_level == 0:
+                    depth = random.choice([2, 3])  # Cannot choose node (1) at root
+                elif max_depth - individual_depth > 0:
+                    depth = random.choice([1, 2, 3])
+                else: 
+                    depth = random.choice([1, 2])
+            else:
+                chosen_level = individual_depth - 1
+                if max_depth - individual_depth > 0:
+                    depth = random.choice([1, 2])
+                else:
+                    depth = random.choice([1])
 
-        valid_indices, valid_levels = zip(*valid_indices_with_levels)
-        probs = exp_decay_prob(max(valid_levels) + 1, decay_rate=decay_rate)
-        level_probs = [probs[level] for level in valid_levels]
-        random_index = random.choices(valid_indices, weights=level_probs)[0]
+            valid_indices = [index for index, level in indices_with_levels if level == chosen_level]
+            random_index = random.choice(valid_indices)
 
-        if depth_dist == "norm":
-            depth = choose_depth_norm(max_depth, random_index, mean=None, std_dev=None)
-            
         else:
-            depth = max_depth - len(random_index)   
-            depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
-            
-            if depth_dist == "exp":
-                probs = exp_decay_prob(len(depths), decay_rate=decay_rate)
-                depth = random.choices(depths, weights=probs)[0]    
+            valid_indices_with_levels = [(index, level) for index, level in indices_with_levels if max_depth - level >= 2]
+
+            if not valid_indices_with_levels:
+                raise ValueError("No valid indices satisfy the condition max_depth - level >= 2")
+
+            valid_indices, valid_levels = zip(*valid_indices_with_levels)
+
+            probs = exp_decay_prob(max(valid_levels) + 1, decay_rate=decay_rate)
+            level_probs = [probs[level] for level in valid_levels]
+            random_index = random.choices(valid_indices, weights=level_probs)[0]
+
+            if depth_dist == "norm":
+                depth = choose_depth_norm(max_depth, random_index, mean=None, std_dev=None)
                 
-            elif depth_dist == "uniform":
-                depth = random.choice(depths)
+            else:
+                depth = max_depth - len(random_index)   
+                depths = np.arange(1, depth + 1) if len(random_index) > 1 else np.arange(2, depth + 1)
                 
-            elif depth_dist == "max":
-                depth = depths[-1]
+                if depth_dist == "exp":
+                    probs = exp_decay_prob(len(depths), decay_rate=decay_rate)
+                    depth = random.choices(depths, weights=probs)[0]    
+                    
+                elif depth_dist == "uniform":
+                    depth = random.choice(depths)
+                    
+                elif depth_dist == "max":
+                    depth = depths[-1]
                             
         
         # If just a node is selected

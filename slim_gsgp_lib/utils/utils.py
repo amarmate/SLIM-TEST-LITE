@@ -587,8 +587,8 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     if p_inflate + p_struct > 1:
         raise ValueError("p_inflate + p_struct must be smaller or equal to 1")
     
-    if depth_distribution not in ["norm", "exp", "uniform", "max"]:
-        raise ValueError("depth_distribution must be one of: 'norm', 'exp', 'uniform', 'max'")
+    if depth_distribution not in ["norm", "exp", "uniform", "max", "diz"]:
+        raise ValueError("depth_distribution must be one of: 'norm', 'exp', 'uniform', 'max', 'diz'")
     
 
 def check_slim_version(slim_version):
@@ -718,7 +718,7 @@ def get_indices_with_levels(tree):
     
     def traverse(sub_tree, path=(), level=0):
         indices_with_levels = []
-        
+
         # If not tuple 
         if not isinstance(sub_tree, tuple):
             indices_with_levels.append((path, level))
@@ -733,7 +733,7 @@ def get_indices_with_levels(tree):
 
         return indices_with_levels
     
-    return traverse(tree)
+    return [((), (0))] + traverse(tree)
 
 
 def swap_sub_tree(tree, new_tree, indices):
