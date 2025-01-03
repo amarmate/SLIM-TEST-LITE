@@ -379,7 +379,7 @@ def main():
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
         for scale in [True]
-        for struct_mutation in [True, False]
+        for struct_mutation in [True]
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
