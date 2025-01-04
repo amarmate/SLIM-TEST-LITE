@@ -335,14 +335,14 @@ class SLIM_GSGP:
                     offs_pop.extend(offs)
                 else:
                     p1 = self.selector(population)
-                    if random.random() < self.p_deflate:
-                        off1 = self.deflate_mutation_step(p1, X_train, X_test, reconstruct)
+                    if random.random() < self.p_inflate:
+                        off1 = self.inflate_mutation_step(p1, X_train, X_test, reconstruct, max_depth)
                         
                     elif random.random() < self.p_struct:
                         off1 = self.struct_mutation_step(p1, X_train, X_test, reconstruct)
                         
                     else:
-                        off1 = self.inflate_mutation_step(p1, X_train, X_test, reconstruct, max_depth)
+                        off1 = self.deflate_mutation_step(p1, X_train, X_test, reconstruct)
                     offs_pop.append(off1)
 
             # removing any excess individuals from the offspring population

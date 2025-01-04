@@ -10,7 +10,6 @@ from sklearn.model_selection import KFold
 from skopt import gp_minimize
 from skopt.space import Integer, Real, Categorical
 import time 
-
 from matplotlib import pyplot as plt
 
 # Limit threads for NumPy and other multi-threaded libraries
@@ -383,7 +382,7 @@ def main():
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
-        for simplify in [False]
+        for simplify in [True]
     ]
 
     # Add to each experiment a random_state 

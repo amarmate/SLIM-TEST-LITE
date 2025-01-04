@@ -111,7 +111,7 @@ def test_slim(X_train, y_train, X_test, y_test,
         try:
             final_tree = slim(X_train=X_train, y_train=y_train,
                                 dataset_name=dataset_name, slim_version=algorithm, seed=it,
-                                reconstruct=True, n_jobs=1, initializer=initializer, test_elite=False,
+                                reconstruct=True, n_jobs=1, test_elite=False,
                                 n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
                                 timeout=timeout, callbacks=callbacks, verbose=0,
             )
