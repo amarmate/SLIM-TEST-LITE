@@ -34,9 +34,9 @@ for i, dataset in enumerate(datasets):
 max_iter = 2000  # 2000
 p_train = 0.8    # 0.85
 n_trials = 40    # 40  75
-n_samples = 100   # 50
+n_samples = 50   # 50
 
-cv = 3           # 5
+cv = 4           # 5
 seed = 100        # 40
 timeout = 45     # 45
 
@@ -98,6 +98,7 @@ def skopt_slim_cv(X, y, dataset,
             'n_iter': int(n_iter),
             'p_xo': p_xo / 25,
             'p_struct_xo': p_struct_xo / 25,
+            'initializer': 'simple',
         }
 
         # Perform K-fold cross-validation
@@ -378,11 +379,11 @@ def main():
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
         for scale in [True]
-        for struct_mutation in [True]
+        for struct_mutation in [False]
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
-        for simplify in [False, True]
+        for simplify in [False]
     ]
 
     # Add to each experiment a random_state 

@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import torch
-from slim_gsgp_lib.initializers.initializers import rhh, grow, full
+from slim_gsgp_lib.initializers.initializers import rhh, grow, full, simple
 from slim_gsgp_lib.algorithms.GSGP.operators.crossover_operators import geometric_crossover
 from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.crossovers import xo_operator
 from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.mutators import (deflate_mutation)
@@ -113,5 +113,6 @@ fitness_function_options = {
 initializer_options = {
     "rhh": rhh,
     "grow": grow,
-    "full": full
+    "full": full,
+    "simple": simple
 }

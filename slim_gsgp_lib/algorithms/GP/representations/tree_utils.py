@@ -263,6 +263,32 @@ def create_full_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
             node = (node, left_subtree)
     return node
 
+def create_neutral_tree(operator, FUNCTIONS, CONSTANTS):
+    """
+    Generates a tree with semantics all 0 if operator is 'sum' or 1 if operator is 'product'.
+    
+    Parameters
+    ----------
+    operator : str
+        The operator to be used in the tree.    
+    FUNCTIONS : dict
+        Dictionary of functions allowed in the tree.
+    CONSTANTS : dict
+        Dictionary of constant values allowed in the tree.
+
+    Returns
+    -------
+    tuple
+        The generated tree representation with neutral semantics.
+    """
+    if operator == 'sum':
+        return ('subtract', list(CONSTANTS.keys())[0], list(CONSTANTS.keys())[0])
+    elif operator == 'mul':
+        return ('divide', list(CONSTANTS.keys())[0], list(CONSTANTS.keys())[0])
+    else:
+        raise ValueError("Invalid operator. Choose either 'sum' or 'mul'.")
+
+
 
 def random_subtree(FUNCTIONS):
     """

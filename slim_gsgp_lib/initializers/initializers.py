@@ -24,9 +24,9 @@ Initializers operator implementation.
 """
 
 from slim_gsgp_lib.algorithms.GP.representations.tree_utils import (create_full_random_tree,
-                                                                create_grow_random_tree)
+                                                                create_grow_random_tree, create_neutral_tree)
 
-def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
+def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **kwargs):
     """
     Generates a list of individuals with random trees for a GM4OS population using the Grow method.
 
@@ -56,7 +56,7 @@ def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
     ]
 
 
-def full(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
+def full(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **kwargs):
     """
     Generates a list of individuals with random trees for a GM4OS population using the Full method.
 
@@ -86,7 +86,7 @@ def full(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
     ]
 
 
-def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
+def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **kwargs):
     """
     Generates a list of individuals with random trees for a GM4OS population using the ramped-half-half method.
 
@@ -139,3 +139,29 @@ def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
         )
 
     return population
+
+
+def simple(init_pop_size, operator, FUNCTIONS, CONSTANTS, **kwargs):
+    """
+    Generates a list of individuals with neutral trees for a GM4OS population using the Simple method.
+
+    Parameters
+    ----------
+    init_pop_size : int
+        The total number of individuals to be generated for the population.
+    operator : str
+        The operator to be used in the trees.
+    FUNCTIONS : dict
+        The dictionary of functions allowed in the trees.
+    CONSTANTS : dict
+        The dictionary of constant values allowed in the trees.
+    Returns
+    -------
+    list
+        A list of Individual objects containing neutral trees and input sets based on the parameters provided.
+    """
+    
+    return [
+        create_neutral_tree(operator, FUNCTIONS, CONSTANTS)
+        for _ in range(init_pop_size)
+    ]

@@ -264,6 +264,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     slim_gsgp_pi_init["init_pop_size"] = pop_size
     slim_gsgp_pi_init["init_depth"] = init_depth
     slim_gsgp_pi_init["p_c"] = prob_const
+    slim_gsgp_pi_init['operator'] = op
 
     #   *************** SLIM_GSGP_PARAMETERS ***************
 
