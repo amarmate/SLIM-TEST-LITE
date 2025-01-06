@@ -32,11 +32,11 @@ for i, dataset in enumerate(datasets):
 # Settings
 max_iter = 2000  # 2000
 p_train = 0.8    # 0.85
-n_trials = 40    # 40  75
+n_trials = 50    # 40  75
 n_samples = 50   # 50
 
 cv = 4           # 5
-seed = 100        # 40
+seed = 200        # 40
 timeout = 45     # 45
 
 iter_dict = {     # EarlyStop
@@ -97,7 +97,7 @@ def skopt_slim_cv(X, y, dataset,
             'n_iter': int(n_iter),
             'p_xo': p_xo / 25,
             'p_struct_xo': p_struct_xo / 25,
-            'initializer': 'simple',
+            'initializer': 'rhh',
         }
 
         # Perform K-fold cross-validation
@@ -105,7 +105,7 @@ def skopt_slim_cv(X, y, dataset,
         scores = []
         nodes_count = []
         # early_stopping = EarlyStopping_train(patience=int(12_000 / pop_size**0.9))   # 10_000
-        early_stopping = EarlyStopping_train(patience=250)
+        early_stopping = EarlyStopping_train(patience=500)
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -165,10 +165,10 @@ def skopt_slim_cv(X, y, dataset,
         # Integer(2, 4, name='tournament_size'),
         Categorical([2], name='tournament_size'),
         Integer(0, int(30/2), name='prob_const', prior='uniform'),  # / 50
-        # Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
-        Categorical([0], name='decay_rate'),
-        # Categorical(['exp', 'uniform', 'norm', 'diz'], name='depth_distribution'),
-        Categorical(['diz'], name='depth_distribution'),
+        Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
+        # Categorical([0], name='decay_rate'),
+        Categorical(['exp', 'uniform', 'norm', 'diz'], name='depth_distribution'),
+        # Categorical(['diz'], name='depth_distribution'),
 ]
 
     # All to be divided by 25
@@ -201,7 +201,7 @@ def skopt_slim_cv(X, y, dataset,
         n_calls=n_trials,
         random_state=random_state,
         verbose=False,
-        noise=1e-2,    # Noise level, check for better convergence
+        noise=2e-2,    # Noise level, check for better convergence
         n_random_starts=20,
     )
 
@@ -225,7 +225,7 @@ def skopt_slim_cv(X, y, dataset,
     standardized_nodes = (nodes - nodes.mean()) / nodes.std()
 
     # Combine metrics and find the best parameters
-    combined_metric = standardized_rmse + 0.5 * standardized_nodes
+    combined_metric = standardized_rmse + 0.4 * standardized_nodes
     best_index = np.argmin(combined_metric)
     best_params = params_list[best_index]
 
@@ -249,7 +249,7 @@ def process_dataset(dataset, name, algorithm,
     X_train, X_test, y_train, y_test = dataset
 
     # Suffix for file naming
-    scale_suffix = 'sc' if scale else None
+    scale_suffix = 'sc' if scale else 'un'
     xo_suffix = 'xo' if xo else None
     gp_xo_suffix = 'gx' if gp_xo else None
     mut_xo_suffix = 'mx' if mut_xo else None
@@ -387,12 +387,12 @@ def main():
         (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify)
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
-        for scale in [True]
-        for struct_mutation in [False]
+        for scale in [False, True]
+        for struct_mutation in [False, True]
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
-        for simplify in [True]
+        for simplify in [False]
     ]
 
     # Add to each experiment a random_state 

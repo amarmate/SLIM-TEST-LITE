@@ -48,8 +48,9 @@ FUNCTIONS = {
 # }
 
 # Changed constants to a list of 200 values between -1 and 1
-constants = [round(-1 + (2 * i) / (200 - 1), 2) for i in range(200)]
-CONSTANTS = {f'constant_{i}': lambda _: torch.tensor(i) for i in constants}
+constants = [round(-1 + (2 * i) / (100 - 1), 2) for i in range(100)]
+filtered_constants = [c for c in constants if c <= -0.1 or c >= 0.1]
+CONSTANTS = {f'constant_{i}': lambda _: torch.tensor(i) for i in filtered_constants}
 
 
 # Set parameters
