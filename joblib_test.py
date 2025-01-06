@@ -37,7 +37,7 @@ n_samples = 50   # 50
 
 cv = 4           # 5
 seed = 200        # 40
-timeout = 45     # 45
+timeout = 60     # 45
 
 iter_dict = {     # EarlyStop
     '30' : 2300,  # 551 
@@ -261,9 +261,9 @@ def process_dataset(dataset, name, algorithm,
 
     # Ensure the domain exists
     if not os.path.exists(f'params/{dataset_id}'):
-        os.makedirs(f'params/{dataset_id}')
+        os.makedirs(f'params/{dataset_id}', exist_ok=True)
     if not os.path.exists(f'results/slim/{dataset_id}'):
-        os.makedirs(f'results/slim/{dataset_id}')
+        os.makedirs(f'results/slim/{dataset_id}', exist_ok=True)
 
     # Random search
     try:
