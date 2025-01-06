@@ -156,8 +156,8 @@ def skopt_slim_cv(X, y, dataset,
 
     # Define search space with parameter names
     space = [
-        Integer(5, 10, name='init_depth', prior='uniform'),   # 3 - 10
-        Integer(11, 23, name='max_depth'),                     # 9 - 22
+        Integer(3, 10, name='init_depth', prior='uniform'),
+        Integer(10, 22, name='max_depth'),                   
         # Integer(1, 5, name='pop_size', prior='uniform'),     # * 30
         Categorical([100], name='pop_size'),
         Integer(0, int(35/2), name='p_struct', prior='uniform'),    # / 50
@@ -167,7 +167,7 @@ def skopt_slim_cv(X, y, dataset,
         Integer(0, int(30/2), name='prob_const', prior='uniform'),  # / 50
         # Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
         Categorical([0], name='decay_rate'),
-        # Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
+        # Categorical(['exp', 'uniform', 'norm', 'diz'], name='depth_distribution'),
         Categorical(['diz'], name='depth_distribution'),
 ]
 
@@ -233,7 +233,10 @@ def skopt_slim_cv(X, y, dataset,
     # print(f"Best RMSE: {rmses[best_index]}")
     # print(f"Best size: {nodes[best_index]}")
 
-    return best_params
+    return best_params, scores, nodes, space
+
+    # TODO : Keep track of the scores and nodes for each trial, to see how parameter dependent they are
+    # Include a copy of the hyperparameters' range so that we can compare, or do something better (still dont know )
 
 
 def process_dataset(dataset, name, algorithm, 
@@ -270,7 +273,7 @@ def process_dataset(dataset, name, algorithm,
     except FileNotFoundError:
         print(f"Performing random search for: {name} - {pattern}")
         try:
-            results = skopt_slim_cv(
+            best_params, scores, nodes, space = skopt_slim_cv(
                 X=X_train,
                 y=y_train,
                 dataset=name,
@@ -289,6 +292,13 @@ def process_dataset(dataset, name, algorithm,
             )
 
             with open(f'params/{dataset_id}/{pattern}.pkl', 'wb') as f:
+                # Compile the results in a dictionary
+                results = {
+                    'best_params': best_params,
+                    'scores': scores,
+                    'nodes': nodes,
+                    'space': space,
+                }
                 pickle.dump(results, f)
             print(f"Random search completed and saved: {pattern}.pkl")
 
@@ -299,7 +309,7 @@ def process_dataset(dataset, name, algorithm,
     # Load parameters for testing
     try:
         with open(f'params/{dataset_id}/{pattern}.pkl', 'rb') as f:
-            params = pickle.load(f)
+            params = pickle.load(f)['best_params']
     except Exception as e:
         print(f"Failed to load parameters for {name} - {pattern}: {e}")
         return

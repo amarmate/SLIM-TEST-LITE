@@ -123,7 +123,7 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
         The operator to use for crossing two individuals during mutation xo. 
     selector : str, optional
         The selection algorithm to use for selecting individuals for the next generation.
-        Default is tournament selection, options are: 'tournament', 'lexicase', 'e_lexicase', 'rank_based'
+        Default is tournament selection, options are: 'tournament', 'lexicase', 'e_lexicase', 'rank_based', 'roulette', 'tournament_size'.
     fitness_sharing : bool, optional
         Whether to use fitness sharing to evaluate the fitness of the individuals.
     log_path : str, optional
@@ -313,7 +313,8 @@ def slim(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
     slim_gsgp_parameters['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
                                                 type=selector, 
                                                 pool_size=tournament_size,
-                                                targets=y_train)
+                                                targets=y_train, 
+                                                pressure_size=pressure_size)
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
     slim_gsgp_parameters['timeout'] = timeout
     slim_gsgp_parameters['pressure_size'] = pressure_size if selector == 'rank_based' else None

@@ -219,6 +219,7 @@ class Population:
 
         # Sort the population based on fitness and optionally calculate ranks
         if rank_selection:
+            # Sorting the population 
             individuals_with_fitness = list(zip(self.population, self.fit, self.sizes))
             individuals_with_fitness.sort(key=lambda x: x[1])
             self.population, self.fit, self.sizes = zip(*individuals_with_fitness)

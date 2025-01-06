@@ -30,7 +30,8 @@ def selector(problem='min',
              type='tournament', 
              pool_size=2, 
              eps_fraction=1e-4,
-             targets=None):
+             targets=None, 
+             pressure_size=1e-4):
     """
     Returns a selection function based on the specified problem and selection type.
 
@@ -39,13 +40,17 @@ def selector(problem='min',
     problem : str, optional
         The type of problem to solve. Can be 'min' or 'max'. Defaults to 'min'.
     type : str, optional
-        The type of selection to perform. Can be 'tournament', 'e_lexicase' or 'lexicase. Defaults to 'tournament'.
+        The type of selection to perform. Can be 'tournament', 'e_lexicase', 'lexicase', 'roulette', 'rank_based' or 'tournament_size'.
+        Defaults to 'tournament'.
     pool_size : int, optional
         Number of individuals participating in the tournament. Defaults to 2.
     eps_fraction : float, optional
         The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-4.
     targets : torch.Tensor, optional
         The true target values for each entry in the dataset. Required for lexicase selection and epsilon lexicase
+        selection. Defaults to None.
+    pressure_size : float, optional
+        Pressure for size in rank selection. Defaults to 1e-4.
 
     Returns
     -------
@@ -62,6 +67,10 @@ def selector(problem='min',
             return lexicase_selection(targets, mode='min')
         elif type == 'rank_based':
             return rank_based(mode='min', pool_size=pool_size)
+        elif type == 'roulette':
+            return roulette_wheel_selection
+        elif type == 'tournament_size':
+            return tournament_selection_min_size(pool_size, pressure_size=0.5)
         else:
             raise ValueError(f"Invalid selection type: {type}")
     elif problem == 'max':
@@ -73,6 +82,8 @@ def selector(problem='min',
             return lexicase_selection(targets, mode='max')
         elif type == 'rank_based':
             return rank_based(mode='max', pool_size=pool_size)
+        elif type == 'roulette':
+            return roulette_wheel_selection
         else:
             raise ValueError(f"Invalid selection type: {type}")
     else:
@@ -176,6 +187,56 @@ def tournament_selection_max(pool_size):
         return pool[np.argmax([ind.fitness for ind in pool])]
 
     return ts
+
+def tournament_selection_min_size(pool_size, pressure_size=1e-4):
+    """
+    Returns a function that performs tournament selection to select an individual with the lowest fitness and size from a
+    population.
+
+    Parameters
+    ----------
+    pool_size : int
+        Number of individuals participating in the tournament.
+    pressure_size : float, optional
+        Pressure for size in rank selection. Defaults to 1e-4.
+    Returns
+    -------
+    Callable
+        A function ('ts') that elects the individual with the lowest fitness and size from a randomly chosen pool.
+
+        Parameters
+        ----------
+        pop : Population
+            The population from which individuals are drawn.
+
+        Returns
+        -------
+        Individual
+            The individual with the combined lowest fitness and size in the pool.
+    Notes
+    -----
+    The returned function performs tournament selection by receiving a population and returning the best of {pool_size}
+    randomly selected individuals.
+    """
+    def ts(pop):
+        """
+        Selects the individual with the lowest fitness and size from a randomly chosen pool.
+
+        Parameters
+        ----------
+        pop : Population
+            The population from which individuals are drawn.
+
+        Returns
+        -------
+        Individual
+            The individual with the combined lowest fitness and size in the pool.
+        """
+        pool = random.choices(pop.population, k=pool_size)
+        return pool[np.argmin([ind.fitness + pressure_size * ind.size for ind in pool])]
+
+    return ts
+
 
 def lexicase_selection(targets, mode='min'):
     """
@@ -412,4 +473,22 @@ def rank_based(mode='min', pool_size=2):
         return population[best_index]
     
     return double_tournament
+
+
+def roulette_wheel_selection(population):
+    """
+    Perform roulette wheel selection on a population of individuals.
+
+    Parameters
+    ----------
+    population : list of Individual
+        The population from which to select parents.
+
+    Returns
+    -------
+    Individual
+        The selected parent individual.
+    """
+    # return random.choices(population, weights=[ind.fitness for ind in population])[0]
+    return random.choices(population)[0]
  
