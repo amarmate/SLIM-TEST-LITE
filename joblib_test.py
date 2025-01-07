@@ -332,7 +332,7 @@ def process_dataset(dataset, name, algorithm,
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
-            args_dict=params_test, dataset_name=name, verbose=0,
+            args_dict=params_test, dataset_name=name, verbose=0, scale=scale,
             n_samples=n_samples, n_elites=1, simplify_threshold=simplify_threshold,
             # callbacks=[early_stopping],
         )
@@ -387,7 +387,7 @@ def main():
         (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify)
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
-        for scale in [False, True]
+        for scale in [False]
         for struct_mutation in [False, True]
         for xo in [False]
         for mut_xo in [False]
