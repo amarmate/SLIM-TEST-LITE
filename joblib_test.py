@@ -37,7 +37,7 @@ n_samples = 50   # 50
 
 cv = 4           # 5
 seed = 200        # 40
-timeout = 60     # 45
+timeout = 100     # 45
 
 iter_dict = {     # EarlyStop
     '30' : 2300,  # 551 
@@ -334,6 +334,7 @@ def process_dataset(dataset, name, algorithm,
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
             args_dict=params_test, dataset_name=name, verbose=0, scale=scale,
             n_samples=n_samples, n_elites=1, simplify_threshold=simplify_threshold,
+            timeout=200,
             # callbacks=[early_stopping],
         )
 
