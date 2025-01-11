@@ -216,13 +216,13 @@ def skopt_slim_cv(X, y, dataset,
         pareto_front[i] = np.sum(np.logical_and(scores < score, nodes < node)) == 0
 
     # Filtert the pareto front
-    scores = scores[pareto_front]
-    nodes = nodes[pareto_front]
+    scores_pf = scores[pareto_front]
+    nodes_pf = nodes[pareto_front]
     params_list = np.array(params_list)[pareto_front]
 
     # Standardize both metrics
-    standardized_rmse = (scores - scores.mean()) / scores.std()
-    standardized_nodes = (nodes - nodes.mean()) / nodes.std()
+    standardized_rmse = (scores_pf - scores_pf.mean()) / scores_pf.std()
+    standardized_nodes = (nodes_pf - nodes_pf.mean()) / nodes_pf.std()
 
     # Combine metrics and find the best parameters
     combined_metric = standardized_rmse + 0.4 * standardized_nodes
@@ -393,7 +393,7 @@ def main():
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
-        for simplify in [False]
+        for simplify in [True]
     ]
 
     # Add to each experiment a random_state 
