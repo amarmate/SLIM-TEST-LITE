@@ -173,6 +173,7 @@ class SLIM_GSGP:
         GP_Tree.TERMINALS = pi_init["TERMINALS"]
         GP_Tree.CONSTANTS = pi_init["CONSTANTS"]
 
+    @profile
     def solve(
         self,
         X_train,
