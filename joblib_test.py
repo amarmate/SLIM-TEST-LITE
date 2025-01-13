@@ -33,9 +33,9 @@ for i, dataset in enumerate(datasets):
 max_iter = 2000  # 2000
 p_train = 0.8    # 0.85
 n_trials = 50    # 40  75
-n_samples = 50   # 50
+n_samples = 1   # 50
 
-cv = 4           # 5
+cv = 4          # 5
 seed = 200        # 40
 timeout = 100     # 45
 
@@ -114,10 +114,10 @@ def skopt_slim_cv(X, y, dataset,
 
             if scale:
                 scaler_x, scaler_y = MinMaxScaler(), MinMaxScaler()
-                X_train = torch.tensor(scaler_x.fit_transform(X_train), dtype=torch.float32)
-                X_test = torch.tensor(scaler_x.transform(X_test), dtype=torch.float32)
-                y_train = torch.tensor(scaler_y.fit_transform(y_train.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
-                y_test = torch.tensor(scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1), dtype=torch.float32)
+                X_train = scaler_x.fit_transform(X_train)
+                X_test = scaler_x.transform(X_test)
+                y_train = scaler_y.fit_transform(y_train.reshape(-1, 1)).reshape(-1)
+                y_test = scaler_y.transform(y_test.reshape(-1, 1)).reshape(-1)
 
             try:
                 slim_ = slim(
