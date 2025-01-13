@@ -30,7 +30,7 @@ from slim_gsgp_lib_np.algorithms.GSGP.operators.crossover_operators import geome
 # from scipy.special import expit as sigmoid
 
 def sigmoid(x):
-    x = np.clip(x, -5, 5)
+    x = np.clip(x, -6, 6)
     return 1 / (1 + np.exp(-x))
 
 class Tree:
@@ -40,7 +40,6 @@ class Tree:
     Attributes
     ----------
     structure : tuple or str
-        The tree structure, either as a tuple or a list of pointers.
     FUNCTIONS : dict
         Dictionary of allowed functions in the tree.
     TERMINALS : dict
