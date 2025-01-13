@@ -34,9 +34,7 @@ from slim_gsgp_lib_np.utils.diversity import gsgp_pop_div_from_vectors
 from slim_gsgp_lib_np.utils.logger import logger
 from functools import lru_cache
 
-
 class SLIM_GSGP:
-
     def __init__(
         self,
         pi_init,
@@ -171,7 +169,6 @@ class SLIM_GSGP:
         GP_Tree.TERMINALS = pi_init["TERMINALS"]
         GP_Tree.CONSTANTS = pi_init["CONSTANTS"]
 
-    @profile
     def solve(
         self,
         X_train,
@@ -267,7 +264,7 @@ class SLIM_GSGP:
         
         # calculating initial population semantics
         population.calculate_semantics(X_train)
-        population.calculate_errors_case(y_train)
+        population.calculate_errors_case(y_train, operator=self.operator)
         population.evaluate(ffunction, y=y_train, operator=self.operator, 
                                       n_jobs=n_jobs, 
                                       fitness_sharing=self.fitness_sharing,
@@ -350,7 +347,7 @@ class SLIM_GSGP:
             # turning the offspring population into a Population
             offs_pop = Population(offs_pop)
             offs_pop.calculate_semantics(X_train)
-            offs_pop.calculate_errors_case(y_train)
+            offs_pop.calculate_errors_case(y_train, operator=self.operator)
             offs_pop.evaluate(ffunction, y=y_train, operator=self.operator, 
                                         n_jobs=n_jobs, 
                                         fitness_sharing=self.fitness_sharing,
@@ -538,7 +535,7 @@ class SLIM_GSGP:
                     "test": self.elite.test_fitness,
                     "time": end - start,
                     "nodes": self.elite.nodes_count,
-                    "div": int(self.calculate_diversity(iteration).item()),
+                    "div": int(self.calculate_diversity(iteration)),
                     # "avgSize": np.mean([ind.size for ind in self.population.population]),
                     # "avgFit": np.mean(self.population.fit),
                     # "std_fit": np.std(self.population.fit),   
@@ -561,9 +558,9 @@ class SLIM_GSGP:
     def calculate_diversity(self, it):
         if self.operator == "sum":
             return gsgp_pop_div_from_vectors(
-                torch.stack([torch.sum(ind.train_semantics, dim=0) for ind in self.population.population])
+                np.stack([np.sum(ind.train_semantics, axis=0) for ind in self.population.population])
             )
         else:
             return gsgp_pop_div_from_vectors(
-                torch.stack([torch.prod(ind.train_semantics, dim=0) for ind in self.population.population])
+                np.stack([np.prod(ind.train_semantics, axis=0) for ind in self.population.population])
             )

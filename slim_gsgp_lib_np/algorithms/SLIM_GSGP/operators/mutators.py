@@ -89,20 +89,20 @@ def two_trees_delta(operator="sum"):
         """
         if testing:
             return (
-                np.mul(ms, np.sub(tr1.test_semantics, tr2.test_semantics))
+                np.multiply(ms, np.subtract(tr1.test_semantics, tr2.test_semantics))
                 if operator == "sum"
                 else np.add(
-                    1, np.mul(ms, np.sub(tr1.test_semantics, tr2.test_semantics))
+                    1, np.multiply(ms, np.subtract(tr1.test_semantics, tr2.test_semantics))
                 )
             )
 
         else:
             return (
-                np.mul(ms, np.sub(tr1.train_semantics, tr2.train_semantics))
+                np.multiply(ms, np.subtract(tr1.train_semantics, tr2.train_semantics))
                 if operator == "sum"
                 else np.add(
                     1,
-                    np.mul(ms, np.sub(tr1.train_semantics, tr2.train_semantics)),
+                    np.multiply(ms, np.subtract(tr1.train_semantics, tr2.train_semantics)),
                 )
             )
 
@@ -166,38 +166,38 @@ def one_tree_delta(operator="sum", sig=False):
         if sig:
             if testing:
                 return (
-                    np.mul(ms, np.sub(np.mul(2, tr1.test_semantics), 1))
+                    np.multiply(ms, np.subtract(np.multiply(2, tr1.test_semantics), 1))
                     if operator == "sum"
                     else np.add(
-                        1, np.mul(ms, np.sub(np.mul(2, tr1.test_semantics), 1))
+                        1, np.multiply(ms, np.subtract(np.multiply(2, tr1.test_semantics), 1))
                     )
                 )
             else:
                 return (
-                    np.mul(ms, np.sub(np.mul(2, tr1.train_semantics), 1))
+                    np.multiply(ms, np.subtract(np.multiply(2, tr1.train_semantics), 1))
                     if operator == "sum"
                     else np.add(
                         1,
-                        np.mul(ms, np.sub(np.mul(2, tr1.train_semantics), 1)),
+                        np.multiply(ms, np.subtract(np.multiply(2, tr1.train_semantics), 1)),
                     )
                 )
         else:
             if testing:
                 return (
-                    np.mul(
+                    np.multiply(
                         ms,
-                        np.sub(
-                            1, np.div(2, np.add(1, np.abs(tr1.test_semantics)))
+                        np.subtract(
+                            1, np.divide(2, np.add(1, np.abs(tr1.test_semantics)))
                         ),
                     )
                     if operator == "sum"
                     else np.add(
                         1,
-                        np.mul(
+                        np.multiply(
                             ms,
-                            np.sub(
+                            np.subtract(
                                 1,
-                                np.div(
+                                np.divide(
                                     2, np.add(1, np.abs(tr1.test_semantics))
                                 ),
                             ),
@@ -206,21 +206,21 @@ def one_tree_delta(operator="sum", sig=False):
                 )
             else:
                 return (
-                    np.mul(
+                    np.multiply(
                         ms,
-                        np.sub(
+                        np.subtract(
                             1,
-                            np.div(2, np.add(1, np.abs(tr1.train_semantics))),
+                            np.divide(2, np.add(1, np.abs(tr1.train_semantics))),
                         ),
                     )
                     if operator == "sum"
                     else np.add(
                         1,
-                        np.mul(
+                        np.multiply(
                             ms,
-                            np.sub(
+                            np.subtract(
                                 1,
-                                np.div(
+                                np.divide(
                                     2, np.add(1, np.abs(tr1.train_semantics))
                                 ),
                             ),
@@ -408,7 +408,7 @@ def inflate_mutation(FUNCTIONS, TERMINALS, CONSTANTS, two_trees=True, operator="
                     *individual.train_semantics,
                     (
                         new_block.train_semantics
-                        if new_block.train_semantics.shape != np.Size([])
+                        if new_block.train_semantics.shape != ()
                         else new_block.train_semantics.repeat(len(X))
                     ),
                 ]
@@ -420,7 +420,7 @@ def inflate_mutation(FUNCTIONS, TERMINALS, CONSTANTS, two_trees=True, operator="
                             *individual.test_semantics,
                             (
                                 new_block.test_semantics
-                                if new_block.test_semantics.shape != np.Size([])
+                                if new_block.test_semantics.shape != ()
                                 else new_block.test_semantics.repeat(len(X_test))
                             ),
                         ]
@@ -450,7 +450,6 @@ def inflate_mutation(FUNCTIONS, TERMINALS, CONSTANTS, two_trees=True, operator="
         return offs
 
     return inflate
-
 
 def deflate_mutation(individual, reconstruct, mut_point_idx=None):
     """
@@ -599,7 +598,6 @@ def choose_depth_norm(max_depth, random_index, mean=None, std_dev=None):
     chosen_depth = random.choices(depths, weights=probabilities, k=1)[0]
     
     return chosen_depth
-
 
 def structure_mutation(FUNCTIONS, TERMINALS, CONSTANTS, depth_dist="norm"):
     """

@@ -125,7 +125,7 @@ def simplify_individual(individual,
             fit = rmse(preds, y_train)
             individual.fitness = fit
         else:
-            individual.evaluate(ffunction, y_train, testing=False, operator=op)
+            individual.evaluate(ffunction, y_train, testing=False, operator=op, force=True)
 
     return individual
 

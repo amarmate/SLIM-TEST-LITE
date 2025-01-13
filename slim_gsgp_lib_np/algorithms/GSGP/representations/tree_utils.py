@@ -26,7 +26,12 @@ Utility functions for Tree Evaluation and Mutation in GSGP.
 from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import bound_value
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import _execute_tree as exec_tree
-import torch
+import numpy as np
+
+def sigmoid(x):
+    x = np.clip(x, -5, 5)
+    return 1 / (1 + np.exp(-x))
+
 
 def _execute_tree(individual, inputs, testing=False, logistic=False):
     """
@@ -57,7 +62,7 @@ def _execute_tree(individual, inputs, testing=False, logistic=False):
         # if the individual is a base (gp) tree, use apply_tree to compute its semantics
         if isinstance(individual.structure, tuple):
             individual.test_semantics = (
-                torch.sigmoid(apply_tree(individual, inputs))
+                sigmoid(apply_tree(individual, inputs))
                 if logistic
                 else apply_tree(individual, inputs)
             )
@@ -72,7 +77,7 @@ def _execute_tree(individual, inputs, testing=False, logistic=False):
         # if the individual is a base (gp) tree, use apply_tree to compute its semantics
         if isinstance(individual.structure, tuple):
             individual.train_semantics = (
-                torch.sigmoid(apply_tree(individual, inputs))
+                sigmoid(apply_tree(individual, inputs))
                 if logistic
                 else apply_tree(individual, inputs)
             )
@@ -102,8 +107,8 @@ def apply_tree(tree, inputs):
     if isinstance(tree.structure, tuple):  # If it's a function node
         function_name = tree.structure[0]
         if tree.FUNCTIONS[function_name]["arity"] == 2:
-            left_subtree, right_subtree = tree.structure[1], tree.structure[2]
             FUNCTIONS, TERMINALS, CONSTANTS = tree.FUNCTIONS, tree.TERMINALS, tree.CONSTANTS
+            left_subtree, right_subtree = tree.structure[1], tree.structure[2]
             left_result = exec_tree(left_subtree, inputs, FUNCTIONS, TERMINALS, CONSTANTS)
             right_result = exec_tree(right_subtree, inputs, FUNCTIONS, TERMINALS, CONSTANTS)
             output = tree.FUNCTIONS[function_name]["function"](

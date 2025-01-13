@@ -23,99 +23,108 @@
 This module provides various error metrics functions for evaluating machine learning models.
 """
 
-import torch
+import numpy as np 
 
 
-def rmse(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+def rmse(y_true: np.ndarray=None, y_pred: np.ndarray=None, errors=None) -> np.ndarray:
     """
     Compute Root Mean Squared Error (RMSE).
 
     Parameters
     ----------
-    y_true : torch.Tensor
+    y_true : np.ndarray
         True values.
-    y_pred : torch.Tensor
+    y_pred : np.ndarray
         Predicted values.
+    errors : np.ndarray
+        Errors between true and predicted values. If None, it will be computed.
 
     Returns
     -------
-    torch.Tensor
+    np.ndarray
         RMSE value.
     """
-    return torch.sqrt(torch.mean(torch.square(torch.sub(y_true, y_pred)), dim=len(y_pred.shape) - 1))
+    if errors is None:
+        errors = y_true - y_pred
+    return np.sqrt(np.mean(np.square(errors), axis=len(errors.shape) - 1))
 
-
-def mse(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+def mse(y_true: np.ndarray=None, y_pred: np.ndarray=None, errors=None) -> np.ndarray:
     """
     Compute Mean Squared Error (MSE).
 
     Parameters
     ----------
-    y_true : torch.Tensor
+    y_true : np.ndarray
         True values.
-    y_pred : torch.Tensor
+    y_pred : np.ndarray
         Predicted values.
+    errors : np.ndarray
+        Errors between true and predicted values. If None, it will be computed.
 
     Returns
     -------
-    torch.Tensor
+    np.ndarray
         MSE value.
     """
-    return torch.mean(torch.square(torch.sub(y_true, y_pred)), dim=len(y_pred.shape) - 1)
+    if errors is None:
+        errors = y_true - y_pred
+    return np.mean(np.square(errors), axis=len(errors.shape) - 1)
 
-
-def mae(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+def mae(y_true: np.ndarray, y_pred: np.ndarray, errors=None) -> np.ndarray:
     """
     Compute Mean Absolute Error (MAE).
 
     Parameters
     ----------
-    y_true : torch.Tensor
+    y_true : np.ndarray
         True values.
-    y_pred : torch.Tensor
+    y_pred : np.ndarray
         Predicted values.
+    errors : np.ndarray
+        Errors between true and predicted values. If None, it will be computed.
 
     Returns
     -------
-    torch.Tensor
+    np.ndarray
         MAE value.
     """
-    return torch.mean(torch.abs(torch.sub(y_true, y_pred)), dim=len(y_pred.shape) - 1)
+    if errors is None:
+         errors = y_true - y_pred
+    return np.mean(np.abs(errors), axis=len(errors.shape) - 1)
 
-
-def mae_int(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+def mae_int(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
     """
     Compute Mean Absolute Error (MAE) for integer values.
 
     Parameters
     ----------
-    y_true : torch.Tensor
+    y_true : np.ndarray
         True values.
-    y_pred : torch.Tensor
+    y_pred : np.ndarray
         Predicted values.
 
     Returns
     -------
-    torch.Tensor
+    np.ndarray
         MAE value for integer predictions.
     """
-    return torch.mean(torch.abs(torch.sub(y_true, torch.round(y_pred))), dim=len(y_pred.shape) - 1)
+    return np.mean(np.abs(y_true - np.round(y_pred)), axis=len(y_pred.shape) - 1)
 
-
-def signed_errors(y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+def signed_errors(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
     """
     Compute signed errors between true and predicted values.
 
     Parameters
     ----------
-    y_true : torch.Tensor
+    y_true : np.ndarray
         True values.
-    y_pred : torch.Tensor
+    y_pred : np.ndarray
         Predicted values.
 
     Returns
     -------
-    torch.Tensor
+    np.ndarray
         Signed error values.
     """
-    return torch.sub(y_true, y_pred)
+    return y_true - y_pred
+

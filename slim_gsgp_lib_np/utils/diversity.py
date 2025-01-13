@@ -19,9 +19,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import torch
-from scipy.stats import entropy
 
+import numpy as np 
+from scipy.stats import entropy
 
 def niche_entropy(repr_, n_niches=10):
     """
@@ -68,17 +68,26 @@ def gsgp_pop_div_from_vectors(sem_vectors):
 
     Parameters
     ----------
-    sem_vectors : torch.Tensor
-        The tensor of semantic vectors.
+    sem_vectors : np.ndarray
+        The array of semantic values (1-dimensional).
 
     Returns
     -------
     float
-        The average pairwise distance between semantic vectors.
+        The average pairwise distance between semantic values.
+
     Notes
     -----
     https://ieeexplore.ieee.org/document/9283096
     """
-    return torch.sum(torch.cdist(sem_vectors, sem_vectors)) / (
-        sem_vectors.shape[0] ** 2
-    )
+    # Compute pairwise differences using broadcasting
+    diffs = sem_vectors[:, np.newaxis] - sem_vectors[np.newaxis, :]
+    pairwise_distances = np.abs(diffs)  # For 1D values, abs is sufficient instead of norm
+    
+    # Extract the upper triangle of the distance matrix
+    triu_indices = np.triu_indices(len(sem_vectors), k=1)
+    upper_triangle_distances = pairwise_distances[triu_indices]
+    
+    # Return the mean of the distances
+    return np.mean(upper_triangle_distances)
+

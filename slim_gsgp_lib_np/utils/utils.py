@@ -498,13 +498,13 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
 
 
     """
-    if not isinstance(X_train, np.array):
+    if not isinstance(X_train, np.ndarray):
         raise TypeError("X_train must be a numpy array")
-    if not isinstance(y_train, np.array):
+    if not isinstance(y_train, np.ndarray):
         raise TypeError("y_train must be a numpy array")
-    if not isinstance(X_test, np.array):
+    if not isinstance(X_test, np.ndarray) and test_elite:
         raise TypeError("X_test must be a numpy array")
-    if not isinstance(y_test, np.array):
+    if not isinstance(y_test, np.ndarray) and test_elite:
         raise TypeError("y_test must be a numpy array") 
     if not isinstance(pop_size, int):
         raise TypeError("pop_size must be an int")

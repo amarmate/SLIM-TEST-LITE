@@ -2,10 +2,10 @@ import os
 import argparse
 import pickle
 from joblib import Parallel, delayed
-from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
+from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
 from functions.test_algorithms import *
-from slim_gsgp_lib.datasets.data_loader import *
-from slim_gsgp_lib.utils.callbacks import EarlyStopping_train
+from slim_gsgp_lib_np.datasets.data_loader import *
+from slim_gsgp_lib_np.utils.callbacks import EarlyStopping_train
 from sklearn.model_selection import KFold
 from skopt import gp_minimize
 from skopt.space import Integer, Real, Categorical
@@ -61,7 +61,8 @@ def skopt_slim_cv(X, y, dataset,
                   struct_xo=False, 
                   mut_xo=False,
                   random_state=0, 
-                  simplify=False
+                  simplify=False,
+                  no_structure=False
                   ):
     trial_results = []
     calls_count = 0
@@ -69,7 +70,7 @@ def skopt_slim_cv(X, y, dataset,
     def objective(params):
         nonlocal calls_count
         start = time.time()
-        init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo, simplify_threshold = params
+        init_depth, max_depth, pop_size, p_struct, p_inflate, tournament_size, prob_const, decay_rate, depth_distribution, p_xo, p_struct_xo, simplify_threshold, initializer = params
         if max_depth < init_depth + 6:
             calls_count += 1
             return 100000
@@ -97,7 +98,7 @@ def skopt_slim_cv(X, y, dataset,
             'n_iter': int(n_iter),
             'p_xo': p_xo / 25,
             'p_struct_xo': p_struct_xo / 25,
-            'initializer': 'rhh',
+            'initializer': initializer,
         }
 
         # Perform K-fold cross-validation
@@ -105,7 +106,7 @@ def skopt_slim_cv(X, y, dataset,
         scores = []
         nodes_count = []
         # early_stopping = EarlyStopping_train(patience=int(12_000 / pop_size**0.9))   # 10_000
-        early_stopping = EarlyStopping_train(patience=500)
+        early_stopping = EarlyStopping_train(patience=2000)
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -195,6 +196,12 @@ def skopt_slim_cv(X, y, dataset,
     else:
         space.append(Categorical([None], name='simplify_threshold'))
 
+    if no_structure:
+        space.append(Categorical(['simple'], name='initializer'))
+    
+    else:
+        space.append(Categorical(['rhh'], name='initializer'))
+
     gp_minimize(
         func=lambda params: objective(params),
         dimensions=space,
@@ -242,6 +249,7 @@ def skopt_slim_cv(X, y, dataset,
 def process_dataset(dataset, name, algorithm, 
                     scale, struct_mutation, xo, 
                     mut_xo, gp_xo, simplify=None,
+                    no_structure=False,
                     random_state=0):
     
     dataset_id = dataset_dict[name]
@@ -255,9 +263,10 @@ def process_dataset(dataset, name, algorithm,
     mut_xo_suffix = 'mx' if mut_xo else None
     struct_mutation_suffix = 'sm' if struct_mutation else None
     simplify_threshold_suffix = 'sp' if simplify else None
+    no_structure_suffix = 'ns' if no_structure else None
     pattern = algorithm_suffix + '_' + ''.join([i for i in [scale_suffix, xo_suffix, gp_xo_suffix, 
                                                             mut_xo_suffix, struct_mutation_suffix,
-                                                            simplify_threshold_suffix] if i])
+                                                            simplify_threshold_suffix, no_structure_suffix] if i])
 
     # Ensure the domain exists
     if not os.path.exists(f'params/{dataset_id}'):
@@ -288,6 +297,7 @@ def process_dataset(dataset, name, algorithm,
                 mut_xo=mut_xo,
                 random_state=random_state,
                 simplify=simplify,
+                no_structure=no_structure,
                 pattern=pattern,
             )
 
@@ -385,15 +395,16 @@ def main():
 
     # Define dataset and algorithm combinations
     experiments = [
-        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify)
+        (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, no_structure)
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
-        for scale in [False]
-        for struct_mutation in [False, True]
+        for scale in [True, False]
+        for struct_mutation in [False]
         for xo in [False]
         for mut_xo in [False]
         for gp_xo in [False]
-        for simplify in [True]
+        for simplify in [False]
+        for no_structure in [True]
     ]
 
     # Add to each experiment a random_state 
@@ -408,66 +419,9 @@ def main():
 
     # Execute experiments in parallel
     Parallel(n_jobs=parallel_jobs)(
-        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, random_state)
-        for dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, random_state in experiments
+        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, no_structure, random_state)
+        for dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, no_structure, random_state in experiments
     )
 
 if __name__ == "__main__":
     main()
-
-    # # Aggregate the dictionary of params and results, as they were saved in separate files
-    # params_dict = {}
-    # results_dict = {}
-
-    # for dataset in datasets:
-    #     try:
-    #         dataset_name = dataset.__name__.split('load_')[1]
-    #         dataset_id = dataset_dict[dataset_name]
-
-    #         # The file will have this pattern: algorithm_scxo.pkl. 
-    #         # We need to ensure only that for some settings (ex.: scxo) all the algorithms are present
-    #         avalaible_settings = []
-    #         for file in os.listdir(f'results/slim/{dataset_id}'):
-    #             # Get the different settings available 
-    #             if len(file.split('_')) < 3:
-    #                 continue
-    #             settings = file.split('_')[2].split('.')[0]
-    #             if settings not in avalaible_settings:
-    #                 avalaible_settings.append(settings)
-            
-    #         for settings in avalaible_settings:
-    #             dict_params = {}
-    #             dict_results = {}
-    #             for suffix in ['MUL_ABS', 'MUL_SIG1', 'MUL_SIG2', 'SUM_ABS', 'SUM_SIG1', 'SUM_SIG2']:
-    #                 try:
-    #                     # Parameters
-    #                     with open(f'params/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
-    #                         params = pickle.load(f)
-    #                     params = {suffix : params}
-    #                     dict_params.update(params)
-    #                     os.remove(f'params/{dataset_id}/{suffix}_{settings}.pkl')
-    #                 except Exception as e:
-    #                     print(f"Error in parameters {dataset_id} - {settings}: {e}")
-
-    #                 try:
-    #                     # Results
-    #                     with open(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl', 'rb') as f:
-    #                         results = pickle.load(f)
-    #                     for k, v in results.items():
-    #                         if k not in dict_results:
-    #                             dict_results[k] = {}
-    #                         v = {suffix : v}
-    #                         dict_results[k].update(v)
-    #                     os.remove(f'results/slim/{dataset_id}/{suffix}_{settings}.pkl')
-
-    #                 except Exception as e:
-    #                     print(f"Error in results {dataset_id} - {settings}: {e}")
-    #                     continue
-                
-    #             # Dump the results
-    #             pickle.dump(dict_params, open(f'params/{dataset_id}/{settings}.pkl', 'wb'))
-    #             pickle.dump(dict_results, open(f'results/slim/{dataset_id}/{settings}.pkl', 'wb')) 
-
-    #     except Exception as e:
-    #         print(f"Error in processing dataset: {e}")
-    #         continue       

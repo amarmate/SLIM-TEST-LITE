@@ -22,13 +22,10 @@
 """
 Population Class for SLIM GSGP using PyTorch.
 """
-from slim_gsgp_lib.utils.utils import _evaluate_slim_individual
+from slim_gsgp_lib_np.utils.utils import _evaluate_slim_individual
 from joblib import Parallel, delayed
-
-# ----------------------- CHANGED ---------------------------
 import numpy as np
 
-# ----------------------- END ---------------------------
 
 class Population:
     def __init__(self, population):
@@ -98,7 +95,7 @@ class Population:
                 individual.train_semantics for individual in self.population
             ]
             
-    def calculate_errors_case(self, target):
+    def calculate_errors_case(self, target, operator="sum"):
         """
         Calculate the errors case for each individual in the population.
 
@@ -113,7 +110,7 @@ class Population:
         """
         # computing the errors case for all the individuals in the population
         [
-            individual.calculate_errors_case(target)
+            individual.calculate_errors_case(target, operator=operator)
             for individual in self.population
         ]
 
@@ -147,7 +144,6 @@ class Population:
         """
         return self.population[item]
     
-        
     def evaluate(self, 
             ffunction, 
             y, 
@@ -164,7 +160,6 @@ class Population:
             self.evaluate_parall(
                 ffunction, y, operator, n_jobs, fitness_sharing, rank_selection, pressure_size
             )
-
 
     def evaluate_no_parall(self, ffunction, y, operator="sum"):
         """

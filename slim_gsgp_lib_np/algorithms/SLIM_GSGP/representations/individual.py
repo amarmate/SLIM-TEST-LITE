@@ -28,7 +28,9 @@ from slim_gsgp_lib_np.algorithms.GSGP.representations.tree_utils import apply_tr
 from slim_gsgp_lib_np.utils.utils import check_slim_version
 
 # sigmoid function
+
 def sigmoid(x):
+    x = np.clip(x, -6, 6)
     return 1 / (1 + np.exp(-x))
 
 class Individual:
@@ -175,8 +177,33 @@ class Individual:
             The tree at the specified index.
         """
         return self.collection[item]
+    
+    def calculate_errors_case(self, target, operator='sum'):
+        """
+        Calculate the error for each test case (entry) in the dataset.
+        
+        Parameters
+        ----------
+        target : torch.Tensor
+            The true target values for each entry in the dataset.
 
-    def evaluate(self, ffunction, y, testing=False, operator="sum"):
+        Returns
+        -------
+        torch.Tensor
+            The error for each test case.
+        """
+        if operator == "sum":
+            operator = np.sum
+        else:
+            operator = np.prod
+        
+        # Everytime an individual is mutated/born it's errors_per_case should be reset
+        if self.errors_case is None:
+            self.errors_case = target - np.clip(operator(self.train_semantics, axis=0),-1000000000000.0, 1000000000000.0,)
+        return self.errors_case
+    
+
+    def evaluate(self, ffunction, y, testing=False, operator="sum", force=False):
         """
         Evaluate the Individual using a fitness function.
 
@@ -190,6 +217,10 @@ class Individual:
             Boolean indicating if the evaluation is for testing semantics (default is False).
         operator : str, optional
             Operator to apply to the semantics (default is "sum").
+        errors : torch.Tensor, optional
+            Errors for each test case in the dataset (default is None).
+        force : bool, optional
+            Whether to force recalculating the errors per case.
 
         Returns
         -------
@@ -206,17 +237,20 @@ class Individual:
             self.test_fitness = ffunction(
                 y,
                 np.clip(
-                    operator(self.test_semantics, dim=0),
+                    operator(self.test_semantics, axis=0),
                     -1000000000000.0,
                     1000000000000.0,
                 ),
             )
+
         # computing the training fitness
+        elif self.errors_case is not None and not force:
+            self.fitness = ffunction(errors = self.errors_case)
         else:
             self.fitness = ffunction(
                 y,
                 np.clip(
-                    operator(self.train_semantics, dim=0),
+                    operator(self.train_semantics, axis=0),
                     -1000000000000.0,
                     1000000000000.0,
                 ),
@@ -314,12 +348,17 @@ class Individual:
         # making sure that if the semantics of the collection is solely a constant,
         # the constant value is repeated len(data) number of times to match the remaining semantics' shapes.
 
-        semantics = [ten if ten.numel() == len(data) else ten.repeat(len(data)) for ten in semantics]
+        # Ensure semantics match the shape of data
+        semantics = [
+            ten if ten.size == len(data) else np.repeat(ten, len(data)) for ten in semantics
+        ]
 
-        # clamping the semantics
-        return np.clip(
-            operator(np.stack(semantics), dim=0), -1000000000000.0, 1000000000000.0
+        # Clamp the semantics
+        clamped_semantics = np.clip(
+            operator(np.stack(semantics), axis=0), -1e12, 1e12
         )
+
+        return clamped_semantics
 
     def get_tree_representation(self):
         """
@@ -376,27 +415,3 @@ class Individual:
         """
 
         print(self.get_tree_representation())
-
-    def calculate_errors_case(self, target):
-        """
-        Calculate the error for each test case (entry) in the dataset.
-        
-        Parameters
-        ----------
-        target : torch.Tensor
-            The true target values for each entry in the dataset.
-
-        Returns
-        -------
-        torch.Tensor
-            The error for each test case.
-        """
-        # Assuming self.train_semantics contains predictions for all entries (TIME CONSUMING)
-        # if self.train_semantics is None:
-        #     raise ValueError("Individual has no training semantics. Can't calculate errors.")
-        
-        # Everytime an individual is mutated/born it's errors_per_case should be reset
-        if self.errors_case is None:
-            self.errors_case = np.abs(self.train_semantics - target)[0]
-        
-        return self.errors_case

@@ -23,7 +23,7 @@
 Initializers operator implementation.
 """
 
-from slim_gsgp_lib.algorithms.GP.representations.tree_utils import (create_full_random_tree,
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import (create_full_random_tree,
                                                                 create_grow_random_tree, create_neutral_tree)
 
 def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **kwargs):

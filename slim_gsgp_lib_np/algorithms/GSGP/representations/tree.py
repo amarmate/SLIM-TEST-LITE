@@ -27,8 +27,10 @@ import numpy as np
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth_and_nodes
 from slim_gsgp_lib_np.algorithms.GSGP.representations.tree_utils import apply_tree, nested_depth_calculator, nested_nodes_calculator
 from slim_gsgp_lib_np.algorithms.GSGP.operators.crossover_operators import geometric_crossover
+# from scipy.special import expit as sigmoid
 
 def sigmoid(x):
+    x = np.clip(x, -5, 5)
     return 1 / (1 + np.exp(-x))
 
 class Tree:

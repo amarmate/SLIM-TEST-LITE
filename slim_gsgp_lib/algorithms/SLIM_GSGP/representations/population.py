@@ -147,7 +147,6 @@ class Population:
         """
         return self.population[item]
     
-        
     def evaluate(self, 
             ffunction, 
             y, 
