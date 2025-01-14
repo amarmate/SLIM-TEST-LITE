@@ -1,14 +1,13 @@
-from slim_gsgp_lib.main_slim import slim
-from slim_gsgp_lib.utils.utils import train_test_split
-from slim_gsgp_lib.evaluators.fitness_functions import rmse
+from slim_gsgp_lib_np.main_slim import slim
+from slim_gsgp_lib_np.utils.utils import train_test_split
+from slim_gsgp_lib_np.evaluators.fitness_functions import rmse
 import numpy as np
-import torch
 from sklearn.preprocessing import MinMaxScaler
 import time
-from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.mutators import *
-from slim_gsgp_lib.utils.utils import *
+from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.mutators import *
+from slim_gsgp_lib_np.utils.utils import *
 from functions.test_algorithms import *
-from slim_gsgp_lib.datasets.data_loader import *
+from slim_gsgp_lib_np.datasets.data_loader import *
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -24,8 +23,8 @@ if __name__ == '__main__':
     datasets = [globals()[i] for i in globals() if 'load' in i][2:]
     X,y = datasets[10]()
     scaler_X, scaler_y = MinMaxScaler(), MinMaxScaler()
-    X = torch.tensor(scaler_X.fit_transform(X))
-    y = torch.tensor(scaler_y.fit_transform(y.reshape(-1,1)).reshape(-1))
+    X = scaler_X.fit_transform(X)
+    y = scaler_y.fit_transform(y.reshape(-1,1)).reshape(-1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2, seed=seed)
     
     start = time.time()
