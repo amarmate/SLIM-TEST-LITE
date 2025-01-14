@@ -33,7 +33,7 @@ for i, dataset in enumerate(datasets):
 max_iter = 2000  # 2000
 p_train = 0.8    # 0.85
 n_trials = 50    # 40  75
-n_samples = 1   # 50
+n_samples = 50    
 
 cv = 4          # 5
 seed = 200        # 40
