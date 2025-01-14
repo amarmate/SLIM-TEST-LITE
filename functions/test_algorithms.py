@@ -1,6 +1,6 @@
 from slim_gsgp_lib_np.main_slim import slim
-from slim_gsgp_lib_np.main_gsgp import gsgp 
-from slim_gsgp_lib_np.main_gp import gp
+# from slim_gsgp_lib_np.main_gsgp import gsgp 
+# from slim_gsgp_lib_np.main_gp import gp
 from slim_gsgp_lib_np.utils.utils import train_test_split
 from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
 from slim_gsgp_lib_np.evaluators.fitness_functions import rmse

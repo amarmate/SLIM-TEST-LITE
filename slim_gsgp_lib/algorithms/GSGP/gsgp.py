@@ -27,7 +27,6 @@ import random
 import time
 
 import numpy as np
-import torch
 from slim_gsgp_lib.algorithms.GP.representations.tree import Tree as GP_Tree
 from slim_gsgp_lib.algorithms.GSGP.representations.population import Population
 from slim_gsgp_lib.algorithms.GSGP.representations.tree import Tree
