@@ -28,11 +28,11 @@ import time
 
 import numpy as np
 import torch
-from slim_gsgp_lib.algorithms.GP.representations.population import Population
-from slim_gsgp_lib.algorithms.GP.representations.tree import Tree
-from slim_gsgp_lib.utils.diversity import niche_entropy
-from slim_gsgp_lib.utils.logger import logger
-from slim_gsgp_lib.utils.utils import verbose_reporter
+from slim_gsgp_lib_torch.algorithms.GP.representations.population import Population
+from slim_gsgp_lib_torch.algorithms.GP.representations.tree import Tree
+from slim_gsgp_lib_torch.utils.diversity import niche_entropy
+from slim_gsgp_lib_torch.utils.logger import logger
+from slim_gsgp_lib_torch.utils.utils import verbose_reporter
 
 from joblib import Parallel, delayed
 

@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.stats import wilcoxon
 from tabulate import tabulate
 import matplotlib.pyplot as plt
-from slim_gsgp_lib.datasets.data_loader import *
+from slim_gsgp_lib_torch.datasets.data_loader import *
 
 datasets = [globals()[i] for i in globals() if 'load' in i][2:]
 datasets = datasets[:12] + datasets[13:]  

@@ -3,9 +3,9 @@ from tqdm import tqdm
 import numpy as np
 import os
 import pickle
-from slim_gsgp_lib.main_slim import slim
-from slim_gsgp_lib.utils.utils import train_test_split
-from slim_gsgp_lib.evaluators.fitness_functions import rmse
+from slim_gsgp_lib_torch.main_slim import slim
+from slim_gsgp_lib_torch.utils.utils import train_test_split
+from slim_gsgp_lib_torch.evaluators.fitness_functions import rmse
 import torch
 from sklearn.preprocessing import MinMaxScaler
 

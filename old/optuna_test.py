@@ -4,10 +4,10 @@ import argparse
 import pickle
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from slim_gsgp_lib.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
+from slim_gsgp_lib_torch.algorithms.SLIM_GSGP.operators.simplifiers import simplify_individual
 from functions.test_algorithms import *
-from slim_gsgp_lib.datasets.data_loader import *
-from slim_gsgp_lib.utils.callbacks import EarlyStopping_train
+from slim_gsgp_lib_torch.datasets.data_loader import *
+from slim_gsgp_lib_torch.utils.callbacks import EarlyStopping_train
 from sklearn.model_selection import KFold
 from skopt import gp_minimize
 from skopt.space import Integer, Real, Categorical

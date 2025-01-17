@@ -7,7 +7,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from functions.test_algorithms import *
 from functions.random_search import random_search_slim  # Assuming this is the non-parallel version
-from slim_gsgp_lib.datasets.data_loader import *
+from slim_gsgp_lib_torch.datasets.data_loader import *
 
 # Limit threads for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"

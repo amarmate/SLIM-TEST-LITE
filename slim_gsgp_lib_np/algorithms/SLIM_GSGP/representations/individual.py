@@ -194,8 +194,10 @@ class Individual:
         """
         if operator == "sum":
             operator = np.sum
-        else:
+        elif operator == "mul":
             operator = np.prod
+        else:
+            raise ValueError("Invalid operator. Must be 'sum' or 'mul'.")
         
         # Everytime an individual is mutated/born it's errors_per_case should be reset
         if self.errors_case is None:
@@ -229,8 +231,10 @@ class Individual:
         # getting the correct torch operator based on the slim_gsgp version
         if operator == "sum":
             operator = np.sum
-        else:
+        elif operator == "mul":
             operator = np.prod
+        else:
+            raise ValueError("Invalid operator. Must be 'sum' or 'mul'.")
 
         # computing the testing fitness, if applicable
         if testing:

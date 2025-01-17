@@ -1,5 +1,5 @@
 from functions.test_algorithms import test_slim
-from slim_gsgp_lib.datasets.data_loader import *
+from slim_gsgp_lib_torch.datasets.data_loader import *
 import numpy as np
 from multiprocessing import Pool, cpu_count
 

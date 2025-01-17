@@ -270,7 +270,6 @@ def lexicase_selection(targets, mode='min'):
     The returned function performs lexicase selection by receiving a population and returning the individual with the
     lowest fitness in the pool.
     """
-
     def ls(population):
         """
         Perform lexicase selection on a population of individuals.
@@ -288,7 +287,7 @@ def lexicase_selection(targets, mode='min'):
         
         # Get errors for each individual on each test case
         errors = population.errors_case
-        num_cases = targets.shape[0]
+        num_cases = errors.shape[1]  
                 
         # Start with all individuals in the pool
         pool = population.population.copy()
@@ -297,7 +296,7 @@ def lexicase_selection(targets, mode='min'):
         # Iterate over test cases and filter individuals based on exact performance (no epsilon)
         for i in range(5):
             # Generate an int from 0 to num_cases
-            case_errors = errors[:, case_order[i]]
+            case_errors = (errors[:, case_order[i]]) ** 2
             
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':                
@@ -390,7 +389,7 @@ def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
             case_idx = random.randint(0, num_cases - 1)
             
             # Extract case errors for the current test case
-            case_errors = errors[:, case_idx]
+            case_errors = errors[:, case_idx] ** 2
 
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':

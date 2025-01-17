@@ -1,7 +1,7 @@
-from slim_gsgp_lib.datasets.data_loader import *
+from slim_gsgp_lib_torch.datasets.data_loader import *
 from sklearn.preprocessing import MinMaxScaler
-from slim_gsgp_lib.utils.utils import train_test_split
-from slim_gsgp_lib.main_slim import slim
+from slim_gsgp_lib_torch.utils.utils import train_test_split
+from slim_gsgp_lib_torch.main_slim import slim
 import cProfile
 import pstats
 

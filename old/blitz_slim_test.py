@@ -7,8 +7,8 @@ import pickle
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from functions.test_algorithms import *
-from slim_gsgp_lib.datasets.data_loader import *
-from slim_gsgp_lib.utils.callbacks import EarlyStopping
+from slim_gsgp_lib_torch.datasets.data_loader import *
+from slim_gsgp_lib_torch.utils.callbacks import EarlyStopping
 from sklearn.model_selection import KFold
 import optuna
 
