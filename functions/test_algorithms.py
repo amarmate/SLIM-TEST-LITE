@@ -138,8 +138,8 @@ def test_slim(X_train, y_train, X_test, y_test,
         
         if scale:
             # Apply inverse scaling
-            y_pred_descaled = scaler_y.inverse_transform(y_pred.reshape(-1, 1))
-            y_test_descaled = scaler_y.inverse_transform(y_test.reshape(-1, 1))
+            y_pred_descaled = scaler_y.inverse_transform(y_pred.reshape(-1, 1)).reshape(-1)
+            y_test_descaled = scaler_y.inverse_transform(y_test.reshape(-1, 1)).reshape(-1)
 
             # Calculate metrics
             rmse_compare = rmse(y_test_descaled, y_pred_descaled)
