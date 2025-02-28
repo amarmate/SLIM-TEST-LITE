@@ -129,81 +129,352 @@ def create_grow_random_tree(depth,
                                                    p_c, p_t, False)
             return (node, left_subtree)
 
-def create_full_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
+
+def create_random_tree(depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+                       p_specialist=0.5, p_t=0.5, p_c=0.3):
     """
-    Generates a full random tree representation with a specified depth.
-
-    Utilizes recursion to call itself on progressively smaller depths to form the whole tree, until the leaf nodes.
-
-    Parameters
-    ----------
-    depth : int
-        Maximum depth of the tree to be created.
-    FUNCTIONS : dict
-        Dictionary of functions allowed in the tree.
-    TERMINALS : dict
-        Dictionary of terminal symbols allowed in the tree.
-    CONSTANTS : dict
-        Dictionary of constant values allowed in the tree.
-    p_c : float, optional
-        Probability of choosing a constant node. Default is 0.3.
-    list_form : bool, optional
-        Variable that controls whether the tree is returned in list form. Default is False.
-
-    Returns
-    -------
-    tuple
-        The generated tree representation according to the specified parameters.
-    str
-        The terminal or constant node selected, depending on depth and random probabilities.
-    """
-    # if the maximum depth is 1, choose a terminal node
-    if depth <= 1:
-        # choosing between a terminal or a constant to be the terminal node
-        if random.random() > p_c:
-            node = random.choice(list(TERMINALS.keys()))
-        else:
-            node = random.choice(list(CONSTANTS.keys()))
-    # if the depth isn't one, choose a random function
-    else:
-        node = np.random.choice(list(FUNCTIONS.keys()))
-        # building the tree based on the arity of the chosen function
-        if FUNCTIONS[node]["arity"] == 2:
-            left_subtree = create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
-            right_subtree = create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
-            node = (node, left_subtree, right_subtree)
-        else:
-            left_subtree = create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
-            node = (node, left_subtree)
-    return node
-
-def create_neutral_tree(operator, FUNCTIONS, CONSTANTS):
-    """
-    Generates a tree with semantics all 0 if operator is 'sum' or 1 if operator is 'product'.
+    Generates a random ensemble tree representing an individual in the GP ensemble.
+    
+    The tree is structured as a conditional operator:
+        (condition_tree, true_branch, false_branch)
+    
+    - condition_tree: generated using your existing create_grow_random_tree function.
+    - true_branch / false_branch: either a further nested conditional tree or, with some probability,
+      a specialist selected from SPECIALISTS.
     
     Parameters
     ----------
-    operator : str
-        The operator to be used in the tree.    
+    depth_condition : int
+        Maximum depth for the condition trees.
+    depth_tree : int
+        Maximum depth for the ensemble trees.
     FUNCTIONS : dict
-        Dictionary of functions allowed in the tree.
+        Dictionary of function nodes (for condition trees).
+    TERMINALS : dict
+        Dictionary of terminal nodes (for condition trees).
     CONSTANTS : dict
-        Dictionary of constant values allowed in the tree.
-
+        Dictionary of constant nodes (for condition trees).
+    SPECIALISTS : dict
+        Dictionary (or list) of specialist solutions.
+    p_specialist : float, optional
+        Probability of terminating a branch with a specialist rather than another conditional node.
+    p_t : float, optional
+        Terminal probability passed to create_grow_random_tree.
+    p_c : float, optional
+        Constant probability passed to create_grow_random_tree.
+    
     Returns
     -------
-    tuple
-        The generated tree representation with neutral semantics.
+    tuple or str
+        A conditional tree or a specialist (when the branch is terminated).
     """
-    if operator == 'sum':
-        return ('subtract', list(CONSTANTS.keys())[0], list(CONSTANTS.keys())[0])
-    elif operator == 'mul':
-        return ('divide', list(CONSTANTS.keys())[0], list(CONSTANTS.keys())[0])
-    else:
-        raise ValueError("Invalid operator. Choose either 'sum' or 'mul'.")
+    # Base case: if depth is 0 or by chance we decide to return a specialist
+    if depth_tree <= 0 or random.random() < p_specialist:
+        return random.choice(list(SPECIALISTS.keys()))
+    
+    # Generate a condition tree.
+    # Here we choose a random depth for the condition tree (at most the current depth)
+    condition_tree = create_grow_random_tree(depth_condition, FUNCTIONS, TERMINALS, CONSTANTS,
+                                             p_c=p_c, p_t=p_t, first_call=True)
+    
+    # Recursively build the true and false branches.
+    true_branch = create_random_tree(depth_condition, depth_tree - 1, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+                                     p_specialist=p_specialist, p_t=p_t, p_c=p_c)
+    false_branch = create_random_tree(depth_condition, depth_tree - 1, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+                                      p_specialist=p_specialist, p_t=p_t, p_c=p_c)
+    
+    return (condition_tree, true_branch, false_branch)
+
+
+def initializer(init_pop_size, 
+                depth_condition, 
+                depth_tree, 
+                FUNCTIONS, 
+                TERMINALS, 
+                CONSTANTS,
+                SPECIALISTS,
+                p_c=0.3, 
+                p_t=0.5, 
+                p_specialist=0.5,
+                **kwargs):
+    """
+    Generates a list of individuals with random ensemble trees for a GP population.
+    
+    The individuals are binned along two axes:
+      - Condition tree depth: from 0 to depth_condition (inclusive).
+      - Ensemble tree depth: from 1 to depth_tree.
+    
+    For each (condition, ensemble) bin, four modes are created by adjusting the probabilities:
+      1. grow–grow: condition: p_t, p_c as given; ensemble: p_specialist as given.
+      2. full (condition)–grow: condition: p_t = 0, p_c = 0; ensemble: p_specialist as given.
+      3. grow–full: condition: p_t, p_c as given; ensemble: p_specialist = 0.
+      4. full–full: condition: p_t = 0, p_c = 0; ensemble: p_specialist = 0.
+    
+    Parameters
+    ----------
+    init_pop_size : int
+        Total number of individuals to generate.
+    depth_condition : int
+        Maximum depth for condition trees. (A minimum of 2 is enforced.)
+        For example, if 5 is passed then condition depths 0,1,...,5 will be used.
+    depth_tree : int
+        Maximum ensemble tree depth. If depth_tree <= 0, only specialists will be chosen.
+    FUNCTIONS : dict
+        Dictionary of allowed function nodes.
+    TERMINALS : dict
+        Dictionary of allowed terminal symbols.
+    CONSTANTS : dict
+        Dictionary of allowed constant values.
+    SPECIALISTS : dict
+        Dictionary of specialist individuals.
+    p_c : float, optional
+        Constant probability for tree creation (default: 0.3).
+    p_t : float, optional
+        Terminal probability for tree creation (default: 0.5).
+    p_specialist : float, optional
+        Specialist termination probability for ensemble tree creation (default: 0.5).
+    
+    Returns
+    -------
+    list
+        A list of tree representations (each either a conditional tree or a specialist)
+        forming the initial population.
+    """
+    # Enforce a minimum condition depth of 2.
+    if depth_condition < 2:
+        depth_condition = 2
+
+    # If depth_tree <= 0, then no ensemble tree can be built: return specialists.
+    if depth_tree <= 0:
+        return [random.choice(list(SPECIALISTS.keys())) for _ in range(init_pop_size)]
+    
+    population = []
+    num_condition_bins = depth_condition - 1  # condition depths: 2 ... depth_condition
+    num_ensemble_bins = depth_tree            # ensemble depths: 1 ... depth_tree
+
+    # Define four modes by fixing the probabilities:
+    # Each mode is a tuple: (condition_p_t, condition_p_c, ensemble_p_specialist)
+    modes = [
+         (p_t,      p_c,      p_specialist),  # grow–grow
+         (0,        p_c,        p_specialist),  # full (condition)–grow
+         (p_t,      p_c,      0),             # grow–full
+         (0,        p_c,        0)              # full–full
+    ]
+    total_bins = num_condition_bins * num_ensemble_bins * len(modes)
+    inds_per_bin = init_pop_size // total_bins
+
+    # Loop over all bins.
+    for cond_depth in range(2, depth_condition + 1):
+        for ens_depth in range(1, depth_tree + 1):
+            for mode in modes:
+                count = 0 
+                cond_p_t, cond_p_c, ens_p_specialist = mode
+                for _ in range(inds_per_bin):
+                    tree = create_random_tree(
+                        cond_depth, ens_depth, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+                        p_specialist=ens_p_specialist, p_t=cond_p_t, p_c=cond_p_c
+                    )
+                    population.append(tree)
+                    count += 1
+                print(count)
+
+    
+    # If there are still fewer individuals than desired, fill with trees at maximum depths using default probabilities.
+    while len(population) < init_pop_size:
+        tree = create_random_tree(
+            depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+            p_specialist=p_specialist, p_t=p_t, p_c=p_c
+        )
+        population.append(tree)
+    
+    return population[:init_pop_size]
+
+
+def tree_depth_and_nodes(FUNCTIONS, SPECIALISTS):
+    """
+    Returns a function that calculates three measures for a tree:
+      1. Depth: length of the longest path from the root to a leaf.
+      2. Node count: the total number of nodes in the tree (for function nodes, each is counted;
+         ensemble nodes themselves are not counted as extra nodes).
+      3. Ensemble nodes total: the sum of the node counts from the specialist trees used as terminals.
+         For a specialist terminal, its individual node count is used (accessed via SPECIALISTS[key].nodes_count);
+         non-specialist terminals contribute 0.
+
+    The tree may be:
+      - A function node (created by your grow method), represented as a tuple whose first element is a key in FUNCTIONS.
+      - An ensemble (conditional) node, represented as a 3-tuple (condition, true_branch, false_branch)
+        where the condition is a function tree and the branches are either ensemble nodes or terminals.
+      - A terminal (string). If the string is a key in SPECIALISTS, its ensemble total is taken from the individual.
+    
+    Parameters
+    ----------
+    FUNCTIONS : dict
+        Dictionary of function nodes allowed in the tree. Each function has an "arity" entry.
+    SPECIALISTS : dict
+        Dictionary of specialist individuals. For a specialist terminal key (e.g. "S_0"), its ensemble
+        node count is retrieved by SPECIALISTS[key].nodes_count.
+    
+    Returns
+    -------
+    Callable
+        A function that, given a tree, returns a triple (depth, node_count, ensemble_nodes_total).
+    """
+    def depth_and_nodes(tree, count_ensemble):
+        # Base case: terminal node.
+        if not isinstance(tree, tuple):
+            if tree in SPECIALISTS:
+                # Depth and node count are 1 for the terminal,
+                # but the ensemble total comes from the specialist's own nodes_count.
+                return 1, 1, SPECIALISTS[tree].nodes_count
+            else:
+                # Regular terminal (variable or constant): count as 1 node and depth 1, but no ensemble total.
+                return 1, 1, 0
+
+        # If the node is a function node (its first element is a key in FUNCTIONS)
+        if isinstance(tree[0], str) and tree[0] in FUNCTIONS:
+            arity = FUNCTIONS[tree[0]]["arity"]
+            if arity == 2:
+                d_left, n_left, ens_left = depth_and_nodes(tree[1], True)
+                d_right, n_right, ens_right = depth_and_nodes(tree[2], True)
+                depth_val = 1 + max(d_left, d_right)
+                nodes_val = 1 + n_left + n_right
+                ens_total = ens_left + ens_right
+                return depth_val, nodes_val, ens_total
+            elif arity == 1:
+                d_child, n_child, ens_child = depth_and_nodes(tree[1], True)
+                return 1 + d_child, 1 + n_child, ens_child
+            else:
+                # If the function node is of arity 0, treat it as a leaf.
+                return 1, 1, 0
+
+        else:
+            # Otherwise, assume it's an ensemble (conditional) node: (condition, true_branch, false_branch)
+            if len(tree) != 3:
+                raise ValueError("Invalid ensemble tree structure. Expected a tuple of length 3.")
+            d_cond, n_cond, ens_cond = depth_and_nodes(tree[0], False)
+            d_true, n_true, ens_true = depth_and_nodes(tree[1], False)
+            d_false, n_false, ens_false = depth_and_nodes(tree[2], False)
+            # For depth, take the max depth among children; if this ensemble operator is counted, add 1.
+            d = max(d_cond, d_true, d_false)
+            if count_ensemble:
+                d += 1
+            # For node count, simply sum the node counts of the children (ensemble operator not counted as an extra node).
+            n = n_cond + n_true + n_false
+            # For ensemble total, sum the ensemble totals of the children.
+            ens_total = ens_cond + ens_true + ens_false
+            return d, n, ens_total
+
+    return lambda tree: depth_and_nodes(tree, True)
+
+def _execute_gp_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
+    if isinstance(repr_, tuple):  # If it's a function node
+        function_name = repr_[0]
+        if FUNCTIONS[function_name]["arity"] == 2:
+            left_subtree, right_subtree = repr_[1], repr_[2]
+            left_result = _execute_gp_tree(left_subtree, X, FUNCTIONS, TERMINALS,
+                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
+            right_result = _execute_gp_tree(right_subtree, X, FUNCTIONS, TERMINALS,
+                                         CONSTANTS)  # equivalent to Tree(right_subtree).apply_tree(inputs) if no parallelization were used
+            output = FUNCTIONS[function_name]["function"](
+                left_result, right_result
+            )
+        else:
+            left_subtree = repr_[1]
+            left_result = _execute_gp_tree(left_subtree, X, FUNCTIONS, TERMINALS,
+                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
+            output = FUNCTIONS[function_name]["function"](left_result)
+
+        return bound_value(output, -1e12, 1e12)
+
+    else:  # If it's a terminal node
+        if repr_ in TERMINALS:
+            return X[:, TERMINALS[repr_]]
+        elif repr_ in CONSTANTS:
+            return np.full((X.shape[0],), CONSTANTS[repr_](None))
+
+
+def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing=False, predict=False):
+    """
+    Evaluates a tree representation that may include ensemble (conditional) nodes.
+    
+    Ensemble nodes are represented as a 3-tuple:
+         (condition, branch_if_true, branch_if_false)
+    For the condition part, we use _execute_gp_tree to compute its semantics and then 
+    create a mask (condition > 0). The mask is used to select, for each sample in X, which 
+    branch to follow.
+    
+    Parameters
+    ----------
+    repr_ : tuple or str
+        The tree representation. This may be:
+          - A function node (tuple with the first element a key in FUNCTIONS),
+          - An ensemble node (tuple with first element NOT in FUNCTIONS), or
+          - A terminal (string).
+    X : np.ndarray
+        Input data samples (rows correspond to samples).
+    FUNCTIONS : dict
+        Dictionary of allowed functions for GP trees (each with an "arity" and "function").
+    TERMINALS : dict
+        Dictionary mapping terminal symbols to their corresponding column indices in X.
+    CONSTANTS : dict
+        Dictionary mapping constant symbols to constant-producing functions.
+    SPECIALISTS : dict
+        Dictionary mapping specialist keys to specialist individuals. Each specialist must have:
+           - The precomputed attributes `train_semantics` and `test_semnatics`, and
+           - A method `predict(X)` to compute semantics on new data.
+    testing : bool, optional
+        If True, use the specialist's precomputed test semantics. Else, use the train semantics.
+    predict : bool, optional
+        If True, use the specialist's predict method to compute semantics on new data.
+    
+    Returns
+    -------
+    np.ndarray
+        A NumPy array of semantics for each sample in X.
+    """
+    # Check for ensemble (conditional) node:
+    # We assume an ensemble node is a tuple whose first element is not a key in FUNCTIONS.
+    if isinstance(repr_, tuple) and not (isinstance(repr_[0], str) and repr_[0] in FUNCTIONS):
+        # Evaluate the condition using _execute_gp_tree.
+        condition_semantics = _execute_gp_tree(repr_[0], X, FUNCTIONS, TERMINALS, CONSTANTS)
+        # Create a Boolean mask: for each sample, True if condition > 0.
+        mask = condition_semantics > 0
+        
+        # Evaluate the true and false branches recursively.
+        true_branch = _execute_tree(repr_[1], X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing)
+        false_branch = _execute_tree(repr_[2], X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing)
+        # Combine the results: for each sample, pick the branch based on the mask.
+        return np.where(mask, true_branch, false_branch)
+    
+    # Otherwise, if it is a standard function node, use _execute_gp_tree.
+    if isinstance(repr_, tuple) and (isinstance(repr_[0], str) and repr_[0] in FUNCTIONS):
+        return _execute_gp_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS)
+    
+    # Terminal node: check terminals, constants, and specialists.
+    if not isinstance(repr_, tuple):
+        if repr_ in TERMINALS:
+            return X[:, TERMINALS[repr_]]
+        elif repr_ in CONSTANTS:
+            return np.full((X.shape[0],), CONSTANTS[repr_](None))
+        elif repr_ in SPECIALISTS:
+            if testing:
+                return SPECIALISTS[repr_].test_semantics
+            elif not predict:
+                return SPECIALISTS[repr_].train_semantics
+            else: 
+                return SPECIALISTS[repr_].predict(X)
+        else:
+            raise ValueError("Unknown terminal symbol: " + str(repr_))
+        
 
 
 
+
+
+
+
+
+# --------------------------------------------- NOT IMPLEMENTED ---------------------------------------------
 def random_subtree(FUNCTIONS):
     """
     Creates a function that selects a random subtree from a given tree representation.
@@ -481,175 +752,3 @@ def tree_pruning(TERMINALS, CONSTANTS, FUNCTIONS, p_c=0.3):
             return tree[0], new_left_subtree
 
     return pruning
-
-
-def tree_depth(FUNCTIONS):
-    """
-    Generates a function that calculates the depth of a given tree representation.
-
-    This function returns another function that can be used to compute the depth
-    of a tree representation, which is defined as the length of the longest path
-    from the root node to a leaf node.
-
-    Parameters
-    ----------
-    FUNCTIONS : dict
-        Dictionary of functions allowed in the tree representation.
-
-    Returns
-    -------
-    Callable
-        A function ('depth') that calculates the depth of the given tree.
-
-        This function determines the depth by recursively computing the maximum
-        depth of the left and right subtrees and adding one for the current node.
-
-        Parameters
-        ----------
-        tree : tuple or str
-            The tree representation for which to calculate the depth. It can also be
-            a terminal node represented as a string.
-
-        Returns
-        -------
-        int
-            The depth of the tree.
-
-    Notes
-    -----
-    The returned function traverses the tree representation recursively, determining
-    the depth based on the max of the subtree depths.
-    """
-    def depth(tree):
-        """
-        Calculates the depth of the given tree.
-
-        This function determines the depth by recursively computing the maximum
-        depth of the left and right subtrees and adding one for the current node.
-
-        Parameters
-        ----------
-        tree : tuple or str
-            The tree representation for which to calculate the depth. It can also be
-            a terminal node represented as a string.
-
-        Returns
-        -------
-        int
-            The depth of the tree.
-        """
-        if not isinstance(tree, tuple):
-            return 1
-        else:
-            if FUNCTIONS[tree[0]]["arity"] == 2:
-                left_depth = depth(tree[1])
-                right_depth = depth(tree[2])
-            elif FUNCTIONS[tree[0]]["arity"] == 1:
-                left_depth = depth(tree[1])
-                right_depth = 0
-            return 1 + max(left_depth, right_depth)
-
-    return depth
-
-def tree_depth_and_nodes(FUNCTIONS):
-    """
-    Generates a function that calculates the depth and number of nodes of a given tree representation.
-
-    This function returns another function that can be used to compute the depth
-    and number of nodes of a tree representation, which is defined as the length of the longest path
-    from the root node to a leaf node.
-
-    Parameters
-    ----------
-    FUNCTIONS : dict
-        Dictionary of functions allowed in the tree representation.
-
-    Returns
-    -------
-    Callable
-    """
-    
-    def depth_and_nodes(tree):
-        """
-        Calculates the depth and number of nodes of the given tree.
-        
-        Parameters
-        ----------
-        tree : tuple or str
-            The tree representation for which to calculate the depth and number of nodes. It can also be
-            a terminal node represented as a string.
-
-        Returns
-        -------
-        int
-            The depth of the tree.
-        int 
-            The number of nodes in the tree.
-        """ 
-        
-        if not isinstance(tree, tuple):
-            return 1, 1
-        
-        if FUNCTIONS[tree[0]]["arity"] == 2:
-            left_depth, left_nodes = depth_and_nodes(tree[1])
-            right_depth, right_nodes = depth_and_nodes(tree[2])
-            depth = 1 + max(left_depth, right_depth)
-            nodes = 1 + left_nodes + right_nodes
-        elif FUNCTIONS[tree[0]]["arity"] == 1:
-            left_depth, left_nodes = depth_and_nodes(tree[1])
-            depth = 1 + left_depth
-            nodes = 1 + left_nodes
-        
-        return depth, nodes
-
-    return depth_and_nodes
-
-
-def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
-    """
-    Evaluates a tree genotype on input vectors.
-
-    Parameters
-    ----------
-    repr_ : tuple
-        Tree representation.
-
-    FUNCTIONS : dict
-        Dictionary of allowed functions in the tree representation.
-
-    TERMINALS : dict
-        Dictionary of terminal symbols allowed in the tree representation.
-
-    CONSTANTS : dict
-        Dictionary of constant values allowed in the tree representation.
-
-    Returns
-    -------
-    float
-        Output of the evaluated tree representation.
-    """
-    if isinstance(repr_, tuple):  # If it's a function node
-        function_name = repr_[0]
-        if FUNCTIONS[function_name]["arity"] == 2:
-            left_subtree, right_subtree = repr_[1], repr_[2]
-            left_result = _execute_tree(left_subtree, X, FUNCTIONS, TERMINALS,
-                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
-            right_result = _execute_tree(right_subtree, X, FUNCTIONS, TERMINALS,
-                                         CONSTANTS)  # equivalent to Tree(right_subtree).apply_tree(inputs) if no parallelization were used
-            output = FUNCTIONS[function_name]["function"](
-                left_result, right_result
-            )
-        else:
-            left_subtree = repr_[1]
-            left_result = _execute_tree(left_subtree, X, FUNCTIONS, TERMINALS,
-                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
-            output = FUNCTIONS[function_name]["function"](left_result)
-
-        return bound_value(output, -1e12, 1e12)
-
-    else:  # If it's a terminal node
-        if repr_ in TERMINALS:
-            return X[:, TERMINALS[repr_]]
-        elif repr_ in CONSTANTS:
-            return np.full((X.shape[0],), CONSTANTS[repr_](None))
-            # return CONSTANTS[repr_](None)

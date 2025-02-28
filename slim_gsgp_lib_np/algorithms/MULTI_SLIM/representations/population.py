@@ -20,11 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-Population class implementation for evaluating genetic programming individuals.
+Population class implementation for evaluating genetic programming trees.
 """
-from joblib import Parallel, delayed
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import _execute_tree
-
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import _execute_tree
+import numpy as np
 
 class Population:
     def __init__(self, pop):
@@ -37,7 +36,7 @@ class Population:
         Parameters
         ----------
         pop : List
-            The list of individual Tree objects that make up the population.
+            The list of tree Tree objects that make up the population.
 
         Returns
         -------
@@ -45,39 +44,39 @@ class Population:
         """
         self.population = pop
         self.size = len(pop)
-        self.nodes_count = sum(ind.node_count for ind in pop)
+        self.nodes_count = sum(ind.nodes_count for ind in pop)
         self.fit = None
 
-    def evaluate(self, ffunction, X, y, n_jobs=1):
+    def calculate_semantics(self, inputs, testing=False):
         """
-        Evaluates the population given a certain fitness function, input data (X), and target data (y).
-
-        Attributes a fitness tensor to the population.
+        Calculate the semantics for each tree in the population.
 
         Parameters
         ----------
-        ffunction : function
-            Fitness function to evaluate the individuals.
-        X : torch.Tensor
-            The input data (which can be training or testing).
-        y : torch.Tensor
-            The expected output (target) values.
-        n_jobs : int
-            The maximum number of concurrently running jobs for joblib parallelization.
+        inputs : torch.Tensor
+            Input data for calculating semantics.
+        testing : bool, optional
+            Boolean indicating if the calculation is for testing semantics.
 
         Returns
         -------
         None
         """
-        # Evaluates individuals' semantics
-        y_pred = Parallel(n_jobs=n_jobs)(
-            delayed(_execute_tree)(
-                individual.repr_, X,
-                individual.FUNCTIONS, individual.TERMINALS, individual.CONSTANTS
-            ) for individual in self.population
-        )
-        # Evaluate fitnesses
-        self.fit = [ffunction(y, y_pred_ind) for y_pred_ind in y_pred]
+        # computing the semantics for all the trees in the population
+        [
+            tree.calculate_semantics(inputs, testing)
+            for tree in self.population
+        ]
 
-        # Assign individuals' fitness
-        [self.population[i].__setattr__('fitness', f) for i, f in enumerate(self.fit)]
+        # computing testing semantics, if applicable
+        if testing:
+            # setting the population semantics to be a list with all the semantics of all trees
+            self.test_semantics = [
+                tree.test_semantics for tree in self.population
+            ]
+
+        else:
+            # setting the population semantics to be a list with all the semantics of all trees
+            self.train_semantics = [
+                tree.train_semantics for tree in self.population
+            ]
