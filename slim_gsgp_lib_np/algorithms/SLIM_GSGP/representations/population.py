@@ -95,6 +95,29 @@ class Population:
                 individual.train_semantics for individual in self.population
             ]
             
+    # def calculate_errors_case(self, target, operator="sum"):
+    #     """
+    #     Calculate the errors case for each individual in the population.
+
+    #     Parameters
+    #     ----------
+    #     y_train : torch.Tensor
+    #         Expected output (target) values for training.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     # computing the errors case for all the individuals in the population
+    #     [
+    #         individual.calculate_errors_case(target, operator=operator)
+    #         for individual in self.population
+    #     ]
+
+    #     # defining the errors case of the population to be a list with the errors case of all individuals in the population
+    #     self.errors_case = np.array([individual.errors_case for individual in self.population])
+
+
     def calculate_errors_case(self, target, operator="sum"):
         """
         Calculate the errors case for each individual in the population.
@@ -108,14 +131,18 @@ class Population:
         -------
         None
         """
-        # computing the errors case for all the individuals in the population
-        [
-            individual.calculate_errors_case(target, operator=operator)
-            for individual in self.population
-        ]
-
-        # defining the errors case of the population to be a list with the errors case of all individuals in the population
-        self.errors_case = np.array([individual.errors_case for individual in self.population])
+        if operator == "sum":
+            operator = np.sum
+        elif operator == "mul":
+            operator = np.prod
+        else:
+            raise ValueError("Invalid operator. Must be 'sum' or 'mul'.")
+        
+        sem = np.zeros((len(self.train_semantics), self.train_semantics[0].shape[1]))
+        for i, array in enumerate(self.train_semantics):
+            sem[i] = np.clip(operator(array, axis=0), -10000000000, 10000000000)
+        errors = sem - np.stack([target] * sem.shape[0])
+        self.errors_case = errors
 
     def __len__(self):
         """
@@ -148,18 +175,53 @@ class Population:
             ffunction, 
             y, 
             operator="sum", 
-            n_jobs=1, 
-            fitness_sharing=False,
-            rank_selection=False, 
-            pressure_size=0.5,
+            mode='fast'
             ):
-        
-        if n_jobs == 1 and not rank_selection:
+        """ 
+        Evaluate the population using a fitness function.
+
+        Parameters
+        ----------
+        ffunction : Callable
+            Fitness function to evaluate the individuals.
+        y : torch.Tensor    
+            Expected output (target) values.
+        operator : str, optional
+            Operator to use to combine the errors case. Default is 'sum'.
+        mode : str, optional
+            Mode to use for evaluation. Default is 'detailed'.
+
+        Returns
+        -------
+        None
+        """
+        if mode == 'fast':
+            self.evaluate_fast()
+        elif mode == 'detailed':
             self.evaluate_no_parall(ffunction, y, operator)
-        else:
-            self.evaluate_parall(
-                ffunction, y, operator, n_jobs, fitness_sharing, rank_selection, pressure_size
-            )
+
+    def evaluate_fast(self):
+        """
+        Evaluate the population using the errors per case with MSE
+
+        Parameters
+        ----------
+        ffunction : Callable
+            Fitness function to evaluate the individuals.
+        y : torch.Tensor        
+            Expected output (target) values.
+
+        Returns
+        -------
+        None
+        """
+        # Check if errors case is already calculated
+        assert self.errors_case is not None, "Errors case not calculated. Please calculate errors case first."
+        fitness = np.sqrt(np.mean(self.errors_case**2, axis=1))
+        self.fit = fitness
+        for i, individual in enumerate(self.population):
+            individual.fitness = fitness[i]
+
 
     def evaluate_no_parall(self, ffunction, y, operator="sum"):
         """
@@ -173,9 +235,6 @@ class Population:
             Fitness function to evaluate the individuals.
         y : torch.Tensor
             Expected output (target) values.
-        operator : str, optional
-            Operator to apply to the semantics. Default is "sum".
-
         Returns
         -------
         None
@@ -187,86 +246,3 @@ class Population:
         ]
         # defining the fitness of the population to be a list with the fitnesses of all individuals in the population
         self.fit = [individual.fitness for individual in self.population]
-
-    def evaluate_parall(self, 
-                ffunction, 
-                y, 
-                operator="sum", 
-                n_jobs=1, 
-                rank_selection=False, 
-                pressure_size=0.5,
-                ):
-        """
-        Evaluate the population using a fitness function and calculate ranks for fitness and size.
-
-        Parameters
-        ----------
-        ffunction : Callable
-            Fitness function to evaluate the individuals.
-        y : torch.Tensor
-            Expected output (target) values.
-        operator : str, optional
-            Operator to apply to the semantics ("sum" or "prod"). Default is "sum".
-        n_jobs : int, optional
-            The maximum number of concurrently running jobs for joblib parallelization. Default is 1.
-        rank_selection : bool, optional
-            Boolean indicating if rank selection is used. Default is False.
-        pressure_size : float, optional
-            Pressure for size in rank selection. Default is 0.5.
-
-        Returns
-        -------
-        None
-        """
-        # Evaluate individuals' fitnesses
-        self.fit = Parallel(n_jobs=n_jobs)(
-            delayed(_evaluate_slim_individual)(
-                individual, ffunction=ffunction, y=y, operator=operator
-            ) for individual in self.population
-        )
-        
-        [self.population[i].__setattr__('fitness', f) for i, f in enumerate(self.fit)]
-        
-
-        # Sort the population based on fitness and optionally calculate ranks
-        if rank_selection:
-            # Sorting the population 
-            individuals_with_fitness = list(zip(self.population, self.fit, self.sizes))
-            individuals_with_fitness.sort(key=lambda x: x[1])
-            self.population, self.fit, self.sizes = zip(*individuals_with_fitness)
-            self.population = list(self.population)
-            self.fit = list(self.fit)
-            self.sizes = list(self.sizes)
-            
-            # Calculate ranks
-            fitness_ranks = list(range(len(self.population)))
-            size_ranking_indices = np.argsort(self.sizes)
-            size_ranks = np.empty(len(self.sizes), dtype=int)
-            size_ranks[size_ranking_indices] = np.arange(len(self.sizes))
-
-            self.combined_ranks = [
-                fitness_rank + pressure_size * size_rank
-                for fitness_rank, size_rank in zip(fitness_ranks, size_ranks)
-            ]
-
-            # # ----------------------- CHANGED ---------------------------
-            # if fitness_sharing: 
-            #     elite_id, elite_fit = np.argmin(self.fit), np.min(self.fit)     
-            #     seen = {}
-            #     for individual in self.population:
-            #         if individual.structure[0] not in seen:
-            #             seen[individual.structure[0]] = 1
-            #         else:
-            #             seen[individual.structure[0]] += 1
-                
-            #     for i, individual in enumerate(self.population):
-            #         # individual.fitness = self.fit[i] * (np.log(seen[individual.structure[0]]+1))
-            #         self.fit[i] = self.fit[i] * (np.log(seen[individual.structure[0]]+10))
-
-            # ----------------------- END ---------------------------
-
-                # Assigning individuals' fitness as an attribute
-                        
-                
-            
-

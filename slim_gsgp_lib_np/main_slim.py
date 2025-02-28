@@ -36,6 +36,7 @@ from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.mutators import inflate_mut
 from slim_gsgp_lib_np.selection.selection_algorithms import selector as selection_algorithm
 from slim_gsgp_lib_np.utils.utils import verbose_reporter
 
+
 ELITES = {}
 UNIQUE_RUN_ID = uuid.uuid1()
 
@@ -51,12 +52,11 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
          p_struct: float = slim_gsgp_parameters["p_struct"],
          p_xo: float = slim_gsgp_parameters["p_xo"],
          decay_rate: float = slim_gsgp_parameters["decay_rate"],
-         depth_distribution: str = 'norm',
+         mode: str = 'norm',
          p_struct_xo: float = slim_gsgp_parameters["p_struct_xo"],
          mut_xo_operator: str = slim_gsgp_parameters["mut_xo_operator"],
          selector: str = slim_gsgp_parameters["selector"],
-         pressure_size: float = slim_gsgp_parameters["pressure_size"],
-         fitness_sharing: bool = slim_gsgp_parameters["fitness_sharing"],
+         eps_fraction: float = 1e-7,
          log_path: str = None,
          seed: int = slim_gsgp_parameters["seed"],
          log_level: int = slim_gsgp_solve_parameters["log"],
@@ -65,13 +65,11 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
          fitness_function: str = slim_gsgp_solve_parameters["ffunction"],
          initializer: str = slim_gsgp_parameters["initializer"],
          minimization: bool = True,
-         prob_grow: float = slim_gsgp_parameters["p_g"],
          prob_const: float = slim_gsgp_pi_init["p_c"],
+         prob_terminal: float = slim_gsgp_pi_init["p_t"],
          tree_functions: list = list(FUNCTIONS.keys()),
          tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
-         struct_mutation: bool =slim_gsgp_parameters["struct_mutation"],
          max_depth: int | None = slim_gsgp_solve_parameters["max_depth"],
-         n_jobs: int = slim_gsgp_solve_parameters["n_jobs"],
          tournament_size: int = 2,
          test_elite: bool = slim_gsgp_solve_parameters["test_elite"],
          callbacks: list = None, 
@@ -115,8 +113,8 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
         Probability of using crossover 
     decay_rate : float, optional
         The decay rate for structure mutation.
-    depth_distribution : str, optional
-        Distribution to choose the depth of the new tree (default: "norm"), options: "norm", "exp", "uniform", "max".
+    mode : str, optional
+        Distribution to choose the depth of the new tree (default: "exp"), options: "normal", "exp", "uniform".
     p_struct_xo : float, optional
         Probability of selecting structural crossover when crossing two individuals.
     mut_xo_operator : str, optional
@@ -124,8 +122,8 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     selector : str, optional
         The selection algorithm to use for selecting individuals for the next generation.
         Default is tournament selection, options are: 'tournament', 'lexicase', 'e_lexicase', 'rank_based', 'roulette', 'tournament_size'.
-    fitness_sharing : bool, optional
-        Whether to use fitness sharing to evaluate the fitness of the individuals.
+    eps_fraction : float, optional
+        The fraction of the population to use in epsilon lexicase selection. Default 1e-7.
     log_path : str, optional
         The path where is created the log directory where results are saved.
     seed : int, optional
@@ -142,8 +140,6 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
         The fitness function used for evaluating individuals (default is from gp_solve_parameters).
     initializer : str, optional
         The strategy for initializing the population (e.g., "grow", "full", "rhh").
-    prob_grow : float, optional
-        The probability of a grow being chosen rather than a full in trees creation (default: 1).
     prob_const : float, optional
         The probability of a constant being chosen rather than a terminal in trees creation (default: 0.2).
     prob_replace : float, optional
@@ -154,10 +150,6 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
         List of constants allowed to appear in the trees.
     max_depth: int, optional
         Max depth for the SLIM GSGP trees.
-    struct_mutation: bool, optional
-        Whether to use structure mutation.
-    n_jobs : int, optional
-        Number of parallel jobs to run (default is 1).
     tournament_size : int, optional
         Tournament size to utilize during selection. Only applicable if using tournament selection. (Default is 2)
     test_elite : bool, optional
@@ -192,9 +184,9 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     validate_inputs(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, pop_size=pop_size, n_iter=n_iter,
                     elitism=elitism, n_elites=n_elites, init_depth=init_depth, log_path=log_path, prob_const=prob_const,
                     tree_functions=tree_functions, tree_constants=tree_constants, log=log_level, verbose=verbose,
-                    minimization=minimization, n_jobs=n_jobs, test_elite=test_elite, fitness_function=fitness_function,
+                    minimization=minimization, test_elite=test_elite, fitness_function=fitness_function,
                     initializer=initializer, tournament_size=tournament_size, ms_lower=ms_lower, ms_upper=ms_upper,
-                    p_inflate=p_inflate, p_struct=p_struct, depth_distribution=depth_distribution,
+                    p_inflate=p_inflate, p_struct=p_struct, mode=mode,
     )
 
     # Checking that both ms bounds are numerical
@@ -213,7 +205,6 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
 
     if max_depth is not None:
         assert init_depth + 6 <= max_depth, f"max_depth must be at least {init_depth + 6}"
-
 
     # creating a list with the valid available fitness functions
     valid_fitnesses = list(fitness_function_options)
@@ -263,6 +254,7 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     slim_gsgp_pi_init["init_pop_size"] = pop_size
     slim_gsgp_pi_init["init_depth"] = init_depth
     slim_gsgp_pi_init["p_c"] = prob_const
+    slim_gsgp_pi_init["p_t"] = prob_terminal
     slim_gsgp_pi_init['operator'] = op
 
     #   *************** SLIM_GSGP_PARAMETERS ***************
@@ -283,7 +275,7 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
         FUNCTIONS=slim_gsgp_pi_init["FUNCTIONS"],
         TERMINALS=slim_gsgp_pi_init["TERMINALS"],
         CONSTANTS=slim_gsgp_pi_init["CONSTANTS"],
-        depth_dist=depth_distribution,
+        mode=mode,
     ) 
     
     slim_gsgp_parameters["xo_operator"] = xo_operator(
@@ -296,27 +288,21 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     
     slim_gsgp_parameters["initializer"] = initializer_options[initializer]
     slim_gsgp_parameters["ms"] = ms
-    slim_gsgp_parameters["struct_mutation"] = struct_mutation
     slim_gsgp_parameters['p_inflate'] = p_inflate
-    
-    p_struct = p_struct if struct_mutation else 0
     slim_gsgp_parameters['p_struct'] = p_struct
     slim_gsgp_parameters['p_deflate'] = 1 - p_inflate - p_struct
     slim_gsgp_parameters['p_xo'] = p_xo
     slim_gsgp_parameters["seed"] = seed
-    slim_gsgp_parameters["p_g"] = prob_grow
     slim_gsgp_parameters["decay_rate"] = decay_rate
     slim_gsgp_parameters["verbose_reporter"] = verbose_reporter
     slim_gsgp_parameters['callbacks'] = callbacks
-    slim_gsgp_parameters["fitness_sharing"] = fitness_sharing
     slim_gsgp_parameters['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
                                                 type=selector, 
                                                 pool_size=tournament_size,
-                                                targets=y_train, 
-                                                pressure_size=pressure_size)
+                                                eps_fraction=eps_fraction,
+                                                targets=y_train)
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
     slim_gsgp_parameters['timeout'] = timeout
-    slim_gsgp_parameters['pressure_size'] = pressure_size if selector == 'rank_based' else None
 
     #   *************** SLIM_GSGP_SOLVE_PARAMETERS ***************
 
@@ -330,7 +316,6 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     slim_gsgp_solve_parameters["ffunction"] = fitness_function_options[fitness_function]
     slim_gsgp_solve_parameters["reconstruct"] = reconstruct
     slim_gsgp_solve_parameters["max_depth"] = max_depth
-    slim_gsgp_solve_parameters["n_jobs"] = n_jobs
     slim_gsgp_solve_parameters["test_elite"] = test_elite
 
     # ================================
@@ -370,30 +355,37 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     return optimizer.elite
 
 
+
+import cProfile
+import pstats
+
 if __name__ == "__main__":
     from slim_gsgp_lib_np.datasets.data_loader import load_resid_build_sale_price
     from slim_gsgp_lib_np.utils.utils import train_test_split, show_individual
 
+    # Lock numpy core utilization
+    os.environ["OMP_NUM_THREADS"] = "1"
 
-    for ds in ["resid_build_sale_price"]:
 
-        for s in range(30):
+    for ds in ["airfoil"]:
+
+        for s in range(1):
 
             X, y = load_resid_build_sale_price(X_y=True)
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.4, seed=s)
             X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, p_test=0.5, seed=s)
 
-            #X_train, X_val, y_train, y_val = train_test_split(X, y, p_test=0.3, seed=s)
+            for algorithm in ["SLIM*SIG1"]:
+                profiler = cProfile.Profile()
+                profiler.enable()
 
-            for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]:
+                final_tree = slim(X_train=X_train, y_train=y_train, test_elite=False,
+                                  dataset_name=ds, slim_version=algorithm, max_depth=None, pop_size=100, n_iter=500, seed=s, p_inflate=0.4,                                 
+                                  reconstruct=True, p_xo=0, verbose=0, p_struct=0.3)
 
-                final_tree = slim(X_train=X_train, y_train=y_train, X_test=X_val, y_test=y_val,
-                                  dataset_name=ds, slim_version=algorithm, max_depth=None, pop_size=100, n_iter=10, seed=s, p_inflate=0.2,
-                                log_path=os.path.join(os.getcwd(),
-                                                                "log", f"test_{ds}-size.csv"),
-                                   reconstruct=True, n_jobs=1)
+                profiler.disable()
 
-                #print(show_individual(final_tree, operator='sum'))
-                #predictions = final_tree.predict(data=X_test, slim_version=algorithm)
-                #print(float(rmse(y_true=y_test, y_pred=predictions)))
+                # Save and print profiling results
+                stats = pstats.Stats(profiler)
+                stats.strip_dirs().sort_stats("cumulative").print_stats(100)  # Show top 20 slowest calls

@@ -28,10 +28,10 @@ import uuid
 import os
 import warnings
 
-from slim_gsgp_lib_torch.algorithms.GSGP.gsgp import GSGP
-from slim_gsgp_lib_torch.config.gsgp_config import *
-from slim_gsgp_lib_torch.utils.logger import log_settings
-from slim_gsgp_lib_torch.utils.utils import get_terminals, validate_inputs, generate_random_uniform
+from slim_gsgp_lib_np.algorithms.GSGP.gsgp import GSGP
+from slim_gsgp_lib_np.config.gsgp_config import *
+from slim_gsgp_lib_np.utils.logger import log_settings
+from slim_gsgp_lib_np.utils.utils import get_terminals, validate_inputs, generate_random_uniform
 from typing import Callable
 
 # todo: would not be better to first log the settings and then perform the algorithm?
@@ -275,8 +275,8 @@ def gsgp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = No
 
 
 if __name__ == "__main__":
-    from slim_gsgp_lib_torch.datasets.data_loader import load_resid_build_sale_price
-    from slim_gsgp_lib_torch.utils.utils import train_test_split
+    from slim_gsgp_lib_np.datasets.data_loader import load_resid_build_sale_price
+    from slim_gsgp_lib_np.utils.utils import train_test_split
 
     X, y = load_resid_build_sale_price(X_y=True)
 

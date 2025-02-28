@@ -97,7 +97,7 @@ class Tree:
             self.depth, self.nodes = tree_depth_and_nodes(Tree.FUNCTIONS)(structure)
             # self.depth = tree_depth(Tree.FUNCTIONS)(structure)
             # self.nodes = len(list(flatten(structure)))
-
+        
         # if it's not a base tree, calculate the depth via the nested depth function
         elif reconstruct:
             self.depth = nested_depth_calculator(

@@ -40,7 +40,6 @@ class SLIM_GSGP:
         pi_init,
         initializer,
         selector,
-        pressure_size, 
         inflate_mutator,
         deflate_mutator,
         structure_mutator,
@@ -49,16 +48,13 @@ class SLIM_GSGP:
         ms,
         find_elit_func,
         p_xo=0.2,
-        p_g=1,
         p_inflate=0.3,
         p_deflate=0.6,
         p_struct=0.1,
         decay_rate=0.2,
         pop_size=100,
-        fitness_sharing=False,
         seed=0,
         operator="sum",
-        struct_mutation=True,
         two_trees=True,
         p_struct_xo=0.5, 
         mut_xo_operator='rshuffle',
@@ -77,8 +73,6 @@ class SLIM_GSGP:
             Function to initialize the population.
         selector : Callable
             Function to select individuals.
-        pressure_size : float
-            Pressure size for rank selection.
         inflate_mutator : Callable
             Function for inflate mutation.
         deflate_mutator : Callable
@@ -95,8 +89,6 @@ class SLIM_GSGP:
             Function to find elite individuals.
         p_xo : float
             Probability of crossover. Default is 0.
-        p_g : float
-            Probability of grow mutation. Default is 1.
         p_inflate : float
             Probability of inflate mutation. Default is 0.3.
         p_deflate : float
@@ -107,14 +99,10 @@ class SLIM_GSGP:
             Decay rate for exponential decay. Default is 0.2.
         pop_size : int
             Size of the population. Default is 100.
-        fitness_sharing : bool
-            Whether fitness sharing is used. Default is False.
         seed : int
             Random seed for reproducibility. Default is 0.
         operator : {'sum', 'prod'}
             Operator to apply to the semantics, either "sum" or "prod". Default is "sum".
-        struct_mutation : bool
-            Indicates if structure mutation is used. Default is True.
         two_trees : bool
             Indicates if two trees are used. Default is True.
         p_struct_xo : float
@@ -131,8 +119,6 @@ class SLIM_GSGP:
         """
         self.pi_init = pi_init
         self.selector = selector
-        self.pressure_size = pressure_size
-        self.rank_selection = False if not pressure_size else True
         self.p_inflate = p_inflate
         self.p_deflate = p_deflate
         self.p_struct = p_struct
@@ -142,13 +128,10 @@ class SLIM_GSGP:
         self.xo_operator = xo_operator
         self.ms = ms
         self.p_xo = p_xo
-        self.p_g = p_g
         self.initializer = initializer
         self.pop_size = pop_size
-        self.fitness_sharing = fitness_sharing
         self.seed = seed
         self.operator = operator
-        self.struct_mutation = struct_mutation
         self.two_trees = two_trees
         self.settings_dict = settings_dict
         self.find_elit_func = find_elit_func
@@ -187,7 +170,7 @@ class SLIM_GSGP:
         max_depth=17,
         n_elites=1,
         reconstruct=True,
-        n_jobs=1):
+        ):
         
         """
         Solve the optimization problem using SLIM_GSGP.
@@ -226,8 +209,6 @@ class SLIM_GSGP:
             Number of elite individuals to retain during selection. Default is True.
         reconstruct : bool
             Indicates if reconstruction of the solution is needed. Default is True.
-        n_jobs : int
-            Maximum number of concurrently running jobs for joblib parallelization. Default is 1.
 
         """
 
@@ -265,17 +246,12 @@ class SLIM_GSGP:
         # calculating initial population semantics
         population.calculate_semantics(X_train)
         population.calculate_errors_case(y_train, operator=self.operator)
-        population.evaluate(ffunction, y=y_train, operator=self.operator, 
-                                      n_jobs=n_jobs, 
-                                      fitness_sharing=self.fitness_sharing,
-                                      rank_selection=self.rank_selection,
-                                      pressure_size=self.pressure_size,
-                                      )
+        population.evaluate(ffunction, y=y_train, operator=self.operator, mode='fast') 
 
         end = time.time()
 
         # setting up the elite(s)
-        self.elites, self.elite = self.find_elit_func(population, n_elites)
+        self.elites, self.elite = self.find_elit_func(population, n_elites)   
         self.population = population
 
         # setting up log paths and run info
@@ -287,7 +263,7 @@ class SLIM_GSGP:
 
         # calculating the testing semantics and the elite's testing fitness if test_elite is true
         if test_elite:
-            population.calculate_semantics(X_test, testing=True)
+            # population.calculate_semantics(X_test, testing=True)
             self.elite.evaluate(
                 ffunction, y=y_test, testing=True, operator=self.operator
             )
@@ -348,15 +324,8 @@ class SLIM_GSGP:
             offs_pop = Population(offs_pop)
             offs_pop.calculate_semantics(X_train)
             offs_pop.calculate_errors_case(y_train, operator=self.operator)
-            offs_pop.evaluate(ffunction, y=y_train, operator=self.operator, 
-                                        n_jobs=n_jobs, 
-                                        fitness_sharing=self.fitness_sharing,
-                                        rank_selection=self.rank_selection,
-                                        pressure_size=self.pressure_size,
-                            )
+            offs_pop.evaluate(ffunction, y=y_train, operator=self.operator, mode='fast')
             
-                                        
-
             # replacing the current population with the offspring population P = P'
             population = offs_pop
             self.population = population
@@ -419,9 +388,9 @@ class SLIM_GSGP:
             X_train,
             max_depth=self.pi_init["init_depth"],
             p_c=self.pi_init["p_c"],
+            p_t=self.pi_init["p_t"],
             X_test=X_test,
             reconstruct=reconstruct,
-            grow_probability=self.p_g,
         )
 
         if max_depth is not None and off1.depth > max_depth:
@@ -445,10 +414,11 @@ class SLIM_GSGP:
                 X_train,
                 max_depth=self.pi_init["init_depth"],
                 p_c=self.pi_init["p_c"],
+                p_t=self.pi_init["p_t"],
                 X_test=X_test,
                 reconstruct=reconstruct,
-                grow_probability=self.p_g,
             )
+
             self.time_dict['inflate'].append(time.time() - start)   
             return result
         
@@ -464,8 +434,8 @@ class SLIM_GSGP:
                     X=X_train,
                     max_depth=self.pi_init["init_depth"],
                     p_c=self.pi_init["p_c"],
+                    p_t=self.pi_init["p_t"],
                     X_test=X_test,
-                    grow_probability=self.p_g,
                     reconstruct=reconstruct,
                     decay_rate=self.decay_rate,
                     exp_decay=False,)

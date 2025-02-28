@@ -26,13 +26,13 @@ logging the results for further analysis.
 import uuid
 import os
 import warnings
-from slim_gsgp_lib_torch.algorithms.GP.gp import GP
-from slim_gsgp_lib_torch.algorithms.GP.operators.mutators import mutate_tree_subtree
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import tree_depth
-from slim_gsgp_lib_torch.config.gp_config import *
-from slim_gsgp_lib_torch.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
-from slim_gsgp_lib_torch.utils.logger import log_settings
-from slim_gsgp_lib_torch.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
+from slim_gsgp_lib_np.algorithms.GP.gp import GP
+from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
+from slim_gsgp_lib_np.config.gp_config import *
+from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
+from slim_gsgp_lib_np.utils.logger import log_settings
+from slim_gsgp_lib_np.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
 
 
 # todo: would not be better to first log the settings and then perform the algorithm?
@@ -264,8 +264,8 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
 
 
 if __name__ == "__main__":
-    from slim_gsgp_lib_torch.datasets.data_loader import load_resid_build_sale_price
-    from slim_gsgp_lib_torch.utils.utils import train_test_split
+    from slim_gsgp_lib_np.datasets.data_loader import load_resid_build_sale_price
+    from slim_gsgp_lib_np.utils.utils import train_test_split
 
     X, y = load_resid_build_sale_price(X_y=True)
 

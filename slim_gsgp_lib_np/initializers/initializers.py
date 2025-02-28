@@ -26,7 +26,7 @@ Initializers operator implementation.
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import (create_full_random_tree,
                                                                 create_grow_random_tree, create_neutral_tree)
 
-def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **kwargs):
+def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, p_t=0.5, **kwargs):
     """
     Generates a list of individuals with random trees for a GM4OS population using the Grow method.
 
@@ -44,6 +44,8 @@ def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **
         The dictionary of constant values allowed in the trees.
     p_c : float, optional
         The probability of a constant being chosen rather than a terminal in trees creation (default: 0.3).
+    p_t : float, optional
+        The probability of a terminal being chosen rather than a function in trees creation (default: 0.5).
     Returns
     -------
     list
@@ -51,7 +53,7 @@ def grow(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **
     """
 
     return [
-        create_grow_random_tree(init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
+        create_grow_random_tree(init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_t)
         for _ in range(init_pop_size)
     ]
 
@@ -86,7 +88,7 @@ def full(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **
     ]
 
 
-def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **kwargs):
+def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, p_t=0.5, **kwargs):
     """
     Generates a list of individuals with random trees for a GM4OS population using the ramped-half-half method.
 
@@ -104,6 +106,8 @@ def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **k
         The dictionary of constant values allowed in the trees.
     p_c : float, optional
         The probability of a constant being chosen rather than a terminal in trees creation (default: 0.3).
+    p_t : float, optional
+        The probability of a terminal being chosen rather than a function in trees creation (default: 0.5).
     Returns
     -------
     list
@@ -127,7 +131,7 @@ def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **k
         population.extend(
             [
                 create_grow_random_tree(
-                    curr_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c
+                    curr_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c, p_t=p_t
                 )
                 for _ in range(int(inds_per_bin // 2))
             ]
@@ -135,7 +139,7 @@ def rhh(init_pop_size, init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3, **k
 
     while len(population) < init_pop_size:
         population.append(
-            create_grow_random_tree(init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c)
+            create_grow_random_tree(init_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c, p_t=p_t)
         )
 
     return population

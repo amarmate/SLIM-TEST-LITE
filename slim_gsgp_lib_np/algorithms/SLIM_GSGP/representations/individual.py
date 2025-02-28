@@ -203,7 +203,6 @@ class Individual:
         if self.errors_case is None:
             self.errors_case = target - np.clip(operator(self.train_semantics, axis=0),-1000000000000.0, 1000000000000.0,)
         return self.errors_case
-    
 
     def evaluate(self, ffunction, y, testing=False, operator="sum", force=False):
         """

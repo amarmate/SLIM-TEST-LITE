@@ -16,7 +16,6 @@ from functions.test_funcs import mape, nrmse, r_squared, mae, standardized_rmse
 def test_slim(X_train, y_train, X_test, y_test,
             args_dict=None,
             dataset_name='dataset_1', 
-            n_elites=1,
             initializer='rhh',
             n_samples=30,
             scale=True,
@@ -26,7 +25,6 @@ def test_slim(X_train, y_train, X_test, y_test,
             log = False, 
             timeout = 100,
             callbacks = None,
-            simplify_threshold = None,
 ):    
     """
 
@@ -46,8 +44,6 @@ def test_slim(X_train, y_train, X_test, y_test,
         The name of the dataset.
     n_samples: int     
         The number of samples to generate.
-    n_elites: int
-        The number of elites.
     initializer: str
         The initializer to use.
     iterations: int
@@ -66,8 +62,6 @@ def test_slim(X_train, y_train, X_test, y_test,
         The maximum time to train the model.
     callbacks: list
         A list containing the callbacks to use.
-    simplify_threshold: float
-        The threshold to use for simplification. 
 
     Returns
     -------
@@ -111,7 +105,7 @@ def test_slim(X_train, y_train, X_test, y_test,
             final_tree = slim(X_train=X_train, y_train=y_train,
                                 dataset_name=dataset_name, slim_version=algorithm, seed=it,
                                 reconstruct=True, n_jobs=1, test_elite=False,
-                                n_elites=n_elites, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
+                                n_elites=1, **args_dict, log_level=(3 if log else 0), log_path=(path if log else None),
                                 timeout=timeout, callbacks=callbacks, verbose=0,
             )
         except Exception as e:
@@ -120,8 +114,6 @@ def test_slim(X_train, y_train, X_test, y_test,
             continue
 
         end = time.time()   
-        if simplify_threshold is not None:
-            final_tree = simplify_individual(final_tree, y_train=y_train, X_train=X_train, threshold=simplify_threshold)
             
         # Get the node count of the tree
         nodes_count = final_tree.nodes_count

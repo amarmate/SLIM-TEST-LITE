@@ -1,30 +1,34 @@
-from slim_gsgp_lib_torch.datasets.data_loader import *
-from sklearn.preprocessing import MinMaxScaler
-from slim_gsgp_lib_torch.utils.utils import train_test_split
-from slim_gsgp_lib_torch.main_slim import slim
-import cProfile
-import pstats
+from slim_gsgp_lib_np.datasets.data_loader import *
+from slim_gsgp_lib_np.utils.utils import train_test_split
+from slim_gsgp_lib_np.evaluators.fitness_functions import rmse
+from slim_gsgp_lib_np.main_slim import slim
+import time
+import numpy as np
 
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["BLIS_NUM_THREADS"] = "1"
 
 if __name__ == '__main__':
-    profiler = cProfile.Profile()
-    profiler.enable()
-    
     seed = 0
     datasets = [globals()[i] for i in globals() if 'load' in i][2:]
-    X,y = datasets[2]()
-    scaler_X, scaler_y = MinMaxScaler(), MinMaxScaler()
-    X = torch.tensor(scaler_X.fit_transform(X))
-    y = torch.tensor(scaler_y.fit_transform(y.reshape(-1,1)).reshape(-1))
+    X,y = datasets[12]()
     X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2, seed=seed)
 
-    example_tree = slim(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name='test',
-                    max_depth=22, init_depth=10, pop_size=200, n_iter=10, seed=seed,
-                    p_inflate=0.6, p_struct=0.3, test_elite=True, selector='lexicase',
-                    struct_mutation=True, decay_rate=0.4, p_xo=0, type_structure_mutation='new', verbose=1)
+    start = time.time()
+    results_score = []
+    for i in range(20):
+        example_tree = slim(X_train=X_train, y_train=y_train,dataset_name='test', test_elite=False,
+                        # X_test=X_test, y_test=y_test,
+                    slim_version='SLIM+SIG2', 
+                    max_depth=22, init_depth=10, pop_size=100, n_iter=50, seed=seed*i,
+                    p_inflate=0.35, p_struct=0.35, # selector='lexicase',
+                    struct_mutation=True, decay_rate=0.4, p_xo=0, verbose=0, log_level=0)
+        preds = example_tree.predict(X_test)
+        results_score.append(rmse(y_test, preds))
     
-    profiler.disable()
-    stats = pstats.Stats(profiler)
-    stats.sort_stats('time').print_stats(20)
-    stats.dump_stats('profile_structmut')
-    
+    print('Results:', np.mean(results_score), np.std(results_score))
+    print('Time:', time.time()-start)

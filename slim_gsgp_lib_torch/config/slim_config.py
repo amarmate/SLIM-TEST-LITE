@@ -80,22 +80,23 @@ slim_gsgp_parameters = {
     "inflate_mutator": None,
     "deflate_mutator": deflate_mutation,
     "xo_operator": xo_operator,
-    "p_xo": 0.2,
+    "p_xo": 0,
     "settings_dict": settings_dict,
     "find_elit_func": get_best_min,
     "pressure_size": 1e-4,
     "p_inflate": 0.2,
     "p_struct": 0.1,
-    "struct_mutation": True,
+    "struct_mutation": False,
     "operator": None,
     "pop_size": 100,
     "seed": 74,
     "fitness_sharing": False,
     "p_g": 1,
-    "p_struct_xo": 0.5,
+    "p_struct_xo": 0,
     "decay_rate": 0.1,
     "mut_xo_operator": "rshuffle",
 }
+
 
 slim_gsgp_pi_init = {
     'FUNCTIONS': FUNCTIONS,

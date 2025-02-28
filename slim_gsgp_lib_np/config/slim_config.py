@@ -40,8 +40,8 @@ FUNCTIONS = {
 }
 
 # Generate a list of 200 constants between -1 and 1
-constants = [round(-1 + (2 * i) / (200 - 1), 2) for i in range(200)]
-filtered_constants = constants  # No filtering applied in this case
+constants = [round(-1 + (2 * i) / (100 - 1), 2) for i in range(100)]
+filtered_constants = [i for i in constants if np.abs(i) > 0.1]
 CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in filtered_constants}
 
 
@@ -59,7 +59,6 @@ slim_gsgp_solve_parameters = {
     "n_elites": 1,
     "log": 1,
     "verbose": 1,
-    "n_jobs": 1,
     "test_elite": True
 }
 
@@ -71,19 +70,15 @@ slim_gsgp_parameters = {
     "inflate_mutator": None,
     "deflate_mutator": deflate_mutation,
     "xo_operator": xo_operator,
-    "p_xo": 0.2,
+    "p_xo": 0,
     "settings_dict": settings_dict,
     "find_elit_func": get_best_min,
-    "pressure_size": 1e-4,
     "p_inflate": 0.2,
-    "p_struct": 0.1,
-    "struct_mutation": True,
+    "p_struct": 0,
     "operator": None,
     "pop_size": 100,
     "seed": 74,
-    "fitness_sharing": False,
-    "p_g": 1,
-    "p_struct_xo": 0.5,
+    "p_struct_xo": 0,
     "decay_rate": 0.1,
     "mut_xo_operator": "rshuffle",
 }
@@ -92,6 +87,7 @@ slim_gsgp_pi_init = {
     'FUNCTIONS': FUNCTIONS,
     'CONSTANTS': CONSTANTS,
     "p_c": 0.2,
+    "p_t": 0.7, 
     "init_depth": 6,
 }
 

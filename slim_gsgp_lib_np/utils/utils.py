@@ -274,9 +274,8 @@ def get_random_tree(
         CONSTANTS,
         inputs=None,
         p_c=0.3,
-        grow_probability=1,
+        p_t=0.5,
         logistic=True,
-        list_form=False,
 ):
     """
     Get a random tree using either grow or full method.
@@ -295,26 +294,21 @@ def get_random_tree(
         Input tensor for calculating semantics.
     p_c : float, default=0.3
         Probability of choosing a constant.
+    p_t : float, default=0.5
+        Probability of choosing a terminal.
     grow_probability : float, default=1
         Probability of using the grow method.
     logistic : bool, default=True
             Whether to use logistic semantics.
-    list_form : bool, default=False
-        Whether the functions, terminals, and constants are in list form.
 
     Returns
     -------
     Tree
         The generated random tree.
     """
-    if random.random() < grow_probability:
-        tree_structure = create_grow_random_tree(
-            max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c,
-        )
-    else:
-        tree_structure = create_full_random_tree(
-            max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c
-        )
+    tree_structure = create_grow_random_tree(
+        max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c, p_t=p_t
+    )
 
     tree = Tree(
         structure=tree_structure,
@@ -436,9 +430,9 @@ def gs_size(y_true, y_pred):
 
 
 def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism, n_elites, init_depth, log_path,
-                    prob_const, tree_functions, tree_constants, log, verbose, minimization, n_jobs, test_elite,
+                    prob_const, tree_functions, tree_constants, log, verbose, minimization, test_elite,
                     fitness_function, initializer, tournament_size, ms_lower, ms_upper, p_inflate, p_struct,
-                    depth_distribution):
+                    mode):
     """
     Validates the inputs based on the specified conditions.
 
@@ -475,8 +469,6 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
         The fitness function used for evaluating individuals (default is from gp_solve_parameters).
     initializer : str, optional
         The strategy for initializing the population (e.g., "grow", "full", "rhh").
-    n_jobs : int, optional
-        Number of parallel jobs to run (default is 1).
     prob_const : float, optional
         The probability of introducing constants into the trees during evolution.
     tree_functions : list, optional
@@ -493,8 +485,8 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
         The probability of inflating a tree.
     p_struct : float, optional
         The probability of structural mutation.
-    depth_distribution : list, optional
-        Distribution to choose the depth of the new tree (default: "norm"), options: "norm", "exp", "uniform", "max".
+    mode : list, optional
+        Mode to choose for structure mutation (default: "exp"), options: "normal", "exp", "uniform".
 
 
     """
@@ -554,11 +546,6 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     if not isinstance(minimization, bool):
         raise TypeError("minimization must be a bool")
 
-    if not isinstance(n_jobs, int):
-        raise TypeError("n_jobs must be an int")
-
-    assert n_jobs >= 1, "n_jobs must be at least 1"
-
     if not isinstance(test_elite, bool):
         raise TypeError("test_elite must be a bool")
 
@@ -589,8 +576,8 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     if p_inflate + p_struct > 1:
         raise ValueError("p_inflate + p_struct must be smaller or equal to 1")
     
-    if not isinstance(depth_distribution, str):
-        raise ValueError("depth_distribution must a string: 'norm', 'exp', 'uniform', 'max', 'diz'")
+    if not isinstance(mode, str):
+        raise ValueError("mode must a string: 'normal', 'exp', 'uniform'")
     
 
 def check_slim_version(slim_version):

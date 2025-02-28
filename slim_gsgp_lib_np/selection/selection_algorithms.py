@@ -30,8 +30,7 @@ def selector(problem='min',
              type='tournament', 
              pool_size=2, 
              eps_fraction=1e-4,
-             targets=None, 
-             pressure_size=1e-4):
+             targets=None):
     """
     Returns a selection function based on the specified problem and selection type.
 
@@ -296,7 +295,7 @@ def lexicase_selection(targets, mode='min'):
         # Iterate over test cases and filter individuals based on exact performance (no epsilon)
         for i in range(5):
             # Generate an int from 0 to num_cases
-            case_errors = (errors[:, case_order[i]]) ** 2
+            case_errors = errors[:, case_order[i]] ** 2
             
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':                
@@ -310,13 +309,85 @@ def lexicase_selection(targets, mode='min'):
             
             # Filter individuals based on exact performance and error
             pool = [pool[i] for i in best_individuals]
-            errors = np.array([np.array(ind.errors_case) for ind in pool])
+            errors = errors[best_individuals]
                     
         # If multiple individuals remain after all cases, return one at random
         return random.choice(pool)
 
     return ls  # Return the function that performs lexicase selection
 
+
+
+# def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
+#     """
+#     Returns a function that performs epsilon lexicase selection to select an individual with the lowest (or highest) fitness
+#     from a population.
+
+#     Parameters
+#     ----------
+#     targets : torch.Tensor
+#         The true target values for each entry in the dataset (y_train).
+#     eps_fraction : float, optional
+#         The fraction of the population's standard deviation to use as the epsilon threshold. Defaults to 1e-7.
+#     mode : str, optional
+#         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
+
+#     Returns
+#     -------
+#     Callable
+#         A selection function that, when given a population, returns the selected individual.
+#     """
+#     def els(pop):
+#         """
+#         Perform epsilon lexicase selection on a population of individuals.
+
+#         Parameters
+#         ----------
+#         pop : Population
+#             The population from which to select an individual. It is assumed that pop has attributes:
+#             - population: list of Individual
+#             - errors_case: a numpy array of shape (N, num_cases) with error values for each individual
+#             - fit: numpy array of fitness values for each individual
+
+#         Returns
+#         -------
+#         Individual
+#             The selected individual.
+#         """
+#         errors = pop.errors_case            # shape: (N, num_cases)
+#         fitness_values = pop.fit
+#         fitness_std = np.std(fitness_values)  # Before was using the mean
+#         epsilon = eps_fraction * fitness_std
+#         num_cases = targets.shape[0]
+
+#         # Start with all individuals represented by their indices.
+#         candidate_indices = np.arange(len(pop.population))
+#         case_order = random.sample(range(num_cases), 5)
+        
+#         for case_idx in case_order:
+#             # Evaluate the squared error for current candidates on the selected case.
+#             current_errors = errors[candidate_indices, case_idx] ** 2
+            
+#             if mode == 'min':
+#                 best_value = np.min(current_errors)
+#                 mask = current_errors <= best_value + epsilon
+#             elif mode == 'max':
+#                 best_value = np.max(current_errors)
+#                 mask = current_errors >= best_value - epsilon
+#             else:
+#                 raise ValueError("Invalid mode. Use 'min' or 'max'.")
+            
+#             candidate_indices = candidate_indices[mask]
+#             if candidate_indices.size == 1:
+#                 return pop.population[candidate_indices[0]]
+#             # If candidate_indices becomes empty (unlikely), break and select at random.
+#             if candidate_indices.size == 0:
+#                 break
+        
+#         # If multiple candidates remain, select one at random.
+#         return pop.population[random.choice(candidate_indices.tolist())]
+    
+#     return els
 
 
 def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
@@ -375,21 +446,18 @@ def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
         # Get errors for each individual on each test case
         errors = pop.errors_case
         fitness_values = pop.fit
-        fitness_std = np.mean(fitness_values)
+        fitness_std = np.std(fitness_values)
         epsilon = eps_fraction * fitness_std
     
         num_cases = targets.shape[0]
 
         # Start with all individuals in the pool
         pool = pop.population.copy()
+        case_order = random.sample(range(num_cases), 5)  # ADDED
 
         # Iterate over test cases and filter individuals based on epsilon threshold
         for i in range(5):
-            # Generate an int from 0 to num_cases
-            case_idx = random.randint(0, num_cases - 1)
-            
-            # Extract case errors for the current test case
-            case_errors = errors[:, case_idx] ** 2
+            case_errors = errors[:, case_order[i]] ** 2 
 
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':
@@ -403,7 +471,7 @@ def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
             
             # Filter individuals based on epsilon threshold
             pool = [pool[i] for i in best_individuals]
-            errors = np.array([np.array(ind.errors_case) for ind in pool])
+            errors = errors[best_individuals]
 
         # If multiple individuals remain after all cases, return one at random
         return random.choice(pool)

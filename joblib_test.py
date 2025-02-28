@@ -12,7 +12,8 @@ from skopt.space import Integer, Real, Categorical
 import time 
 from matplotlib import pyplot as plt
 
-# Limit threads for NumPy and other multi-threaded libraries
+# Limit threads  
+for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
@@ -27,27 +28,16 @@ for i, dataset in enumerate(datasets):
     X,y = dataset()
     name = dataset.__name__.split('load_')[1]
     id = 'DA' + str(i).zfill(2)
-    dataset_dict[name] = id 
+    dataset_dict[name] = id
 
 # Settings
-max_iter = 2000  # 2000
-p_train = 0.8    # 0.85
-n_trials = 50    # 40  75
+max_iter = 2000 
+p_train = 0.8    
+n_trials = 50 
 n_samples = 50    
-
-cv = 4          # 5
-seed = 200        # 40
-timeout = 100     # 45
-
-iter_dict = {     # EarlyStop
-    '30' : 2300,  # 551 
-    '60' : 1900,  # 295
-    '90' : 1600,  # 205
-    '120': 1400,  # 158 
-    '150': 1200,   # 129
-    '175': 1000,   # 95
-    '200': 800,   # 85
-}
+cv = 4          
+seed = 200        
+timeout = 100   
 
 def skopt_slim_cv(X, y, dataset, 
                   algorithm, 
@@ -58,10 +48,6 @@ def skopt_slim_cv(X, y, dataset,
                   max_iter=2000,
                   cv=4,
                   struct_mutation=False, 
-                  struct_xo=False, 
-                  mut_xo=False,
-                  random_state=0, 
-                  simplify=False,
                   no_structure=False
                   ):
     trial_results = []
@@ -78,22 +64,17 @@ def skopt_slim_cv(X, y, dataset,
         if p_struct + p_inflate*2 > 50:
             calls_count += 1
             return 100000
-        
-        # n_iter = int(pop_size * 30)
-        # n_iter = iter_dict[str(n_iter)]
-        n_iter = 2000
 
+        n_iter = 2000
         hyperparams = {
-            'p_inflate': p_inflate / 25,
+            'p_inflate': p_inflate / 30,
             'max_depth': int(max_depth),
             'init_depth': int(init_depth),
             'tournament_size': int(tournament_size),
             'prob_const': prob_const / 50,
-            'struct_mutation': struct_mutation,
-            'decay_rate': decay_rate / 50,
+            'decay_rate': decay_rate / 20,
             'p_struct': p_struct / 50,
             'depth_distribution': depth_distribution,
-            # 'pop_size': int(pop_size * 30),
             'pop_size': int(pop_size),
             'n_iter': int(n_iter),
             'p_xo': p_xo / 25,
@@ -105,8 +86,6 @@ def skopt_slim_cv(X, y, dataset,
         kf = KFold(n_splits=cv, shuffle=True, random_state=seed)
         scores = []
         nodes_count = []
-        # early_stopping = EarlyStopping_train(patience=int(12_000 / pop_size**0.9))   # 10_000
-        early_stopping = EarlyStopping_train(patience=2000)
 
         for train_index, test_index in kf.split(X):
             X_train, X_test = X[train_index], X[test_index]
@@ -129,7 +108,6 @@ def skopt_slim_cv(X, y, dataset,
                     timeout=timeout,
                     test_elite=False,
                     verbose=0,
-                    callbacks=[early_stopping],
                     seed=seed
                 )
 
@@ -157,44 +135,16 @@ def skopt_slim_cv(X, y, dataset,
 
     # Define search space with parameter names
     space = [
-        Integer(3, 10, name='init_depth', prior='uniform'),
-        Integer(10, 22, name='max_depth'),                   
-        # Integer(1, 5, name='pop_size', prior='uniform'),     # * 30
+        Integer(3, 8, name='init_depth', prior='uniform'),
+        Integer(10, 20, name='max_depth'),                   
         Categorical([100], name='pop_size'),
-        Integer(0, int(35/2), name='p_struct', prior='uniform'),    # / 50
-        Integer(0, int(70/4), name='p_inflate', prior='uniform'),   # / 25
-        # Integer(2, 4, name='tournament_size'),
-        Categorical([2], name='tournament_size'),
-        Integer(0, int(30/2), name='prob_const', prior='uniform'),  # / 50
-        Integer(0, int(30/2), name='decay_rate', prior='uniform'),  # / 50
-        # Categorical([0], name='decay_rate'),
-        Categorical(['exp', 'uniform', 'norm', 'diz'], name='depth_distribution'),
-        # Categorical(['diz'], name='depth_distribution'),
+        Integer(0.02, int(20), name='p_struct', prior='uniform') if struct_mutation else Categorical([0], name='p_struct'),
+        Integer(0, int(20), name='p_inflate', prior='uniform'),   # / 30, max = 0.6(6)
+        Categorical([2, 3, 4], name='tournament_size'),
+        Integer(0, int(15), name='prob_const', prior='uniform'),  # / 50, max = 0.3
+        Integer(0, int(15), name='decay_rate', prior='uniform'),  # / 20, max = 0.75
+        Categorical(['exp', 'uniform', 'norm'], name='depth_distribution'),
 ]
-
-    # All to be divided by 25
-    if mut_xo and struct_xo:
-        space.append(Real(0, 25, name='p_xo', prior='uniform'))
-        space.append(Real(0, 25, name='p_struct_xo', prior='uniform'))
-    
-    elif struct_xo:
-        space.append(Real(0, 25, name='p_xo', prior='uniform'))
-        space.append(Real(25, 25, name='p_struct_xo', prior='uniform'))
-    
-    elif mut_xo:
-        space.append(Real(25, 25, name='p_xo', prior='uniform'))
-        space.append(Categorical([0], name='p_struct_xo'))
-
-    else: 
-        space.append(Categorical([0], name='p_xo'))
-        space.append(Categorical([0], name='p_struct_xo'))
-
-    if simplify:
-        space.append(Categorical([1], name='simplify_threshold'))
-        # space.append(Integer(-1, 3, name='simplify_threshold'))
-
-    else:
-        space.append(Categorical([None], name='simplify_threshold'))
 
     if no_structure:
         space.append(Categorical(['simple'], name='initializer'))
@@ -206,7 +156,7 @@ def skopt_slim_cv(X, y, dataset,
         func=lambda params: objective(params),
         dimensions=space,
         n_calls=n_trials,
-        random_state=random_state,
+        random_state=seed,
         verbose=False,
         noise=2e-2,    # Noise level, check for better convergence
         n_random_starts=20,
@@ -242,15 +192,12 @@ def skopt_slim_cv(X, y, dataset,
 
     return best_params, scores, nodes, space
 
-    # TODO : Keep track of the scores and nodes for each trial, to see how parameter dependent they are
-    # Include a copy of the hyperparameters' range so that we can compare, or do something better (still dont know )
-
 
 def process_dataset(dataset, name, algorithm, 
                     scale, struct_mutation, xo, 
                     mut_xo, gp_xo, simplify=None,
-                    no_structure=False,
-                    random_state=0):
+                    no_structure=False
+                    ):
     
     dataset_id = dataset_dict[name]
     algorithm_suffix = algorithm.replace('*', 'MUL_').replace('+', 'SUM_').replace('SLIM', '')
@@ -258,9 +205,6 @@ def process_dataset(dataset, name, algorithm,
 
     # Suffix for file naming
     scale_suffix = 'sc' if scale else 'un'
-    xo_suffix = 'xo' if xo else None
-    gp_xo_suffix = 'gx' if gp_xo else None
-    mut_xo_suffix = 'mx' if mut_xo else None
     struct_mutation_suffix = 'sm' if struct_mutation else None
     simplify_threshold_suffix = 'sp' if simplify else None
     no_structure_suffix = 'ns' if no_structure else None
@@ -292,10 +236,6 @@ def process_dataset(dataset, name, algorithm,
                 n_trials=n_trials,
                 max_iter=max_iter,
                 cv=cv,
-                struct_mutation=struct_mutation,
-                struct_xo=xo,
-                mut_xo=mut_xo,
-                random_state=random_state,
                 simplify=simplify,
                 no_structure=no_structure,
                 pattern=pattern,
@@ -334,18 +274,13 @@ def process_dataset(dataset, name, algorithm,
         metrics = ['rmse', 'mape', 'mae', 'rmse_compare', 'mape_compare', 'mae_compare', 'time', 'train_fit', 'test_fit', 'size', 'representations']
         test_results = {metric: {} for metric in metrics}
 
-        # early_stopping = EarlyStopping_train(patience=int(12_000/params['pop_size']))
-
         # Remove the simplify_threshold from the parameters
         params_test = params.copy()
-        simplify_threshold = params_test.pop('simplify_threshold')
             
         rm, mp, ma, rm_c, mp_c, ma_c, time_stats, size, reps = test_slim(
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
             args_dict=params_test, dataset_name=name, verbose=0, scale=scale,
-            n_samples=n_samples, n_elites=1, simplify_threshold=simplify_threshold,
-            timeout=200,
-            # callbacks=[early_stopping],
+            n_samples=n_samples, n_elites=1,
         )
 
         # Store results in the dictionary
@@ -377,7 +312,7 @@ def divide_tasks(tasks, num_chunks):
 
 # Parallel execution
 def main():
-    parser = argparse.ArgumentParser(description="Run SLIM-GSGP experiments.")
+    parser = argparse.ArgumentParser(description="Run SLIM-GSGP trials.")
     parser.add_argument('--max-workers', type=int, default=-1, help="Number of parallel workers.")
     parser.add_argument('--divide', type=str, default="1:0", 
                         help="Format: NUM_CHUNKS:CHUNK_INDEX (e.g., 3:1 for the second chunk of 3).")
@@ -391,37 +326,71 @@ def main():
     num_chunks = int(args.divide.split(':')[0])
     chunk_index = int(args.divide.split(':')[1])
     
-    print(f"Running experiments with {parallel_jobs} parallel jobs...")
+    print(f"Running trials with {parallel_jobs} parallel jobs...")
 
     # Define dataset and algorithm combinations
-    experiments = [
+    trials = [
         (dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, no_structure)
         for dataset, name in data_split
         for algorithm in ["SLIM+SIG2", "SLIM*SIG2", "SLIM+ABS", "SLIM*ABS", "SLIM+SIG1", "SLIM*SIG1"]
         for scale in [True, False]
         for struct_mutation in [False]
-        for xo in [False]
-        for mut_xo in [False]
-        for gp_xo in [False]
-        for simplify in [False]
         for no_structure in [True]
     ]
 
     # Add to each experiment a random_state 
-    for i,_ in enumerate(experiments):
-        experiments[i] += (seed+i,)
+    for i,_ in enumerate(trials):
+        trials[i] += (seed+i,)
         
     # Divide tasks into chunks
-    chunks = divide_tasks(experiments, num_chunks)
-    experiments = chunks[chunk_index]
+    chunks = divide_tasks(trials, num_chunks)
+    trials = chunks[chunk_index]
     
-    print(f"Total number of experiments: {len(experiments)}")
+    print(f"Total number of trials: {len(trials)}")
 
-    # Execute experiments in parallel
+    # Execute trials in parallel
     Parallel(n_jobs=parallel_jobs)(
-        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, no_structure, random_state)
-        for dataset, name, algorithm, scale, struct_mutation, xo, mut_xo, gp_xo, simplify, no_structure, random_state in experiments
+        delayed(process_dataset)(dataset, name, algorithm, scale, struct_mutation, no_structure, random_state)
+        for dataset, name, algorithm, scale, struct_mutation, no_structure, random_state in trials
     )
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# OLD CODE ---------------------------------
+    # # All to be divided by 25
+    # if mut_xo and struct_xo:
+    #     space.append(Real(0, 25, name='p_xo', prior='uniform'))
+    #     space.append(Real(0, 25, name='p_struct_xo', prior='uniform'))
+    
+    # elif struct_xo:
+    #     space.append(Real(0, 25, name='p_xo', prior='uniform'))
+    #     space.append(Real(25, 25, name='p_struct_xo', prior='uniform'))
+    
+    # elif mut_xo:
+    #     space.append(Real(25, 25, name='p_xo', prior='uniform'))
+    #     space.append(Categorical([0], name='p_struct_xo'))
+
+    # else: 
+    #     space.append(Categorical([0], name='p_xo'))
+    #     space.append(Categorical([0], name='p_struct_xo'))

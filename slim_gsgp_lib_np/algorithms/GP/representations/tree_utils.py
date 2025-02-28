@@ -73,9 +73,9 @@ def create_grow_random_tree(depth,
                             FUNCTIONS, 
                             TERMINALS, 
                             CONSTANTS, 
-                            p_c=0.3, 
-                            first_call=True, 
-                            coin_flip=True):
+                            p_c=0.3,
+                            p_t=0.5, 
+                            first_call=True):
     """
     Generates a random tree representation using the Grow method with a maximum specified depth.
 
@@ -97,10 +97,10 @@ def create_grow_random_tree(depth,
         Precomputed list of function keys.
     p_c : float, optional
         Probability of choosing a constant node. Default is 0.3.
+    p_t : float, optional
+        Probability of choosing a terminal node. Default is 0.5.
     first_call : bool, optional
         Variable that controls whether the function is being called for the first time. Default is True.
-    coin_flip : bool, optional
-        Variable that controls whether a coin flip is used to determine the selection of a terminal node. Default is True.
 
     Returns
     -------
@@ -108,17 +108,8 @@ def create_grow_random_tree(depth,
         The generated tree representation according to the specified parameters.
     """
     
-    # Define probability for selecting a terminal node
-    if not coin_flip:
-        if p_c > 0:
-            p_terminal = (len(TERMINALS) + len(CONSTANTS)) / (len(TERMINALS) + len(CONSTANTS) + len(FUNCTIONS))
-        else:
-            p_terminal = len(TERMINALS) / (len(TERMINALS) + len(FUNCTIONS))
-    else:
-        p_terminal = 0.5
-
     # If depth is 1 or a terminal is selected and it's not the first call
-    if (depth <= 1 or random.random() < p_terminal) and not first_call:
+    if (depth <= 1 or random.random() < p_t) and not first_call:
         if random.random() > p_c:
             return random.choice(list(TERMINALS.keys()))
         else:
@@ -129,13 +120,13 @@ def create_grow_random_tree(depth,
         node = random.choice(list(FUNCTIONS.keys()))
         if FUNCTIONS[node]["arity"] == 2:
             left_subtree = create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS,
-                                                   p_c, False, coin_flip)
+                                                   p_c, p_t, False)
             right_subtree = create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS,
-                                                    p_c, False, coin_flip)
+                                                    p_c, p_t, False)
             return (node, left_subtree, right_subtree)
         else:
             left_subtree = create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS,
-                                                   p_c, False, coin_flip)
+                                                   p_c, p_t, False)
             return (node, left_subtree)
 
 def create_full_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
@@ -563,7 +554,7 @@ def tree_depth(FUNCTIONS):
 def tree_depth_and_nodes(FUNCTIONS):
     def depth_and_nodes(tree):
         if not isinstance(tree, tuple):
-            return 1, 1  # Tiefe 1, 1 Knoten für Terminalknoten
+            return 1, 1
         
         if FUNCTIONS[tree[0]]["arity"] == 2:
             left_depth, left_nodes = depth_and_nodes(tree[1])
