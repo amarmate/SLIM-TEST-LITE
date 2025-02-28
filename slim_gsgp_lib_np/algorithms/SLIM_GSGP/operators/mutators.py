@@ -88,6 +88,10 @@ def two_trees_delta(operator="sum"):
             The mutated semantics.
         """
         if testing:
+            # Test semantics
+            if tr1.test_semantics is None or tr2.test_semantics is None:
+                raise ValueError("Semantics not calculated for tr1 or tr2")
+            
             return (
                 np.multiply(ms, np.subtract(tr1.test_semantics, tr2.test_semantics))
                 if operator == "sum"
@@ -163,8 +167,11 @@ def one_tree_delta(operator="sum", sig=False):
         np.Tensor
             The mutated semantics.
         """
+        # Check if tr1 has semantics
         if sig:
             if testing:
+                if tr1.test_semantics is None:
+                    raise ValueError("Semantics not calculated for tr1")
                 return (
                     np.multiply(ms, np.subtract(np.multiply(2, tr1.test_semantics), 1))
                     if operator == "sum"
@@ -183,6 +190,9 @@ def one_tree_delta(operator="sum", sig=False):
                 )
         else:
             if testing:
+                if tr1.test_semantics is None:
+                    raise ValueError("Semantics not calculated for tr1")
+
                 return (
                     np.multiply(
                         ms,

@@ -101,7 +101,7 @@ class Individual:
         self.test_semantics = test_semantics
         self.fitness = None
         self.test_fitness = None
-        self.errors_case = None
+        self.errors_case, self.errors_case_test = None, None
         self.age = 0 
         self.id = None
 
@@ -203,6 +203,7 @@ class Individual:
         if self.errors_case is None:
             self.errors_case = target - np.clip(operator(self.train_semantics, axis=0),-1000000000000.0, 1000000000000.0,)
         return self.errors_case
+        
 
     def evaluate(self, ffunction, y, testing=False, operator="sum", force=False):
         """
