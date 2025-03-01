@@ -267,7 +267,6 @@ def initializer(init_pop_size,
     for cond_depth in range(2, depth_condition + 1):
         for ens_depth in range(1, depth_tree + 1):
             for mode in modes:
-                count = 0 
                 cond_p_t, cond_p_c, ens_p_specialist = mode
                 for _ in range(inds_per_bin):
                     tree = create_random_tree(
@@ -275,10 +274,7 @@ def initializer(init_pop_size,
                         p_specialist=ens_p_specialist, p_t=cond_p_t, p_c=cond_p_c
                     )
                     population.append(tree)
-                    count += 1
-                print(count)
 
-    
     # If there are still fewer individuals than desired, fill with trees at maximum depths using default probabilities.
     while len(population) < init_pop_size:
         tree = create_random_tree(

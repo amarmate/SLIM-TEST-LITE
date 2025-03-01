@@ -41,7 +41,7 @@ ELITES = {}
 UNIQUE_RUN_ID = uuid.uuid1()
 
 def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_test: np.ndarray = None,
-         dataset_name: str = None,
+         dataset_name: str = None, run_info: list = slim_gsgp_solve_parameters["run_info"],
          slim_version: str = "SLIM+SIG2",
          pop_size: int = slim_gsgp_parameters["pop_size"],
          n_iter: int = slim_gsgp_solve_parameters["n_iter"],
@@ -312,7 +312,7 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     slim_gsgp_solve_parameters["elitism"] = elitism
     slim_gsgp_solve_parameters["n_elites"] = n_elites
     slim_gsgp_solve_parameters["n_iter"] = n_iter
-    slim_gsgp_solve_parameters['run_info'] = [slim_version, UNIQUE_RUN_ID, dataset_name]
+    slim_gsgp_solve_parameters['run_info'] = [slim_version, UNIQUE_RUN_ID, dataset_name] if run_info is None else run_info
     slim_gsgp_solve_parameters["ffunction"] = fitness_function_options[fitness_function]
     slim_gsgp_solve_parameters["reconstruct"] = reconstruct
     slim_gsgp_solve_parameters["max_depth"] = max_depth

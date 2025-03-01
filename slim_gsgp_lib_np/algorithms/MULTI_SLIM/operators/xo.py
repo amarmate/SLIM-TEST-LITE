@@ -27,6 +27,68 @@ Crossover operator implementation.
 from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import random_subtree, substitute_subtree
 
 
+def xo_op(
+        
+):
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ----------------------------------------------------------------------------------------------------------------------------
+
 def crossover_trees(FUNCTIONS):
     """
     Returns a function that performs crossover between two tree representations.

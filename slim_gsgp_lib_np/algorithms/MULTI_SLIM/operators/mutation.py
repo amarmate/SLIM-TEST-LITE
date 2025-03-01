@@ -32,6 +32,65 @@ from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import (create
                                                                 substitute_subtree)
 
 
+def mutator_op(
+        
+):
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ----------------------------------------------------------------------------------------------------------------------------
 # Function to perform mutation on a tree.
 def mutate_tree_node(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c):
     """

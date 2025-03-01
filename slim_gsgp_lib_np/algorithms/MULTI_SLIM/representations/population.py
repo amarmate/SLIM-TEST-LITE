@@ -26,6 +26,38 @@ from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import _e
 import numpy as np
 
 class Population:
+    """
+    The Population class representing a population of trees in MULTI-SLIM-GSGP.
+    
+    Attributes
+    ----------
+    population : List
+        List of Tree objects representing the population.   
+    size : int
+        Number of trees in the population.
+    nodes_count : int
+        Total number of nodes in the population.
+    fit : np.ndarray
+        Fitness values of the population.
+    train_semantics : np.ndarray
+        Training semantics of the population.
+    test_semantics : np.ndarray
+        Testing semantics of the population.
+
+    Methods
+    -------
+    calculate_semantics(inputs, testing=False)
+        Calculate the semantics for each tree in the population.
+    evaluate(target, testing=False) 
+        Evaluate the population using the errors per case with MSE.
+    __len__()
+        Return the size of the population.
+    __getitem__(item)
+        Get an individual from the population by index.
+        
+    """
+
+    
     def __init__(self, pop):
         """
         Initializes a population of Trees.
@@ -71,12 +103,64 @@ class Population:
         # computing testing semantics, if applicable
         if testing:
             # setting the population semantics to be a list with all the semantics of all trees
-            self.test_semantics = [
+            self.test_semantics = np.array([
                 tree.test_semantics for tree in self.population
-            ]
+            ])
 
         else:
             # setting the population semantics to be a list with all the semantics of all trees
-            self.train_semantics = [
+            self.train_semantics = np.array([
                 tree.train_semantics for tree in self.population
-            ]
+            ])
+
+
+    def evaluate(self, target, testing=False):
+        """
+        Evaluate the population using the errors per case with MSE
+
+        Parameters
+        ----------
+        ffunction : Callable
+            Fitness function to evaluate the individuals.
+        target : torch.Tensor        
+            Expected output (target) values.
+
+        Returns
+        -------
+        None
+        """
+        # Check if errors case is already calculated
+        sem = self.test_semantics if testing else self.train_semantics
+        errors = sem * np.stack([target] * sem.shape[0])
+        fitness = np.sqrt(np.mean(errors**2, axis=1))
+        self.fit = fitness
+        for i, individual in enumerate(self.population):
+            individual.fitness = fitness[i]
+            
+        
+    def __len__(self):
+        """
+        Return the size of the population.
+
+        Returns
+        -------
+        int
+            Size of the population.
+        """
+        return self.size
+
+    def __getitem__(self, item):
+        """
+        Get an individual from the population by index.
+
+        Parameters
+        ----------
+        item : int
+            Index of the individual to retrieve.
+
+        Returns
+        -------
+        Individual
+            The individual at the specified index.
+        """
+        return self.population[item]
