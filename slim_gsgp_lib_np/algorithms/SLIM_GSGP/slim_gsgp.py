@@ -450,9 +450,7 @@ class SLIM_GSGP:
         
         if self.log_level == 0:
             return
-
-        end = time.time()
-        
+                
         if self.log_level in [2, 4]:
             gen_diversity = self.calculate_diversity(iteration)
         

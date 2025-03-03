@@ -131,7 +131,7 @@ def create_grow_random_tree(depth,
             return (node, left_subtree)
 
 
-def create_random_tree(depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+def create_random_tree(depth_condition, max_depth, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
                        p_specialist=0.5, p_t=0.5, p_c=0.3):
     """
     Generates a random ensemble tree representing an individual in the GP ensemble.
@@ -147,7 +147,7 @@ def create_random_tree(depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTA
     ----------
     depth_condition : int
         Maximum depth for the condition trees.
-    depth_tree : int
+    max_depth : int
         Maximum depth for the ensemble trees.
     FUNCTIONS : dict
         Dictionary of function nodes (for condition trees).
@@ -170,7 +170,7 @@ def create_random_tree(depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTA
         A conditional tree or a specialist (when the branch is terminated).
     """
     # Base case: if depth is 1 or by chance we decide to return a specialist
-    if depth_tree <= 1 or random.random() < p_specialist:
+    if max_depth <= 1 or random.random() < p_specialist:
         return random.choice(list(SPECIALISTS.keys()))
     
     # Generate a condition tree.
@@ -179,31 +179,31 @@ def create_random_tree(depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTA
                                              p_c=p_c, p_t=p_t, first_call=True))
     
     # Recursively build the true and false branches.
-    true_branch = create_random_tree(depth_condition, depth_tree - 1, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+    true_branch = create_random_tree(depth_condition, max_depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
                                      p_specialist=p_specialist, p_t=p_t, p_c=p_c)
-    false_branch = create_random_tree(depth_condition, depth_tree - 1, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+    false_branch = create_random_tree(depth_condition, max_depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
                                       p_specialist=p_specialist, p_t=p_t, p_c=p_c)
     
     return (condition_tree, true_branch, false_branch)
 
 
-def initializer(init_pop_size, 
+def initializer(pop_size, 
                 depth_condition, 
-                depth_tree, 
+                max_depth, 
                 FUNCTIONS, 
                 TERMINALS, 
                 CONSTANTS,
                 SPECIALISTS,
                 p_c=0.3, 
                 p_t=0.5, 
-                p_specialist=0.5,
+                p_s=0.5,
                 **kwargs):
     """
     Generates a list of individuals with random ensemble trees for a GP population.
     
     The individuals are binned along two axes:
       - Condition tree depth: from 0 to depth_condition (inclusive).
-      - Ensemble tree depth: from 1 to depth_tree.
+      - Ensemble tree depth: from 1 to max_depth.
     
     For each (condition, ensemble) bin, four modes are created by adjusting the probabilities:
       1. grow–grow: condition: p_t, p_c as given; ensemble: p_specialist as given.
@@ -213,13 +213,13 @@ def initializer(init_pop_size,
     
     Parameters
     ----------
-    init_pop_size : int
+    pop_size : int
         Total number of individuals to generate.
     depth_condition : int
         Maximum depth for condition trees. (A minimum of 2 is enforced.)
         For example, if 5 is passed then condition depths 0,1,...,5 will be used.
-    depth_tree : int
-        Maximum ensemble tree depth. If depth_tree <= 0, only specialists will be chosen.
+    max_depth : int
+        Maximum ensemble tree depth. If max_depth <= 0, only specialists will be chosen.
     FUNCTIONS : dict
         Dictionary of allowed function nodes.
     TERMINALS : dict
@@ -232,7 +232,7 @@ def initializer(init_pop_size,
         Constant probability for tree creation (default: 0.3).
     p_t : float, optional
         Terminal probability for tree creation (default: 0.5).
-    p_specialist : float, optional
+    p_s : float, optional
         Specialist termination probability for ensemble tree creation (default: 0.5).
     
     Returns
@@ -245,28 +245,28 @@ def initializer(init_pop_size,
     if depth_condition < 2:
         depth_condition = 2
 
-    # If depth_tree <= 0, then no ensemble tree can be built: return specialists.
-    if depth_tree <= 1:
-        return [random.choice(list(SPECIALISTS.keys())) for _ in range(init_pop_size)]
+    # If max_depth <= 0, then no ensemble tree can be built: return specialists.
+    if max_depth <= 1:
+        return [random.choice(list(SPECIALISTS.keys())) for _ in range(pop_size)]
     
     population = []
     num_condition_bins = depth_condition - 1  # condition depths: 2 ... depth_condition
-    num_ensemble_bins = depth_tree            # ensemble depths: 1 ... depth_tree
+    num_ensemble_bins = max_depth            # ensemble depths: 1 ... max_depth
 
     # Define four modes by fixing the probabilities:
     # Each mode is a tuple: (condition_p_t, condition_p_c, ensemble_p_specialist)
     modes = [
-         (p_t,      p_c,      p_specialist),  # grow–grow
-         (0,        p_c,        p_specialist),  # full (condition)–grow
+         (p_t,      p_c,      p_s),  # grow–grow
+         (0,        p_c,        p_s),  # full (condition)–grow
          (p_t,      p_c,      0),             # grow–full
          (0,        p_c,        0)              # full–full
     ]
     total_bins = num_condition_bins * num_ensemble_bins * len(modes)
-    inds_per_bin = init_pop_size // total_bins
+    inds_per_bin = pop_size // total_bins
 
     # Loop over all bins.
     for cond_depth in range(2, depth_condition + 1):
-        for ens_depth in range(1, depth_tree + 1):
+        for ens_depth in range(1, max_depth + 1):
             for mode in modes:
                 cond_p_t, cond_p_c, ens_p_specialist = mode
                 for _ in range(inds_per_bin):
@@ -277,14 +277,14 @@ def initializer(init_pop_size,
                     population.append(tree)
 
     # If there are still fewer individuals than desired, fill with trees at maximum depths using default probabilities.
-    while len(population) < init_pop_size:
+    while len(population) < pop_size:
         tree = create_random_tree(
-            depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
-            p_specialist=p_specialist, p_t=p_t, p_c=p_c
+            depth_condition, max_depth, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
+            p_specialist=p_s, p_t=p_t, p_c=p_c
         )
         population.append(tree)
     
-    return population[:init_pop_size]
+    return population[:pop_size]
 
 
 def tree_depth_and_nodes(tree, SPECIALISTS, depth=1):
@@ -463,6 +463,172 @@ def collect_valid_subtrees(tree):
         if isinstance(tree, str):
             candidates.append(tree)
     return candidates
+
+
+def get_condition_indices(tree, path=None, FUNCTIONS=None):
+    """
+    Recursively collects the indices (paths) to condition subtrees in ensemble nodes.
+    
+    An ensemble (conditional) node is assumed to be a tuple of length 3 
+    whose first element is the condition (and is not a GP function, i.e. not in FUNCTIONS).
+    
+    Parameters
+    ----------
+    tree : tuple or any
+        The tree representation (nested tuples for internal nodes, terminals as strings).
+    path : list of int, optional
+        The path to the current node (used during recursion). Default is [].
+    FUNCTIONS : dict, optional
+        Dictionary of GP functions. A node is considered an ensemble node if its first element 
+        is not in FUNCTIONS. (If None, no GP functions are assumed.)
+    
+    Returns
+    -------
+    List[List[int]]
+        A list of paths, where each path is a list of indices indicating the location of a condition.
+    """
+    if path is None:
+        path = []
+    indices = []
+    # Check if tree is a tuple.
+    if isinstance(tree, tuple):
+        # If it's an ensemble (conditional) node, we assume:
+        # - It has length 3.
+        # - Its first element is the condition (and should not be a key in FUNCTIONS).
+        if len(tree) == 3 and (FUNCTIONS is None or not (isinstance(tree[0], str) and tree[0] in FUNCTIONS)):
+            # Record the path to the condition (the condition is at index 0 of the tuple).
+            indices.append(path + [0])
+        # Now, traverse all children.
+        # For ensemble nodes, we traverse all elements (indices 0, 1, and 2).
+        # For GP function nodes (first element is in FUNCTIONS), we assume children start at index 1.
+        if isinstance(tree[0], str) and FUNCTIONS is not None and tree[0] in FUNCTIONS:
+            arity = FUNCTIONS[tree[0]]["arity"]
+            for i in range(1, arity + 1):
+                indices.extend(get_condition_indices(tree[i], path + [i], FUNCTIONS))
+        else:
+            # For ensemble nodes, traverse every element.
+            for i in range(len(tree)):
+                indices.extend(get_condition_indices(tree[i], path + [i], FUNCTIONS))
+    # Terminals are not traversed.
+    return indices
+
+def get_specialist_indices(tree, path=None, SPECIALISTS=None, depth=1):
+    """
+    Recursively collects the indices (paths) to specialist terminals in the tree.
+    
+    A specialist is assumed to be a terminal (non-tuple) that appears as a key in SPECIALISTS.
+    
+    Parameters
+    ----------
+    tree : tuple or any
+        The tree representation.
+    path : list of int, optional
+        The current path (used in recursion). Default is [].
+    SPECIALISTS : dict, optional
+        Dictionary of specialists (keys are used as terminal symbols).
+    depth : int, 1
+        The current depth of the recursion.
+
+    Returns
+    -------
+    List[List[int]]
+        A list of paths (each a list of integers) indicating the locations of specialist terminals.
+    """
+    if path is None:
+        path = []
+    indices = []
+    if isinstance(tree, tuple):
+        for i, child in enumerate(tree):
+            indices.extend(get_specialist_indices(child, path + [i], SPECIALISTS, depth=depth+1))
+    else:
+        if SPECIALISTS is None:
+            # If no specialists dictionary is provided, return an empty list.
+            return []
+        if tree in SPECIALISTS:
+            indices.append((path, depth))
+    return indices
+
+
+def get_candidate_branch_indices(tree, path=None, FUNCTIONS=None, SPECIALISTS=None):
+    """
+    Recursively collect candidate branch indices (paths) where a specialist can be inserted 
+    to prune the tree. Only branches that are not already specialists are candidates.
+
+    In our representation, an ensemble (conditional) node is a tuple of length 3 
+    whose first element is a condition (i.e. not a GP function in FUNCTIONS). 
+    Its branches (indices 1 and 2) are potential candidate sites if they are not specialists.
+
+    Parameters
+    ----------
+    tree : tuple or any
+        The tree representation.
+    path : list of int, optional
+        The current path (default: []).
+    FUNCTIONS : dict, optional
+        Dictionary of GP functions.
+    SPECIALISTS : dict, optional
+        Dictionary of specialist individuals. A node is considered a specialist if it is a string in SPECIALISTS.
+
+    Returns
+    -------
+    List[List[int]]
+        A list of paths (each a list of indices) representing candidate branch positions.
+    """
+    if path is None:
+        path = []
+    candidates = []
+    if isinstance(tree, tuple):
+        # Check if this is an ensemble node:
+        if len(tree) == 3 and (FUNCTIONS is None or not (isinstance(tree[0], str) and tree[0] in FUNCTIONS)):
+            # For ensemble nodes, branch indices 1 and 2 are candidates if they are not specialists.
+            if not (isinstance(tree[1], str) and SPECIALISTS is not None and tree[1] in SPECIALISTS):
+                candidates.append(path + [1])
+            if not (isinstance(tree[2], str) and SPECIALISTS is not None and tree[2] in SPECIALISTS):
+                candidates.append(path + [2])
+            # Also, traverse further into branches that are not specialists.
+            if not (isinstance(tree[1], str) and SPECIALISTS is not None and tree[1] in SPECIALISTS):
+                candidates.extend(get_candidate_branch_indices(tree[1], path + [1], FUNCTIONS, SPECIALISTS))
+            if not (isinstance(tree[2], str) and SPECIALISTS is not None and tree[2] in SPECIALISTS):
+                candidates.extend(get_candidate_branch_indices(tree[2], path + [2], FUNCTIONS, SPECIALISTS))
+        # If it's a GP function node, traverse its children (children start at index 1).
+        elif isinstance(tree[0], str) and FUNCTIONS is not None and tree[0] in FUNCTIONS:
+            arity = FUNCTIONS[tree[0]]["arity"]
+            for i in range(1, arity + 1):
+                candidates.extend(get_candidate_branch_indices(tree[i], path + [i], FUNCTIONS, SPECIALISTS))
+        else:
+            # Otherwise, traverse all children.
+            for i, child in enumerate(tree):
+                candidates.extend(get_candidate_branch_indices(child, path + [i], FUNCTIONS, SPECIALISTS))
+    return candidates
+
+def get_all_branches(tree, path=None):
+    """
+    Recursively collect valid branch indices (paths) for a tree.
+    A branch is defined as any child position (starting at index 1) in a tuple.
+    
+    Parameters
+    ----------
+    tree : any
+        The tree representation.
+    path : list, optional
+        The current path (used for recursion).
+    
+    Returns
+    -------
+    list
+        A list of paths (each a list of indices) that lead to valid branch nodes.
+    """
+    if path is None:
+        path = []
+    branches = []
+    if isinstance(tree, tuple) and len(tree) > 1:
+        # Collect each child index as a valid branch.
+        for i in range(1, len(tree)):
+            current_path = path + [i]
+            branches.append(current_path)
+            branches.extend(get_all_branches(tree[i], current_path))
+    return branches
+
 
 
 # --------------------------------------------- NOT IMPLEMENTED ---------------------------------------------

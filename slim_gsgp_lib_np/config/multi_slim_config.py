@@ -13,8 +13,7 @@ from slim_gsgp_lib_np.utils.utils import (get_best_min, protected_div)
 
 # MULTI SLIM
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import initializer
-from slim_gsgp_lib_np.algorithms.MULTI_SLIM.operators.mutation import mutator_op
-from slim_gsgp_lib_np.algorithms.MULTI_SLIM.operators.xo import xo_op
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.operators.xo import crossover
 from slim_gsgp_lib_np.evaluators.fitness_functions import *
 
 # --------------------------- FUNCTIONS AND CONSTANTS ---------------------------
@@ -101,38 +100,33 @@ class SlimParameters:
 
 
 
-# SLIM GSGP solve parameters
+# ---------------------------- MULTI SLIM SOLVE parameters ----------------------------
 multi_solve_params = {
     "run_info": None,
     "ffunction": "rmse",
     "max_depth": 15,
-    "reconstruct": True,
     "n_iter": 1000,
     "elitism": True,
     "n_elites": 1,
     "log": 1,
     "verbose": 1,
-    "test_elite": True
+    "test_elite": True,
+    "timeout": None
 }
 
-# SLIM GSGP parameters
+# ---------------------------- MULTI SLIM parameters ----------------------------
 multi_params = {
-    "initializer": "rhh",
     "selector": 'tournament',
     "mutator": None,
-    "xo_operator": xo_op,
-    "p_xo": 0.2,
+    "xo_operator": crossover,
+    "p_mut": 0.2,
     "find_elit_func": get_best_min,
-    "p_inflate": 0.2,
-    "p_struct": 0,
-    "operator": None,
     "pop_size": 100,
     "seed": 74,
-    "p_struct_xo": 0,
     "decay_rate": 0.1,
-    "mut_xo_operator": "rshuffle",
 }
 
+# ---------------------------- MULTI SLIM PI_INIT parameters ----------------------------
 multi_pi_init = {
     'FUNCTIONS': FUNCTIONS,
     'CONSTANTS': CONSTANTS,
@@ -141,4 +135,12 @@ multi_pi_init = {
     "p_c": 0.2,
     "p_t": 0.7, 
     "p_specialist": 0.7,
+}
+
+fitness_function_options = {
+    "rmse": rmse,
+    "mse": mse,
+    "mae": mae,
+    "mae_int": mae_int,
+    "signed_errors": signed_errors
 }

@@ -24,13 +24,85 @@
 Crossover operator implementation.
 """
 
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import random_subtree, substitute_subtree
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree import Tree
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import (get_all_branches,get_subtree,replace_subtree)
+import random
 
 
-def xo_op(
-        
-):
-    pass
+def crossover(ind1, ind2):
+    """
+    Perform subtree crossover between two individuals.
+    
+    The operator uses the following rules:
+      - If both individuals are trees (tuples), randomly select a branch
+        in each and swap them.
+      - If one individual is a terminal (non-tuple) and the other is a tree,
+        randomly select a branch from the tree, graft the terminal into that spot,
+        and return the removed branch as the other offspring.
+      - If both individuals are terminals, no crossover is performed.
+    
+    Parameters
+    ----------
+    ind1 : any
+        The first individual (tree or terminal).
+    ind2 : any
+        The second individual (tree or terminal).
+    
+    Returns
+    -------
+    tuple
+        A pair of offspring resulting from the crossover.
+    
+    Example
+    -------
+    >>> ind_1 = 'S_2'
+    >>> ind_2 = (cond1, (cond2, 'S_1', 'S_4'), (cond3, 'S_4', 'S_1'))
+    >>> offs1, offs2 = crossover(ind_1, ind_2)
+    # offs1 becomes (cond2, 'S_1', 'S_4')
+    # offs2 becomes (cond1, 'S_2', (cond3, 'S_4', 'S_1'))
+    """
+    # Both individuals are trees.
+    if isinstance(ind1, tuple) and isinstance(ind2, tuple):
+        branches1 = get_all_branches(ind1)
+        branches2 = get_all_branches(ind2)
+        if branches1 and branches2:
+            path1 = random.choice(branches1)
+            path2 = random.choice(branches2)
+            subtree1 = get_subtree(ind1, path1)
+            subtree2 = get_subtree(ind2, path2)
+            offspring1 = replace_subtree(ind1, path1, subtree2)
+            offspring2 = replace_subtree(ind2, path2, subtree1)
+        else:
+            offspring1, offspring2 = ind1, ind2
+
+    # First individual is a tree and second is terminal.
+    elif isinstance(ind1, tuple) and not isinstance(ind2, tuple):
+        branches1 = get_all_branches(ind1)
+        if branches1:
+            path = random.choice(branches1)
+            subtree = get_subtree(ind1, path)
+            offspring1 = subtree
+            offspring2 = replace_subtree(ind1, path, ind2)
+        else:
+            offspring1, offspring2 = ind1, ind2
+
+    # First individual is terminal and second is a tree.
+    elif not isinstance(ind1, tuple) and isinstance(ind2, tuple):
+        branches2 = get_all_branches(ind2)
+        if branches2:
+            path = random.choice(branches2)
+            subtree = get_subtree(ind2, path)
+            offspring1 = subtree
+            offspring2 = replace_subtree(ind2, path, ind1)
+        else:
+            offspring1, offspring2 = ind1, ind2
+
+    # Both are terminals; no crossover is possible.
+    else:
+        offspring1, offspring2 = ind1, ind2
+
+    return Tree(offspring1), Tree(offspring2)
+
 
 
 
