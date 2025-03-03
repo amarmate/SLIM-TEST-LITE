@@ -95,6 +95,13 @@ class Population:
         None
         """
         # computing the semantics for all the trees in the population
+        if testing and hasattr(self, "test_semantics"):
+            print("Warning: Testing semantics already calculated.")
+            return
+        if not testing and hasattr(self, "train_semantics"):
+            print("Warning: Training semantics already calculated.")
+            return
+        
         [
             tree.calculate_semantics(inputs, testing)
             for tree in self.population
@@ -129,6 +136,12 @@ class Population:
         -------
         None
         """
+        if testing and not hasattr(self, "test_semantics"):
+            raise ValueError("Testing semantics not calculated.")
+        
+        elif not testing and not hasattr(self, "train_semantics"):
+            raise ValueError("Training semantics not calculated.")
+
         # Check if errors case is already calculated
         sem = self.test_semantics if testing else self.train_semantics
         errors = sem * np.stack([target] * sem.shape[0])

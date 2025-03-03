@@ -31,11 +31,9 @@ from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import (create
                                                                 random_subtree,
                                                                 substitute_subtree)
 
-
-def mutator_op(
-        
-):
-    pass
+from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.mutators import exp
+from slim_gsgp_lib_np.utils.utils import get_indices_with_levels, swap_sub_tree
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import replace_subtree, get_subtree
 
 
 

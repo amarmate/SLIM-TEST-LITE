@@ -26,7 +26,7 @@ FUNCTIONS = {
 }
 
 constants = [round(-1 + (2 * i) / (100 - 1), 2) for i in range(100) if np.abs(i) > 0.1]
-CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in constants}
+CONSTANTS = {f'c_{i}': lambda _: np.array(i) for i in constants}
 
 
 # ---------------------------- SLIM GSGP parameters ----------------------------
@@ -118,8 +118,8 @@ multi_solve_params = {
 # SLIM GSGP parameters
 multi_params = {
     "initializer": "rhh",
-    "selector": 'e_lexicase',
-    "mutator": mutator_op,
+    "selector": 'tournament',
+    "mutator": None,
     "xo_operator": xo_op,
     "p_xo": 0.2,
     "find_elit_func": get_best_min,

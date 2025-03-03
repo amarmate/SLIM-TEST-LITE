@@ -51,6 +51,21 @@ class Tree:
         Number of nodes in the tree.
     total_nodes : int
         Total number of nodes in the tree, including the specialists.
+
+    Methods
+    -------
+    apply_tree(inputs, testing, predict)
+        Apply the tree to the input data.
+    calculate_semantics(inputs, testing=False)
+        Calculate the semantics for the tree, if they have not been calculated yet.
+    evaluate(ffunction, X, y, testing=False)
+        Evaluate the tree on the given data.
+    predict(X)
+        Predict the target values using the tree.
+    get_tree_representation(indent="")
+        Get the tree representation as a string.
+    print_tree_representation(indent="")
+        Print the tree representation.
     """
 
     TERMINALS = None
@@ -58,13 +73,13 @@ class Tree:
     CONSTANTS = None
     SPECIALISTS = None
 
-    def __init__(self, repr_):
+    def __init__(self, collection):
         """
         Initializes a Tree object.
 
         Parameters
         ----------
-        repr_ : tuple
+        collection : tuple or str
             Representation of the tree structure.
         """
         self.FUNCTIONS = Tree.FUNCTIONS
@@ -72,8 +87,8 @@ class Tree:
         self.CONSTANTS = Tree.CONSTANTS
         self.SPECIALISTS = Tree.SPECIALISTS
 
-        self.repr_ = repr_
-        self.depth, self.nodes_count, self.total_nodes = tree_depth_and_nodes(Tree.FUNCTIONS, Tree.SPECIALISTS)(repr_)
+        self.collection = collection
+        self.depth, self.nodes_count, self.total_nodes = tree_depth_and_nodes(collection, self.SPECIALISTS) 
         self.fitness, self.test_fitness = None, None
         self.train_semantics, self.test_semantics = None, None 
 
@@ -97,7 +112,7 @@ class Tree:
         """
 
         return _execute_tree(
-            repr_=self.repr_,
+            collection=self.collection,
             X=inputs,
             FUNCTIONS=self.FUNCTIONS,
             TERMINALS=self.TERMINALS,
@@ -118,10 +133,9 @@ class Tree:
         testing : bool
             Boolean indicating if the calculation is for testing semantics.
         """
-
-        if testing:
+        if testing and self.test_semantics is None:
             self.test_semantics = self.apply_tree(inputs, testing=True, predict=False)
-        else:
+        elif self.train_semantics is None:
             self.train_semantics = self.apply_tree(inputs, testing=False, predict=False)
 
 
@@ -163,64 +177,84 @@ class Tree:
         """
 
         return self.apply_tree(X, testing=False, predict=True)
+    
 
     def get_tree_representation(self, indent=""):
         """
         Get the tree representation as a string.
 
-        Parameters
-        ----------
-        indent : str
-            Indentation string.
-
         Returns
         -------
         str
-            Tree representation.
+            A string representation of the tree.
         """
-
         representation = []
-        
-        if isinstance(self.repr_, tuple):
-            # Check if the node is a function node (its first element is a function key)
-            if isinstance(self.repr_[0], str) and self.repr_[0] in Tree.FUNCTIONS:
-                function_name = self.repr_[0]
-                representation.append(indent + f"{function_name}(\n")
-                
-                # Process children based on the function's arity.
-                if Tree.FUNCTIONS[function_name]["arity"] == 2:
-                    left_subtree, right_subtree = self.repr_[1], self.repr_[2]
-                    representation.append(Tree(left_subtree).get_tree_representation(indent + "  "))
-                    representation.append(Tree(right_subtree).get_tree_representation(indent + "  "))
+
+        # Check if the collection is a tuple.
+        if isinstance(self.collection, tuple):
+            # Check if the first element is a Condition object.
+            if hasattr(self.collection[0], "repr_"):
+                # This is an ensemble (conditional) node.
+                condition_obj = self.collection[0]
+                representation.append(indent + "if (\n")
+                # Use the condition's own representation.
+                if hasattr(condition_obj, "get_tree_representation"):
+                    representation.append(condition_obj.get_tree_representation(indent + "  "))
                 else:
-                    left_subtree = self.repr_[1]
-                    representation.append(Tree(left_subtree).get_tree_representation(indent + "  "))
-                
+                    representation.append(indent + "  " + str(condition_obj.repr_) + "\n")
+                representation.append(indent + ") > 0 then\n")
+                # Recursively display the true branch.
+                representation.append(Tree(self.collection[1]).get_tree_representation(indent + "  "))
+                representation.append(indent + "else\n")
+                # Recursively display the false branch.
+                representation.append(Tree(self.collection[2]).get_tree_representation(indent + "  "))
+                representation.append(indent + "endif\n")
+            # Otherwise, if the first element is a GP function node.
+            elif isinstance(self.collection[0], str) and self.collection[0] in Tree.FUNCTIONS:
+                function_name = self.collection[0]
+                representation.append(indent + f"{function_name}(\n")
+                arity = Tree.FUNCTIONS[function_name]["arity"]
+                if arity == 2:
+                    representation.append(Tree(self.collection[1]).get_tree_representation(indent + "  "))
+                    representation.append(Tree(self.collection[2]).get_tree_representation(indent + "  "))
+                elif arity == 1:
+                    representation.append(Tree(self.collection[1]).get_tree_representation(indent + "  "))
                 representation.append(indent + ")\n")
             else:
-                # Otherwise, assume it is a conditional node.
-                # Structure: (condition, branch_if_true, branch_if_false)
-                representation.append(indent + "if (\n")
-                representation.append(Tree(self.repr_[0]).get_tree_representation(indent + "  "))
-                representation.append(indent + ") > 0 then\n")
-                representation.append(Tree(self.repr_[1]).get_tree_representation(indent + "  "))
-                representation.append(indent + "else\n")
-                representation.append(Tree(self.repr_[2]).get_tree_representation(indent + "  "))
-                representation.append(indent + "endif\n")
+                # If the structure is unrecognized, just print it.
+                representation.append(indent + str(self.collection) + "\n")
         else:
-            # Terminal node.
-            representation.append(indent + f"{self.repr_}\n")
-        
+            # Terminal (specialist) node.
+            representation.append(indent + str(self.collection) + "\n")
+
         return "".join(representation)
+
 
     def print_tree_representation(self, indent=""):
         """
-        Print the tree representation.
-        
-        Parameters
-        ----------
-        indent : str
-            Indentation string.
+        Print the tree representation with the given indentation.
         """
-
         print(self.get_tree_representation(indent=indent))
+
+
+    def get_simple_representation(self):
+        """
+        Returns a one-line, simple string representation of the tree.
+        For ensemble nodes, the format is:
+            ( condition_simple, branch_true_simple, branch_false_simple )
+        For GP function nodes, it is similar:
+            ( function_name, child1_simple, child2_simple )
+        For terminals, it simply returns the terminal string.
+        """
+        if isinstance(self.collection, tuple):
+            if hasattr(self.collection[0], "repr_"):
+                cond_str = self.collection[0].repr_
+                true_str = Tree(self.collection[1]).get_simple_representation()
+                false_str = Tree(self.collection[2]).get_simple_representation()
+                return f"({cond_str}, {true_str}, {false_str})"
+        # Specialist node.
+        else:
+            return str(self.collection)
+
+    def __str__(self):
+        return self.get_simple_representation()

@@ -25,6 +25,7 @@ Utility functions and tree operations for genetic programming.
 
 import random
 import numpy as np
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.condition import Condition
 
 
 def bound_value(vector, min_val, max_val):
@@ -168,14 +169,14 @@ def create_random_tree(depth_condition, depth_tree, FUNCTIONS, TERMINALS, CONSTA
     tuple or str
         A conditional tree or a specialist (when the branch is terminated).
     """
-    # Base case: if depth is 0 or by chance we decide to return a specialist
-    if depth_tree <= 0 or random.random() < p_specialist:
+    # Base case: if depth is 1 or by chance we decide to return a specialist
+    if depth_tree <= 1 or random.random() < p_specialist:
         return random.choice(list(SPECIALISTS.keys()))
     
     # Generate a condition tree.
     # Here we choose a random depth for the condition tree (at most the current depth)
-    condition_tree = create_grow_random_tree(depth_condition, FUNCTIONS, TERMINALS, CONSTANTS,
-                                             p_c=p_c, p_t=p_t, first_call=True)
+    condition_tree = Condition(create_grow_random_tree(depth_condition, FUNCTIONS, TERMINALS, CONSTANTS,
+                                             p_c=p_c, p_t=p_t, first_call=True))
     
     # Recursively build the true and false branches.
     true_branch = create_random_tree(depth_condition, depth_tree - 1, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
@@ -245,7 +246,7 @@ def initializer(init_pop_size,
         depth_condition = 2
 
     # If depth_tree <= 0, then no ensemble tree can be built: return specialists.
-    if depth_tree <= 0:
+    if depth_tree <= 1:
         return [random.choice(list(SPECIALISTS.keys())) for _ in range(init_pop_size)]
     
     population = []
@@ -286,188 +287,182 @@ def initializer(init_pop_size,
     return population[:init_pop_size]
 
 
-def tree_depth_and_nodes(FUNCTIONS, SPECIALISTS):
+def tree_depth_and_nodes(tree, SPECIALISTS, depth=1):
     """
-    Returns a function that calculates three measures for a tree:
-      1. Depth: length of the longest path from the root to a leaf.
-      2. Node count: the total number of nodes in the tree (for function nodes, each is counted;
-         ensemble nodes themselves are not counted as extra nodes).
-      3. Ensemble nodes total: the sum of the node counts from the specialist trees used as terminals.
-         For a specialist terminal, its individual node count is used (accessed via SPECIALISTS[key].nodes_count);
-         non-specialist terminals contribute 0.
-
-    The tree may be:
-      - A function node (created by your grow method), represented as a tuple whose first element is a key in FUNCTIONS.
-      - An ensemble (conditional) node, represented as a 3-tuple (condition, true_branch, false_branch)
-        where the condition is a function tree and the branches are either ensemble nodes or terminals.
-      - A terminal (string). If the string is a key in SPECIALISTS, its ensemble total is taken from the individual.
+    Recursively computes the overall depth, number of nodes, and total nodes for a tree's collection.
+    
+    Definitions:
+      - depth: the maximum recursion level among the elements in the collection.
+      - nodes: total number of elements (i.e. leaves in the flattened collection).
+      - total_nodes: sum of each element’s nodes_count (for Condition objects and for specialists, 
+                     using SPECIALISTS[element].nodes_count).
     
     Parameters
     ----------
-    FUNCTIONS : dict
-        Dictionary of function nodes allowed in the tree. Each function has an "arity" entry.
+    tree : tuple or any
+        The tree's collection. In our new design:
+          - Ensemble (conditional) nodes are tuples of the form (Condition, branch_if_true, branch_if_false).
+          - GP function nodes are tuples whose first element is a key in FUNCTIONS.
+          - Terminals are specialist keys (strings).
     SPECIALISTS : dict
-        Dictionary of specialist individuals. For a specialist terminal key (e.g. "S_0"), its ensemble
-        node count is retrieved by SPECIALISTS[key].nodes_count.
+        Dictionary of specialist objects (each having attributes `nodes_count` and `depth`).
+    depth : int, optional
+        The current recursion level (default: 1).
     
     Returns
     -------
-    Callable
-        A function that, given a tree, returns a triple (depth, node_count, ensemble_nodes_total).
+    depth : int
+        The maximum recursion level (depth) of the collection.
+    nodes : int
+        The total number of elements in the flattened collection.
+    total_nodes : int
+        The sum of the nodes_count values for all elements.
     """
-    def depth_and_nodes(tree, count_ensemble):
-        # Base case: terminal node.
-        if not isinstance(tree, tuple):
-            if tree in SPECIALISTS:
-                # Depth and node count are 1 for the terminal,
-                # but the ensemble total comes from the specialist's own nodes_count.
-                return 1, 1, SPECIALISTS[tree].nodes_count
-            else:
-                # Regular terminal (variable or constant): count as 1 node and depth 1, but no ensemble total.
-                return 1, 1, 0
+    if isinstance(tree, tuple):
+        # Recursively compute stats for all children.
+        child_stats = [tree_depth_and_nodes(child, SPECIALISTS, depth + 1) for child in tree[1:]]
+        depth = max(depth, max(d for d, _, _ in child_stats))
+        # Nodes is the sum of all children counts.
+        nodes = sum(n for _, n, _ in child_stats)
+        # Total nodes is the sum of the total_nodes of all children.
+        total_nodes = sum(tn for _, _, tn in child_stats)
+        return depth, nodes, total_nodes
+    else:
+        # # Leaf node: either a Condition object or a specialist.
+        # if hasattr(tree, "depth") and hasattr(tree, "nodes_count"):
+        #     return depth, 1, tree.nodes_count
+        # else:
+        spec = SPECIALISTS[tree]
+        return depth, 1, spec.nodes_count 
+               
 
-        # If the node is a function node (its first element is a key in FUNCTIONS)
-        if isinstance(tree[0], str) and tree[0] in FUNCTIONS:
-            arity = FUNCTIONS[tree[0]]["arity"]
-            if arity == 2:
-                d_left, n_left, ens_left = depth_and_nodes(tree[1], True)
-                d_right, n_right, ens_right = depth_and_nodes(tree[2], True)
-                depth_val = 1 + max(d_left, d_right)
-                nodes_val = 1 + n_left + n_right
-                ens_total = ens_left + ens_right
-                return depth_val, nodes_val, ens_total
-            elif arity == 1:
-                d_child, n_child, ens_child = depth_and_nodes(tree[1], True)
-                return 1 + d_child, 1 + n_child, ens_child
-            else:
-                # If the function node is of arity 0, treat it as a leaf.
-                return 1, 1, 0
-
-        else:
-            # Otherwise, assume it's an ensemble (conditional) node: (condition, true_branch, false_branch)
-            if len(tree) != 3:
-                raise ValueError("Invalid ensemble tree structure. Expected a tuple of length 3.")
-            d_cond, n_cond, ens_cond = depth_and_nodes(tree[0], False)
-            d_true, n_true, ens_true = depth_and_nodes(tree[1], False)
-            d_false, n_false, ens_false = depth_and_nodes(tree[2], False)
-            # For depth, take the max depth among children; if this ensemble operator is counted, add 1.
-            d = max(d_cond, d_true, d_false)
-            if count_ensemble:
-                d += 1
-            # For node count, simply sum the node counts of the children (ensemble operator not counted as an extra node).
-            n = n_cond + n_true + n_false
-            # For ensemble total, sum the ensemble totals of the children.
-            ens_total = ens_cond + ens_true + ens_false
-            return d, n, ens_total
-
-    return lambda tree: depth_and_nodes(tree, True)
-
-def _execute_gp_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
-    if isinstance(repr_, tuple):  # If it's a function node
-        function_name = repr_[0]
-        if FUNCTIONS[function_name]["arity"] == 2:
-            left_subtree, right_subtree = repr_[1], repr_[2]
-            left_result = _execute_gp_tree(left_subtree, X, FUNCTIONS, TERMINALS,
-                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
-            right_result = _execute_gp_tree(right_subtree, X, FUNCTIONS, TERMINALS,
-                                         CONSTANTS)  # equivalent to Tree(right_subtree).apply_tree(inputs) if no parallelization were used
-            output = FUNCTIONS[function_name]["function"](
-                left_result, right_result
-            )
-        else:
-            left_subtree = repr_[1]
-            left_result = _execute_gp_tree(left_subtree, X, FUNCTIONS, TERMINALS,
-                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
-            output = FUNCTIONS[function_name]["function"](left_result)
-
-        return bound_value(output, -1e12, 1e12)
-
-    else:  # If it's a terminal node
-        if repr_ in TERMINALS:
-            return X[:, TERMINALS[repr_]]
-        elif repr_ in CONSTANTS:
-            return np.full((X.shape[0],), CONSTANTS[repr_](None))
-
-
-def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing=False, predict=False):
+def _execute_tree(collection, X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing=False, predict=False):
     """
-    Evaluates a tree representation that may include ensemble (conditional) nodes.
+    Evaluates a tree representation using the new design.
     
-    Ensemble nodes are represented as a 3-tuple:
-         (condition, branch_if_true, branch_if_false)
-    For the condition part, we use _execute_gp_tree to compute its semantics and then 
-    create a mask (condition > 0). The mask is used to select, for each sample in X, which 
-    branch to follow.
+    In this design:
+      - Ensemble (conditional) nodes are represented as:
+            (Condition_object, branch_if_true, branch_if_false)
+            or Specialist_key (str)
+        The Condition_object already stores its semantics (train/test) and supports predict().
+      - Terminals are always specialists.
     
     Parameters
     ----------
-    repr_ : tuple or str
-        The tree representation. This may be:
-          - A function node (tuple with the first element a key in FUNCTIONS),
-          - An ensemble node (tuple with first element NOT in FUNCTIONS), or
-          - A terminal (string).
+    condition : tuple
+        The tre.
     X : np.ndarray
-        Input data samples (rows correspond to samples).
+        Input data.
     FUNCTIONS : dict
-        Dictionary of allowed functions for GP trees (each with an "arity" and "function").
+        Dictionary of allowed functions.
     TERMINALS : dict
-        Dictionary mapping terminal symbols to their corresponding column indices in X.
+        Dictionary mapping terminal symbols to column indices.
     CONSTANTS : dict
-        Dictionary mapping constant symbols to constant-producing functions.
+        Dictionary mapping constant-producing keys to functions.
     SPECIALISTS : dict
-        Dictionary mapping specialist keys to specialist individuals. Each specialist must have:
-           - The precomputed attributes `train_semantics` and `test_semnatics`, and
-           - A method `predict(X)` to compute semantics on new data.
+        Dictionary mapping specialist keys to specialist individuals.
     testing : bool, optional
-        If True, use the specialist's precomputed test semantics. Else, use the train semantics.
+        If True, use test semantics for conditions and specialists.
     predict : bool, optional
-        If True, use the specialist's predict method to compute semantics on new data.
+        If True, use the predict method for conditions and specialists.
     
     Returns
     -------
     np.ndarray
-        A NumPy array of semantics for each sample in X.
+        Evaluated semantics for each sample.
     """
-    # Check for ensemble (conditional) node:
-    # We assume an ensemble node is a tuple whose first element is not a key in FUNCTIONS.
-    if isinstance(repr_, tuple) and not (isinstance(repr_[0], str) and repr_[0] in FUNCTIONS):
-        # Evaluate the condition using _execute_gp_tree.
-        condition_semantics = _execute_gp_tree(repr_[0], X, FUNCTIONS, TERMINALS, CONSTANTS)
-        # Create a Boolean mask: for each sample, True if condition > 0.
-        mask = condition_semantics > 0
-        
-        # Evaluate the true and false branches recursively.
-        true_branch = _execute_tree(repr_[1], X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing)
-        false_branch = _execute_tree(repr_[2], X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing)
-        # Combine the results: for each sample, pick the branch based on the mask.
+    # If collection is a tuple the first element is a Condition object
+    if isinstance(collection, tuple):
+        condition_obj = collection[0]
+        if predict:
+            cond_semantics = condition_obj.predict(X)
+        else:
+            condition_obj.calculate_semantics(X, testing)
+            cond_semantics = condition_obj.test_semantics if testing else condition_obj.train_semantics
+        mask = cond_semantics > 0
+        true_branch = _execute_tree(collection[1], X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing, predict)
+        false_branch = _execute_tree(collection[2], X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing, predict)
         return np.where(mask, true_branch, false_branch)
     
-    # Otherwise, if it is a standard function node, use _execute_gp_tree.
-    if isinstance(repr_, tuple) and (isinstance(repr_[0], str) and repr_[0] in FUNCTIONS):
-        return _execute_gp_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS)
-    
-    # Terminal node: check terminals, constants, and specialists.
-    if not isinstance(repr_, tuple):
-        if repr_ in TERMINALS:
-            return X[:, TERMINALS[repr_]]
-        elif repr_ in CONSTANTS:
-            return np.full((X.shape[0],), CONSTANTS[repr_](None))
-        elif repr_ in SPECIALISTS:
-            if testing:
-                return SPECIALISTS[repr_].test_semantics
-            elif not predict:
-                return SPECIALISTS[repr_].train_semantics
-            else: 
-                return SPECIALISTS[repr_].predict(X)
+    else:
+        specialist = SPECIALISTS[collection]
+        if predict:
+            return specialist.predict(X)
+        elif testing:
+            return specialist.test_semantics
         else:
-            raise ValueError("Unknown terminal symbol: " + str(repr_))
-        
+            return specialist.train_semantics        
 
+def replace_subtree(tree, path, new_subtree):
+    """
+    Replace the subtree at the specified path with new_subtree.
 
+    Parameters
+    ----------
+    tree : tuple or any
+        The original tree.
+    path : list of int
+        The path (list of indices) to the subtree to replace.
+    new_subtree : any
+        The subtree (e.g. a specialist terminal) to insert.
 
-
-
-
+    Returns
+    -------
+    The new tree with the subtree at 'path' replaced.
+    """
+    if not path:
+        return new_subtree
+    if isinstance(tree, tuple):
+        index = path[0]
+        tree_list = list(tree)
+        tree_list[index] = replace_subtree(tree[index], path[1:], new_subtree)
+        return tuple(tree_list)
+    else:
+        raise ValueError("Path leads into a terminal; cannot replace further.")
+    
+def get_subtree(tree, path):
+    """
+    Retrieve the subtree at the given path from the tree.
+    """
+    if not path:
+        return tree
+    if isinstance(tree, tuple):
+        index = path[0]
+        return get_subtree(tree[index], path[1:])
+    else:
+        return tree
+    
+def collect_valid_subtrees(tree):
+    """
+    Recursively collects all valid subtrees for hoist mutation.
+    
+    A valid subtree is one that is either:
+      - A specialist terminal (a string), or
+      - A complete ensemble node: a tuple of length 3 whose first element is a Condition object.
+    
+    Parameters
+    ----------
+    tree : tuple or any
+        The tree's collection.
+    
+    Returns
+    -------
+    list
+        A list of valid candidate subtrees.
+    """
+    candidates = []
+    if isinstance(tree, tuple):
+        # Check if this tuple is a complete ensemble node.
+        if len(tree) == 3 and hasattr(tree[0], "repr_"):
+            candidates.append(tree)
+        # Recurse into every child.
+        for child in tree:
+            candidates.extend(collect_valid_subtrees(child))
+    else:
+        # If not a tuple, then it's a terminal.
+        if isinstance(tree, str):
+            candidates.append(tree)
+    return candidates
 
 
 # --------------------------------------------- NOT IMPLEMENTED ---------------------------------------------

@@ -42,7 +42,7 @@ FUNCTIONS = {
 # Generate a list of 200 constants between -1 and 1
 constants = [round(-1 + (2 * i) / (100 - 1), 2) for i in range(100)]
 filtered_constants = [i for i in constants if np.abs(i) > 0.1]
-CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in filtered_constants}
+CONSTANTS = {f'c_{i}': lambda _: np.array(i) for i in filtered_constants}
 
 
 # Set parameters

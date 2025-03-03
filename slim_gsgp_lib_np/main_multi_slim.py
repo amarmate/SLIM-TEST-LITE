@@ -35,6 +35,13 @@ from slim_gsgp_lib_np.config.multi_slim_config import *
 # -------------------------------- MULTI_SLIM --------------------------------
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.multi_slim import MULTI_SLIM
 
+# -----------------------------------  SLIM -----------------------------------
+from slim_gsgp_lib_np.utils.logger import log_settings
+from slim_gsgp_lib_np.utils.utils import get_best_min, get_best_max
+from slim_gsgp_lib_np.selection.selection_algorithms import selector as selection_algorithm
+from slim_gsgp_lib_np.utils.utils import verbose_reporter
+
+
 # -----------------------------------  GP -----------------------------------
 from slim_gsgp_lib_np.algorithms.GP.gp import GP
 from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
@@ -57,6 +64,8 @@ def multi_slim(
         log_level: int = multi_solve_params["log"],
         minimization: bool = True,
         log_path: str = None,
+        tournament_size: int = 2, 
+        selector: str = multi_params["selector"],
 
 
         callbacks: list = None, 
@@ -77,6 +86,12 @@ def multi_slim(
         run_info=[ALGORITHM, slim_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
         log_path=log_path,
           **slim_parameters)
+    
+    # Setting the train and test semantics for the population for speeding up evaluation during multi-slim
+    for ind in population.population:
+        ind.version = elite.version
+        ind.train_semantics = ind.predict(X_train)
+        ind.test_semantics = ind.predict(X_test)
         
     # ------------------------ PI INIT ------------------------------
     multi_pi_init['FUNCTIONS'] = elite.collection[0].FUNCTIONS
@@ -92,6 +107,11 @@ def multi_slim(
     multi_pi_init['max_depth'] = 0         # The max depth of the tree
 
     # ------------------- MULTI_SLIM PARAMETERS ----------------------
+    multi_params['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
+                                                type=selector, 
+                                                pool_size=tournament_size,
+                                                targets=y_train)
+    multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
 
 
     # ---------------- MULTI_SLIM SOLVE PARAMETERS --------------------
@@ -125,3 +145,70 @@ def multi_slim(
         return optimizer.elite, optimizer.population
     
     return optimizer.elite
+
+"""
+
+
+    #   *************** SLIM_GSGP_PARAMETERS ***************
+
+    slim_gsgp_parameters["two_trees"] = trees
+    slim_gsgp_parameters["operator"] = op
+    slim_gsgp_parameters["pop_size"] = pop_size
+    slim_gsgp_parameters["inflate_mutator"] = inflate_mutation(
+        FUNCTIONS= slim_gsgp_pi_init["FUNCTIONS"],
+        TERMINALS= slim_gsgp_pi_init["TERMINALS"],
+        CONSTANTS= slim_gsgp_pi_init["CONSTANTS"],
+        two_trees=slim_gsgp_parameters['two_trees'],
+        operator=slim_gsgp_parameters['operator'],
+        sig=sig
+    )
+    
+    slim_gsgp_parameters["structure_mutator"] = structure_mutation(
+        FUNCTIONS=slim_gsgp_pi_init["FUNCTIONS"],
+        TERMINALS=slim_gsgp_pi_init["TERMINALS"],
+        CONSTANTS=slim_gsgp_pi_init["CONSTANTS"],
+        mode=mode,
+    ) 
+    
+    slim_gsgp_parameters["xo_operator"] = xo_operator(
+        p_struct_xo=p_struct_xo,
+        mut_xo_op=mut_xo_operator,
+        FUNCTIONS=slim_gsgp_pi_init["FUNCTIONS"],
+        max_depth=max_depth,
+        init_depth=init_depth,
+    )
+    
+    slim_gsgp_parameters["initializer"] = initializer_options[initializer]
+    slim_gsgp_parameters["ms"] = ms
+    slim_gsgp_parameters['p_inflate'] = p_inflate
+    slim_gsgp_parameters['p_struct'] = p_struct
+    slim_gsgp_parameters['p_deflate'] = 1 - p_inflate - p_struct
+    slim_gsgp_parameters['p_xo'] = p_xo
+    slim_gsgp_parameters["seed"] = seed
+    slim_gsgp_parameters["decay_rate"] = decay_rate
+    slim_gsgp_parameters["verbose_reporter"] = verbose_reporter
+    slim_gsgp_parameters['callbacks'] = callbacks
+    slim_gsgp_parameters['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
+                                                type=selector, 
+                                                pool_size=tournament_size,
+                                                eps_fraction=eps_fraction,
+                                                targets=y_train)
+    slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
+    slim_gsgp_parameters['timeout'] = timeout
+
+    #   *************** SLIM_GSGP_SOLVE_PARAMETERS ***************
+
+    slim_gsgp_solve_parameters["log"] = log_level
+    slim_gsgp_solve_parameters["verbose"] = verbose
+    slim_gsgp_solve_parameters["log_path"] = log_path
+    slim_gsgp_solve_parameters["elitism"] = elitism
+    slim_gsgp_solve_parameters["n_elites"] = n_elites
+    slim_gsgp_solve_parameters["n_iter"] = n_iter
+    slim_gsgp_solve_parameters['run_info'] = [slim_version, UNIQUE_RUN_ID, dataset_name] if run_info is None else run_info
+    slim_gsgp_solve_parameters["ffunction"] = fitness_function_options[fitness_function]
+    slim_gsgp_solve_parameters["reconstruct"] = reconstruct
+    slim_gsgp_solve_parameters["max_depth"] = max_depth
+    slim_gsgp_solve_parameters["test_elite"] = test_elite
+
+
+"""
