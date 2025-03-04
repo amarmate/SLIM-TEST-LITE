@@ -420,6 +420,7 @@ def replace_subtree(tree, path, new_subtree):
     else:
         raise ValueError("Path leads into a terminal; cannot replace further.")
     
+    
 def get_subtree(tree, path):
     """
     Retrieve the subtree at the given path from the tree.
@@ -431,6 +432,13 @@ def get_subtree(tree, path):
         return get_subtree(tree[index], path[1:])
     else:
         return tree
+    
+    
+def uniform_level_choice(idx_lev):
+    level = random.choices(list(set([depth for _, depth in idx_lev])))[0]
+    idx = random.choice([i for i, depth in idx_lev if depth == level])
+    return idx, level
+
     
 def collect_valid_subtrees(tree):
     """

@@ -436,7 +436,8 @@ def inflate_mutation(FUNCTIONS, TERMINALS, CONSTANTS, two_trees=True, operator="
                         ]
                     )
                 )
-                if individual.test_semantics is not None
+                # if individual.test_semantics is not None
+                if False
                 else None
             ),
             reconstruct=reconstruct,
@@ -510,7 +511,8 @@ def deflate_mutation(individual, reconstruct, mut_point_idx=None):
                     *individual.test_semantics[mut_point + 1 :],
                 ]
             )
-            if individual.test_semantics is not None
+            # if individual.test_semantics is not None
+            if False
             else None
         ),
         reconstruct=reconstruct,

@@ -27,9 +27,7 @@ Mutator operator implementation.
 import random
 
 import numpy as np
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import (create_grow_random_tree,
-                                                                random_subtree,
-                                                                substitute_subtree)
+from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import (create_grow_random_tree)
 
 from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.mutators import exp
 from slim_gsgp_lib_np.utils.utils import get_indices_with_levels, swap_sub_tree
@@ -68,7 +66,7 @@ def mutate_prune(tree,
     candidates = get_candidate_branch_indices(tree, path=[], FUNCTIONS=FUNCTIONS, SPECIALISTS=SPECIALISTS)
     if not candidates:
         # No candidate found: prune the entire tree.
-        return random.choice(list(SPECIALISTS.keys()))
+        return Tree(random.choice(list(SPECIALISTS.keys())))
     chosen_path = random.choice(candidates)
     new_spec = random.choice(list(SPECIALISTS.keys()))
     new_tree = replace_subtree(tree, chosen_path, new_spec)
@@ -157,17 +155,13 @@ def mutate_specialist(tree, SPECIALISTS):
     The new tree after swapping one specialist.
     """
     candidate_paths = get_specialist_indices(tree, path=[], SPECIALISTS=SPECIALISTS)
-    if not candidate_paths:
-        return tree  # No specialist found, return unchanged.
-    chosen_path = random.choice(candidate_paths)
-    current_spec = get_subtree(tree, chosen_path)
     candidates = list(SPECIALISTS.keys())
-    # Remove the current specialist so that a new one is selected.
-    if current_spec in candidates:
-        candidates.remove(current_spec)
-    if not candidates:
-        return tree  # In case there is only one specialist available.
     new_spec = random.choice(candidates)
+    if not candidate_paths: 
+        # Specialist at the root node 
+        return Tree(new_spec)
+    
+    chosen_path = random.choice(candidate_paths)
     new_tree = replace_subtree(tree, chosen_path, new_spec)
     return Tree(new_tree)
 

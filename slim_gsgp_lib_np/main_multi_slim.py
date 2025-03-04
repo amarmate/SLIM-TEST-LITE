@@ -26,30 +26,23 @@ logging the results for further analysis.
 import uuid
 import os
 import warnings
-
 import numpy as np 
 
-from slim_gsgp_lib_np.main_slim import slim
-from slim_gsgp_lib_np.config.multi_slim_config import *
 
 # -------------------------------- MULTI_SLIM --------------------------------
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.multi_slim import MULTI_SLIM
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.operators.mutators import mutator
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.operators.xo import homologus_xo
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import initializer
+from slim_gsgp_lib_np.config.multi_slim_config import *
 
 # -----------------------------------  SLIM -----------------------------------
 from slim_gsgp_lib_np.utils.logger import log_settings
 from slim_gsgp_lib_np.utils.utils import get_best_min, get_best_max
 from slim_gsgp_lib_np.selection.selection_algorithms import selector as selection_algorithm
-from slim_gsgp_lib_np.utils.utils import verbose_reporter
-
+from slim_gsgp_lib_np.main_slim import slim
 
 # -----------------------------------  GP -----------------------------------
-from slim_gsgp_lib_np.algorithms.GP.gp import GP
-from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
-from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
-from slim_gsgp_lib_np.config.gp_config import *
-from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
 from slim_gsgp_lib_np.utils.logger import log_settings
 
 ELITES = {}
@@ -61,6 +54,12 @@ def multi_slim(
         slim_parameters: dict = None, slim_version: str = "SLIM+SIG2",
         pop_size : int = multi_pi_init["pop_size"], 
         n_iter : int = multi_solve_params["n_iter"],
+        p_mut: float = multi_params["p_mut"],
+        depth_condition: int = multi_pi_init["depth_condition"],
+        max_depth: int = multi_pi_init["max_depth"],
+        prob_const: float = multi_pi_init["p_c"],
+        prob_terminal: float = multi_pi_init["p_t"],
+        prob_specialist: float = multi_pi_init["p_specialist"],
         test_elite: bool = multi_solve_params["test_elite"],    
         n_elites: int = multi_solve_params["n_elites"],
         fitness_function : str = multi_solve_params["ffunction"],
@@ -82,15 +81,18 @@ def multi_slim(
     """
     # Validate the inputs given  TODO 
     # validate_parameters()
+    if dataset_name is None:
+        warnings.warn("No dataset name set. Using default value of dataset_1.")
+        dataset_name = "dataset"
 
     # Calling the SLIM-GSGP algorithm 
     elite, population = slim(
-        X_train=X_train, y_train=y_train, dataset_name=dataset_name, test_elite=False,
+        X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
         full_return=True, seed=seed, verbose=verbose, log_level=log_level,
         run_info=[ALGORITHM, slim_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
         log_path=log_path,
-          **slim_parameters)
-    
+        **slim_parameters.__dict__)
+
     # Setting the train and test semantics for the population for speeding up evaluation during multi-slim
     for ind in population.population:
         ind.version = elite.version
@@ -101,14 +103,16 @@ def multi_slim(
     multi_pi_init['FUNCTIONS'] = elite.collection[0].FUNCTIONS
     multi_pi_init['TERMINALS'] = elite.collection[0].TERMINALS
     multi_pi_init['CONSTANTS'] = elite.collection[0].CONSTANTS
+    
+    population.population = population.population[:20]
     multi_pi_init['SPECIALISTS'] = {f'S_{i}' : ind for i, ind in enumerate(population.population)}
 
-    multi_pi_init['p_c'] = 0
-    multi_pi_init['p_t'] = 0 
-    multi_pi_init['p_s'] = 0 
+    multi_pi_init['p_c'] = prob_const
+    multi_pi_init['p_t'] = prob_terminal
+    multi_pi_init['p_s'] = prob_specialist
     multi_pi_init['pop_size'] = pop_size
-    multi_pi_init['depth_condition'] = 0   # The max depth of each of the conditions 
-    multi_pi_init['max_depth'] = 0         # The max depth of the tree
+    multi_pi_init['depth_condition'] = depth_condition
+    multi_pi_init['max_depth'] = max_depth
 
     # ------------------- MULTI_SLIM PARAMETERS ----------------------
     multi_params['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
@@ -125,8 +129,10 @@ def multi_slim(
                                       p_c=multi_pi_init['p_c'],
                                       p_t=multi_pi_init['p_t'],
                                       decay_rate=multi_params['decay_rate'])
+    multi_params['xo_operator'] = homologus_xo
     multi_params['initializer'] = initializer
-    multi_params['p_xo'] = 1 - multi_params['p_mut']
+    multi_params['p_mut'] = p_mut
+    multi_params['p_xo'] = 1 - p_mut
     multi_params['seed'] = seed
     multi_params['callbacks'] = callbacks
     multi_params['decay_rate'] = decay_rate

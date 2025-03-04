@@ -262,6 +262,7 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     slim_gsgp_parameters["two_trees"] = trees
     slim_gsgp_parameters["operator"] = op
     slim_gsgp_parameters["pop_size"] = pop_size
+    slim_gsgp_parameters["slim_version"] = slim_version
     slim_gsgp_parameters["inflate_mutator"] = inflate_mutation(
         FUNCTIONS= slim_gsgp_pi_init["FUNCTIONS"],
         TERMINALS= slim_gsgp_pi_init["TERMINALS"],

@@ -57,7 +57,6 @@ class Population:
         
     """
 
-    
     def __init__(self, pop):
         """
         Initializes a population of Trees.
@@ -144,7 +143,7 @@ class Population:
 
         # Check if errors case is already calculated
         sem = self.test_semantics if testing else self.train_semantics
-        errors = sem * np.stack([target] * sem.shape[0])
+        errors = sem - np.stack([target] * sem.shape[0])
         fitness = np.sqrt(np.mean(errors**2, axis=1))
         self.fit = fitness
         for i, individual in enumerate(self.population):

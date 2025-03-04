@@ -55,6 +55,7 @@ class SLIM_GSGP:
         pop_size=100,
         seed=0,
         operator="sum",
+        slim_version="SLIM+SIG2",
         two_trees=True,
         p_struct_xo=0.5, 
         mut_xo_operator='rshuffle',
@@ -103,6 +104,8 @@ class SLIM_GSGP:
             Random seed for reproducibility. Default is 0.
         operator : {'sum', 'prod'}
             Operator to apply to the semantics, either "sum" or "prod". Default is "sum".
+        slim_version : str
+            Version of the SLIM algorithm. Default is "SLIM+SIG2".
         two_trees : bool
             Indicates if two trees are used. Default is True.
         p_struct_xo : float
@@ -141,6 +144,7 @@ class SLIM_GSGP:
         self.callbacks = callbacks if callbacks is not None else []
         self.stop_training = False
         self.decay_rate = decay_rate
+        self.slim_version = slim_version    
         self.timeout = timeout
         self.iteration = 0
 
@@ -263,10 +267,14 @@ class SLIM_GSGP:
 
         # calculating the testing semantics and the elite's testing fitness if test_elite is true
         if test_elite:
-            # population.calculate_semantics(X_test, testing=True)
-            self.elite.evaluate(
-                ffunction, y=y_test, testing=True, operator=self.operator
-            )
+            self.elite.version = self.slim_version
+            pred_elite = self.elite.predict(X_test)
+            self.elite.test_fitness = ffunction(pred_elite, y_test)
+            # self.elite.calculate_semantics(X_test, testing=True)
+            # self.elite.evaluate(
+            #     ffunction, y=y_test, testing=True, operator=self.operator
+            # )
+
 
         # Display and log results
         self.print_results(0, start, end) if verbose > 0 else None
@@ -337,10 +345,13 @@ class SLIM_GSGP:
 
             # calculating the testing semantics and the elite's testing fitness if test_elite is true
             if test_elite:
-                self.elite.calculate_semantics(X_test, testing=True)
-                self.elite.evaluate(
-                    ffunction, y=y_test, testing=True, operator=self.operator
-                )
+                self.elite.version = self.slim_version
+                pred_elite = self.elite.predict(X_test)
+                self.elite.test_fitness = ffunction(pred_elite, y_test)
+                # self.elite.calculate_semantics(X_test, testing=True)
+                # self.elite.evaluate(
+                #     ffunction, y=y_test, testing=True, operator=self.operator
+                # )
 
             # Display and log results
             self.print_results(it, start, end) if verbose > 0 else None
@@ -389,7 +400,8 @@ class SLIM_GSGP:
             max_depth=self.pi_init["init_depth"],
             p_c=self.pi_init["p_c"],
             p_t=self.pi_init["p_t"],
-            X_test=X_test,
+           #X_test=X_test,
+            X_test=None,
             reconstruct=reconstruct,
         )
 
@@ -415,7 +427,8 @@ class SLIM_GSGP:
                 max_depth=self.pi_init["init_depth"],
                 p_c=self.pi_init["p_c"],
                 p_t=self.pi_init["p_t"],
-                X_test=X_test,
+                # X_test=X_test,
+                X_test=None,
                 reconstruct=reconstruct,
             )
 
@@ -435,7 +448,8 @@ class SLIM_GSGP:
                     max_depth=self.pi_init["init_depth"],
                     p_c=self.pi_init["p_c"],
                     p_t=self.pi_init["p_t"],
-                    X_test=X_test,
+                    # X_test=X_test,
+                    X_test=None,
                     reconstruct=reconstruct,
                     decay_rate=self.decay_rate,
                     exp_decay=False,)

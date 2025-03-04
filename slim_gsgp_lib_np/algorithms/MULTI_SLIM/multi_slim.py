@@ -7,10 +7,10 @@ import numpy as np
 
 from slim_gsgp_lib_np.utils.logger import logger
 from slim_gsgp_lib_np.utils.utils import verbose_reporter
-
+from slim_gsgp_lib_np.utils.diversity import gsgp_pop_div_from_vectors
 
 class MULTI_SLIM:
-    def __init__(self, pi_init, mutator, selector, initializer, find_elit_func,
+    def __init__(self, pi_init, mutator, xo_operator, selector, initializer, find_elit_func,
                  p_mut, p_xo, seed, callbacks, decay_rate):
         """
         Initialize the MULTI_SLIM optimizer.
@@ -24,6 +24,8 @@ class MULTI_SLIM:
               - pop_size, depth_condition, max_depth, etc.
         mutator : Callable
             Mutation operator (aggregated) for modifying individuals.
+        xo_operator : Callable 
+            Crossover operator for modifying individuals 
         selector : Callable
             Selection operator to choose individuals from the population.
         initializer : Callable
@@ -43,7 +45,9 @@ class MULTI_SLIM:
         """
         # Save parameters
         self.pi_init = pi_init
+        self.pop_size = pi_init["pop_size"]
         self.mutator = mutator
+        self.xo_operator = xo_operator 
         self.selector = selector
         self.initializer = initializer
         self.find_elit_func = find_elit_func
@@ -119,7 +123,7 @@ class MULTI_SLIM:
 
         # Initialize the population 
         start = time.time()
-        population = Population(tree for tree in self.initializer(self.pi_init))
+        population = Population([Tree(tree) for tree in self.initializer(**self.pi_init)])
 
         # Evaluate the initial population.
         population.calculate_semantics(inputs=X_train, testing=False)
@@ -137,11 +141,14 @@ class MULTI_SLIM:
         self.dataset = curr_dataset
         self.time_dict = {'mutation':[], 'xo':[]}
 
+        # setting timeouts and iterations
+        self.timeout = timeout
+        self.iteration = 0
+
         # calculating the testing semantics and the elite's testing fitness if test_elite is true
         if test_elite:
-            # population.calculate_semantics(X_test, testing=True)
             self.elite.evaluate(
-                ffunction, X=X_train, y=y_test, testing=True
+                ffunction, X=X_test, y=y_test, testing=True
             )
 
         # Display and log results
@@ -155,8 +162,8 @@ class MULTI_SLIM:
         start_time = time.time()
 
         # Main evolutionary loop.
-        for it in range(n_iter):
-            self.time_dict = {'struct':[], 'inflate':[], 'deflate':[], 'xo':[]}
+        for it in range(1, n_iter + 1, 1):
+            self.time_dict = {'mutation':[], 'xo':[]}
             self.iteration += 1
 
             if time.time() - start_time > self.timeout:
@@ -176,14 +183,14 @@ class MULTI_SLIM:
 
             while len(offs_pop) < self.pop_size:
                 # XO selected
-                if random.random < self.p_xo:
+                if random.random() < self.p_xo:
                     offs = self.crossover_step()
                     offs_pop.extend(offs)
 
                 # Mutation selected
                 else:
                     offs = self.mutation_step()
-                    offs_pop.extend(offs)
+                    offs_pop.append(offs)
 
             # Check if the offspring population is larger than the population size
             if len(offs_pop) > population.size:
@@ -205,7 +212,7 @@ class MULTI_SLIM:
             # Evaluate the elite on the testing data
             if test_elite:
                 self.elite.evaluate(
-                    ffunction, X=X_train, y=y_test, testing=True
+                    ffunction, X=X_test, y=y_test, testing=True
                 )
 
             # Display and log results
@@ -231,19 +238,19 @@ class MULTI_SLIM:
             parent1, parent2 = self.selector(self.population), self.selector(self.population)
             if parent1 != parent2:
                 break  
-        
-        offspring = self.pi_init["xo_operator"](parent1, parent2)
+                
+        offs = self.xo_operator(parent1, parent2)
         self.time_dict['xo'].append(time.time() - start)
-        return offspring
+        print(parent1.depth, parent2.depth, offs[0].depth, offs[1].depth)
+        return offs
 
     def mutation_step(self): 
         start = time.time()
         parent = self.selector(self.population)
-        offspring = self.mutator(parent)
+        offs = self.mutator(parent)
         self.time_dict['mutation'].append(time.time() - start)
-        return offspring
+        return offs
     
-
     def print_results(self, iteration, start, end):
         params = {
             "dataset": self.dataset,
@@ -252,6 +259,8 @@ class MULTI_SLIM:
             "test": self.elite.test_fitness,
             "time": end - start,
             "nodes": self.elite.nodes_count,
+            "total_nodes": self.elite.total_nodes,
+            "average_depth": np.round(np.mean([ind.depth for ind in self.population.population]), 2),
             "div": int(self.calculate_diversity()),
             "mut": f"{np.round(1000*np.mean([self.time_dict['mutation']]),2) if self.time_dict['mutation'] != [] else 'N/A'} ({len(self.time_dict['mutation'])})",
             "xo": f"{np.round(1000*np.mean([self.time_dict['xo']]),2) if self.time_dict['xo'] != [] else 'N/A'} ({len(self.time_dict['xo'])})",
@@ -315,14 +324,4 @@ class MULTI_SLIM:
         )
 
     def calculate_diversity(self):
-        return None
-    
-        # def calculate_diversity(self, it):
-        # if self.operator == "sum":
-        #     return gsgp_pop_div_from_vectors(
-        #         np.stack([np.sum(ind.train_semantics, axis=0) for ind in self.population.population])
-        #     )
-        # else:
-        #     return gsgp_pop_div_from_vectors(
-        #         np.stack([np.prod(ind.train_semantics, axis=0) for ind in self.population.population])
-        #     )
+        return gsgp_pop_div_from_vectors(self.population.train_semantics)
