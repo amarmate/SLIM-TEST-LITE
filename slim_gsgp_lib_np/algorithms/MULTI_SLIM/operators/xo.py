@@ -31,7 +31,7 @@ from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import (g
                                                                                uniform_level_choice)
 from slim_gsgp_lib_np.utils.utils import get_indices_with_levels
 
-def homologus_xo(ind1, ind2):    
+def homologus_xo(ind1, ind2, max_depth):    
     p1, p2 = ind1.collection, ind2.collection
 
     # Both are terminals; no crossover is possible.
@@ -59,9 +59,9 @@ def homologus_xo(ind1, ind2):
         if same_depth: 
             idx_2 = random.choice(same_depth)
         else: 
-            # The second parent has depth smaller than the first parent.
-            # Uniform_level_choice isnt used to favor indices closer to depth (same functionality)
-            idx_2 = random.choice([indices for indices, d in idx_lev2 if d < depth]) 
+            # The second parent has depth smaller than the first parent, we have to be careful 
+            max_subtree_depth = max_depth - depth + 1 
+            idx_2 = random.choice([indices for indices, d in idx_lev2 if d >= ind2.depth - max_subtree_depth + 1])
         
         tree_1 = get_subtree(p1, idx_1)
         tree_2 = get_subtree(p2, idx_2)

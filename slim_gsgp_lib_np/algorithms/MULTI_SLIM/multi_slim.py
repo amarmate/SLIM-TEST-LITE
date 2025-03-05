@@ -241,7 +241,7 @@ class MULTI_SLIM:
                 
         offs = self.xo_operator(parent1, parent2)
         self.time_dict['xo'].append(time.time() - start)
-        print(parent1.depth, parent2.depth, offs[0].depth, offs[1].depth)
+        # print(parent1.depth, parent2.depth, offs[0].depth, offs[1].depth)
         return offs
 
     def mutation_step(self): 
