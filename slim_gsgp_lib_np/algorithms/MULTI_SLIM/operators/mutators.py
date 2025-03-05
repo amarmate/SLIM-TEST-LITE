@@ -26,14 +26,11 @@ Mutator operator implementation.
 
 import random
 
-import numpy as np
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import (create_grow_random_tree)
-
 from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.mutators import exp
 from slim_gsgp_lib_np.utils.utils import get_indices_with_levels, swap_sub_tree
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import (replace_subtree, get_subtree, collect_valid_subtrees,
                                                                                get_candidate_branch_indices, get_condition_indices, 
-                                                                               get_specialist_indices)
+                                                                               get_specialist_indices, create_grow_random_tree)
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.condition import Condition
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree import Tree
 
@@ -52,8 +49,8 @@ def mutate_prune(tree,
 
     Parameters
     ----------
-    tree : tuple or any
-        The tree representation.
+    tree : Tree object 
+        A MULTI-SLIM ensemble tree
     SPECIALISTS : dict
         Dictionary of specialist individuals (keys used as terminals).
     FUNCTIONS : dict
@@ -96,8 +93,8 @@ def mutate_expand(tree,
     
     Parameters
     ----------
-    tree : tuple or any
-        The tree representation.
+    tree : Tree object 
+        A MULTI-SLIM ensemble tree
     FUNCTIONS : dict
         Dictionary of allowed GP functions.
     TERMINALS : dict
@@ -120,7 +117,8 @@ def mutate_expand(tree,
     The mutated tree with one specialist expanded into an ensemble node.
     """
     # Get all indices where the node is a specialist terminal.
-    candidate_indices = get_specialist_indices(tree, path=[], SPECIALISTS=SPECIALISTS)
+    collection = tree.collection
+    candidate_indices = get_specialist_indices(collection, path=[], SPECIALISTS=SPECIALISTS)
     possible_indices = [possible[0] for possible in candidate_indices if possible[1] < max_depth]
     if not possible_indices:
         # No specialist found; nothing to expand.
@@ -131,7 +129,7 @@ def mutate_expand(tree,
     new_spec1 = random.choice(list(SPECIALISTS.keys()))
     new_spec2 = random.choice(list(SPECIALISTS.keys()))
     new_subtree = (new_condition, new_spec1, new_spec2)
-    new_tree = replace_subtree(tree, chosen_path, new_subtree)
+    new_tree = replace_subtree(collection, chosen_path, new_subtree)
     return Tree(new_tree)
 
 # ----------------------------------------------------- SPECIALIST MUTATION ---------------------------------------------------------- #
@@ -145,8 +143,8 @@ def mutate_specialist(tree, SPECIALISTS):
     
     Parameters
     ----------
-    tree : tuple or any
-        The tree representation.
+    tree : Tree object 
+        A MULTI-SLIM ensemble tree
     SPECIALISTS : dict
         Dictionary of specialist individuals (the keys are used as terminals).
     
@@ -154,15 +152,16 @@ def mutate_specialist(tree, SPECIALISTS):
     -------
     The new tree after swapping one specialist.
     """
-    candidate_paths = get_specialist_indices(tree, path=[], SPECIALISTS=SPECIALISTS)
-    candidates = list(SPECIALISTS.keys())
-    new_spec = random.choice(candidates)
+    collection = tree.collection
+    candidate_paths = get_specialist_indices(collection, path=[], SPECIALISTS=SPECIALISTS)
     if not candidate_paths: 
         # Specialist at the root node 
         return Tree(new_spec)
     
-    chosen_path = random.choice(candidate_paths)
-    new_tree = replace_subtree(tree, chosen_path, new_spec)
+    candidates = list(SPECIALISTS.keys())
+    new_spec = random.choice(candidates)
+    chosen_path = random.choice(candidate_paths)[0]
+    new_tree = replace_subtree(collection, chosen_path, new_spec)
     return Tree(new_tree)
 
 # ----------------------------------------------------- CONDITION MUTATION ---------------------------------------------------------- #
@@ -183,8 +182,8 @@ def mutate_condition(tree, depth_condition, TERMINALS, CONSTANTS, FUNCTIONS, p_c
     
     Parameters
     ----------
-    tree : tuple or any
-        The original tree representation.
+    tree : Tree object 
+        A MULTI-SLIM ensemble tree
     depth_condition : int
         The maximum depth allowed for condition trees.
     TERMINALS : dict
@@ -205,12 +204,13 @@ def mutate_condition(tree, depth_condition, TERMINALS, CONSTANTS, FUNCTIONS, p_c
     -------
     The mutated tree.
     """
-    candidate_paths = get_condition_indices(tree, path=[])
+    collection = tree.collection 
+    candidate_paths = get_condition_indices(collection, path=[])
     if not candidate_paths:
         return tree
     
     candidate_path = random.choice(candidate_paths)
-    candidate_tree = get_subtree(tree, candidate_path)
+    candidate_tree = get_subtree(collection, candidate_path)
 
     # Now mutate the candidate tree.
     indices_with_levels = get_indices_with_levels(candidate_tree.repr_)
@@ -227,7 +227,7 @@ def mutate_condition(tree, depth_condition, TERMINALS, CONSTANTS, FUNCTIONS, p_c
 
     new_condition = swap_sub_tree(candidate_tree.repr_, new_subtree, list(random_index))   
     new_condition = Condition(new_condition)
-    new_tree = replace_subtree(tree, candidate_path, new_condition)
+    new_tree = replace_subtree(collection, candidate_path, new_condition)
     return Tree(new_tree)
 
 # ----------------------------------------------------- HOIST MUTATION ---------------------------------------------------------- #
@@ -242,18 +242,19 @@ def hoist_mutation(tree):
     
     Parameters
     ----------
-    tree : tuple or any
-        The original tree's collection.
+    tree : Tree object 
+        A MULTI-SLIM ensemble tree
     
     Returns
     -------
     new_tree : tuple or any
         The mutated tree (i.e. one of the candidate subtrees) or the original tree if none exist.
     """
-    candidates = collect_valid_subtrees(tree)
+    collection = tree.collection
+    candidates = collect_valid_subtrees(collection)
     # Exclude the entire tree from candidates.
-    if tree in candidates:
-        candidates.remove(tree)
+    if collection in candidates:
+        candidates.remove(collection)
     if not candidates:
         return tree
     return Tree(random.choice(candidates))
@@ -295,14 +296,14 @@ def mutator(FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
     """
     def mutation(tree):
         r = random.random()
-        if r < 0.2:
-            return mutate_prune(tree, SPECIALISTS, FUNCTIONS)  # 20% 
-        elif r < 0.4:
-            return mutate_expand(tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, depth_condition, max_depth, p_c, p_t) # 20%
-        elif r < 0.6:
-            return mutate_specialist(tree, SPECIALISTS) # 20%
+        if r < 0.1:
+            return mutate_prune(tree, SPECIALISTS, FUNCTIONS)  
+        elif r < 0.2:
+            return mutate_expand(tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, depth_condition, max_depth, p_c, p_t)
+        elif r < 0.5:
+            return mutate_specialist(tree, SPECIALISTS) 
         elif r < 0.8:
-            return mutate_condition(tree, depth_condition, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t, decay_rate) # 20%
+            return mutate_condition(tree, depth_condition, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t, decay_rate) 
         else: 
-            return hoist_mutation(tree) # 20%
+            return hoist_mutation(tree)
     return mutation

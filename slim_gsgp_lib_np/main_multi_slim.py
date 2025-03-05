@@ -41,6 +41,7 @@ from slim_gsgp_lib_np.utils.logger import log_settings
 from slim_gsgp_lib_np.utils.utils import get_best_min, get_best_max
 from slim_gsgp_lib_np.selection.selection_algorithms import selector as selection_algorithm
 from slim_gsgp_lib_np.main_slim import slim
+from slim_gsgp_lib_np.algorithms.SLIM_GSGP.representations.population import Population
 
 # -----------------------------------  GP -----------------------------------
 from slim_gsgp_lib_np.utils.logger import log_settings
@@ -51,7 +52,7 @@ ALGORITHM = "MULTI_SLIM"
 
 def multi_slim(
         X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_test: np.ndarray = None, dataset_name: str = None,
-        slim_parameters: dict = None, slim_version: str = "SLIM+SIG2",
+        slim_parameters: dict = None, slim_version: str = "SLIM+SIG2", population: Population = None,
         pop_size : int = multi_pi_init["pop_size"], 
         n_iter : int = multi_solve_params["n_iter"],
         p_mut: float = multi_params["p_mut"],
@@ -86,12 +87,16 @@ def multi_slim(
         dataset_name = "dataset"
 
     # Calling the SLIM-GSGP algorithm 
-    elite, population = slim(
-        X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
-        full_return=True, seed=seed, verbose=verbose, log_level=log_level,
-        run_info=[ALGORITHM, slim_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
-        log_path=log_path,
-        **slim_parameters.__dict__)
+    if population is None:
+        elite, population = slim(
+            X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
+            full_return=True, seed=seed, verbose=verbose, log_level=log_level,
+            run_info=[ALGORITHM, slim_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
+            log_path=log_path,
+            **slim_parameters.__dict__)
+    
+    else: 
+        elite = population[0]
 
     # Setting the train and test semantics for the population for speeding up evaluation during multi-slim
     for ind in population.population:
@@ -104,7 +109,7 @@ def multi_slim(
     multi_pi_init['TERMINALS'] = elite.collection[0].TERMINALS
     multi_pi_init['CONSTANTS'] = elite.collection[0].CONSTANTS
     
-    population.population = population.population[:20]
+    # population.population = population.population[:20]
     multi_pi_init['SPECIALISTS'] = {f'S_{i}' : ind for i, ind in enumerate(population.population)}
 
     multi_pi_init['p_c'] = prob_const
@@ -129,7 +134,7 @@ def multi_slim(
                                       p_c=multi_pi_init['p_c'],
                                       p_t=multi_pi_init['p_t'],
                                       decay_rate=multi_params['decay_rate'])
-    multi_params['xo_operator'] = homologus_xo
+    multi_params['xo_operator'] = homologus_xo(multi_pi_init['max_depth'])
     multi_params['initializer'] = initializer
     multi_params['p_mut'] = p_mut
     multi_params['p_xo'] = 1 - p_mut
@@ -178,7 +183,7 @@ def multi_slim(
     optimizer.elite.early_stop = optimizer.stop_training
     
     if full_return: 
-        return optimizer.elite, optimizer.population
+        return optimizer.elite, optimizer.population, population 
     
     return optimizer.elite
 

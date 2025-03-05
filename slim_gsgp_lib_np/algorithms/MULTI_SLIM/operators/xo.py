@@ -31,44 +31,46 @@ from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import (g
                                                                                uniform_level_choice)
 from slim_gsgp_lib_np.utils.utils import get_indices_with_levels
 
-def homologus_xo(ind1, ind2, max_depth):    
-    p1, p2 = ind1.collection, ind2.collection
+def homologus_xo(max_depth): 
+    def xo(ind1, ind2):    
+        p1, p2 = ind1.collection, ind2.collection
 
-    # Both are terminals; no crossover is possible.
-    if isinstance(p1, str) and isinstance(p2, str):
-        return ind1, ind2
-    
-    # One of them is a terminal; the terminal of one is replaced by the tree of the other. No depth restriction.
-    elif isinstance(p1, tuple) and isinstance(p2, str):
-        idx_lev1 = get_indices_with_levels(p1)[1:]
-        idx, _ = uniform_level_choice(idx_lev1)
-        offs1 = get_subtree(p1, idx)
-        offs2 = replace_subtree(p1, idx, p2)
+        # Both are terminals; no crossover is possible.
+        if isinstance(p1, str) and isinstance(p2, str):
+            return ind1, ind2
         
-    elif isinstance(p1, str) and isinstance(p2, tuple):
-        idx_lev2 = get_indices_with_levels(p2)[1:]
-        idx, _ = uniform_level_choice(idx_lev2)
-        offs1 = get_subtree(p2, idx)
-        offs2 = replace_subtree(p2, idx, p1)
+        # One of them is a terminal; the terminal of one is replaced by the tree of the other. No depth restriction.
+        elif isinstance(p1, tuple) and isinstance(p2, str):
+            idx_lev1 = get_indices_with_levels(p1)[1:]
+            idx, _ = uniform_level_choice(idx_lev1)
+            offs1 = get_subtree(p1, idx)
+            offs2 = replace_subtree(p1, idx, p2)
+            
+        elif isinstance(p1, str) and isinstance(p2, tuple):
+            idx_lev2 = get_indices_with_levels(p2)[1:]
+            idx, _ = uniform_level_choice(idx_lev2)
+            offs1 = get_subtree(p2, idx)
+            offs2 = replace_subtree(p2, idx, p1)
 
-    # Both are tuples 
-    else: 
-        idx_lev1, idx_lev2 = get_indices_with_levels(p1)[1:], get_indices_with_levels(p2)[1:]
-        idx_1, depth = uniform_level_choice(idx_lev1)
-        same_depth = [indices for indices, d in idx_lev2 if d == depth]
-        if same_depth: 
-            idx_2 = random.choice(same_depth)
+        # Both are tuples 
         else: 
-            # The second parent has depth smaller than the first parent, we have to be careful 
-            max_subtree_depth = max_depth - depth + 1 
-            idx_2 = random.choice([indices for indices, d in idx_lev2 if d >= ind2.depth - max_subtree_depth + 1])
-        
-        tree_1 = get_subtree(p1, idx_1)
-        tree_2 = get_subtree(p2, idx_2)
-        offs1 = replace_subtree(p1, idx_1, tree_2)
-        offs2 = replace_subtree(p2, idx_2, tree_1)
+            idx_lev1, idx_lev2 = get_indices_with_levels(p1)[1:], get_indices_with_levels(p2)[1:]
+            idx_1, depth = uniform_level_choice(idx_lev1)
+            same_depth = [indices for indices, d in idx_lev2 if d == depth]
+            if same_depth: 
+                idx_2 = random.choice(same_depth)
+            else: 
+                # The second parent has depth smaller than the first parent, we have to be careful 
+                max_subtree_depth = max_depth - depth + 1 
+                idx_2 = random.choice([indices for indices, d in idx_lev2 if d >= ind2.depth - max_subtree_depth + 1])
+            
+            tree_1 = get_subtree(p1, idx_1)
+            tree_2 = get_subtree(p2, idx_2)
+            offs1 = replace_subtree(p1, idx_1, tree_2)
+            offs2 = replace_subtree(p2, idx_2, tree_1)
 
-    return Tree(offs1), Tree(offs2)
+        return Tree(offs1), Tree(offs2)
+    return xo
 
 
 # ------------------------------------- Isnt enforcing max depth yet ---------------------------------------------------------------
