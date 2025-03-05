@@ -309,15 +309,16 @@ class SLIM_GSGP:
 
             # filling the offspring population
             while len(offs_pop) < self.pop_size:
-                if random.random() < self.p_xo:
+                r = random.random()
+                if r < self.p_xo:
                     offs = self.crossover_step(population, X_train, X_test, reconstruct)
                     offs_pop.extend(offs)
                 else:
                     p1 = self.selector(population)
-                    if random.random() < self.p_inflate:
+                    if r < self.p_inflate + self.p_xo:
                         off1 = self.inflate_mutation_step(p1, X_train, X_test, reconstruct, max_depth)
                         
-                    elif random.random() < self.p_struct:
+                    elif r < self.p_inflate + self.p_xo + self.p_struct:
                         off1 = self.struct_mutation_step(p1, X_train, X_test, reconstruct)
                         
                     else:
