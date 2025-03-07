@@ -85,6 +85,43 @@ class SlimParameters:
     elitism: bool = True
     n_elites: int = 1
 
+@dataclass
+class GPParameters:
+    """
+    Parameters for running the GP algorithm.
+    
+    This data class encapsulates the parameters required to configure the Genetic Programming (GP) algorithm.
+    
+    Attributes:
+        pop_size (int): Population size.
+        n_iter (int): Number of iterations in the solve stage.
+        p_xo (float): Crossover probability.
+        elitism (bool): Flag indicating whether elitism is applied.
+        n_elites (int): Number of elite individuals to retain.
+        selector (str): Selection method used in the algorithm.
+        eps_fraction (float): Fraction of the standard deviation of the error for selection (epsilon value).
+        max_depth (Optional[int]): Maximum allowed tree depth.
+        init_depth (int): Initial depth used for generating individuals.
+        initializer (str): Initialization method.
+        prob_const (float): Probability of choosing a constant during initialization.
+        prob_terminal (float): Terminal probability during initialization.
+        tree_functions (List): List of available function nodes (derived from the keys of FUNCTIONS).
+        tree_constants (List): List of available constant nodes (derived from CONSTANTS, with some parsing).
+    """
+    pop_size: int = 100
+    n_iter: int = 1000
+    p_xo: float = 0.2
+    elitism: bool = True
+    n_elites: int = 1
+    selector: str = "e_lexicase"
+    eps_fraction: float = 1e-6  # same as 0.000001
+    max_depth: Optional[int] = 15
+    init_depth: int = 6
+    initializer: str = "rhh"
+    prob_const: float = 0.2
+    prob_terminal: float = 0.7
+    tree_functions: list = field(default_factory=lambda: FUNCTIONS)
+    tree_constants: list = field(default_factory=lambda: CONSTANTS)
 
 # ---------------------------- MULTI SLIM SOLVE parameters ----------------------------
 multi_solve_params = {

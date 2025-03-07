@@ -171,6 +171,17 @@ class Population:
         """
         return self.population[item]
     
+    def __iter__(self): 
+        """
+        Return an iterator over the population.
+
+        Returns
+        -------
+        Iterator
+            Iterator over the population.
+        """
+        return iter(self.population)
+    
     def evaluate(self, 
             ffunction, 
             y, 

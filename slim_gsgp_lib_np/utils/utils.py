@@ -429,155 +429,99 @@ def gs_size(y_true, y_pred):
     return y_pred[1]
 
 
-def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism, n_elites, init_depth, log_path,
-                    prob_const, tree_functions, tree_constants, log, verbose, minimization, test_elite,
-                    fitness_function, initializer, tournament_size, ms_lower, ms_upper, p_inflate, p_struct,
-                    mode):
+import numpy as np
+
+def validate_inputs(*args, **kwargs):
     """
     Validates the inputs based on the specified conditions.
 
     Parameters
     ----------
-    tournament_size
-    X_train: (torch.Tensor)
-        Training input data.
-    y_train: (torch.Tensor)
-        Training output data.
-    X_test: (torch.Tensor), optional
-        Testing input data.
-    y_test: (torch.Tensor), optional
-        Testing output data.
-    pop_size : int, optional
-        The population size for the genetic programming algorithm (default is 100).
-    n_iter : int, optional
-        The number of iterations for the genetic programming algorithm (default is 100).
-    elitism : bool, optional
-        Indicate the presence or absence of elitism.
-    n_elites : int, optional
-        The number of elites.
-    init_depth : int, optional
-        The depth value for the initial GP trees population.
-    log_path : str, optional
-        The path where is created the log directory where results are saved.
-    log : int, optional
-        Level of detail to utilize in logging.
-    verbose : int, optional
-       Level of detail to include in console output.
-    minimization : bool, optional
-        If True, the objective is to minimize the fitness function. If False, maximize it (default is True).
-    fitness_function : str, optional
-        The fitness function used for evaluating individuals (default is from gp_solve_parameters).
-    initializer : str, optional
-        The strategy for initializing the population (e.g., "grow", "full", "rhh").
-    prob_const : float, optional
-        The probability of introducing constants into the trees during evolution.
-    tree_functions : list, optional
-        List of allowed functions that can appear in the trees Check documentation for the available functions.
-    tree_constants : list, optional
-        List of constants allowed to appear in the trees.
-    test_elite : bool, optional
-        Whether to test the elite individual on the test set after each generation.
-    ms_lower : int, optional
-        The lower bound for the maximum size of the trees.
-    ms_upper : int, optional
-        The upper bound for the maximum size of the trees.
-    p_inflate : float, optional
-        The probability of inflating a tree.
-    p_struct : float, optional
-        The probability of structural mutation.
-    mode : list, optional
-        Mode to choose for structure mutation (default: "exp"), options: "normal", "exp", "uniform".
-
-
+    kwargs: dict
+        A dictionary of parameter names and their corresponding values.
     """
-    if not isinstance(X_train, np.ndarray):
-        raise TypeError("X_train must be a numpy array")
-    if not isinstance(y_train, np.ndarray):
-        raise TypeError("y_train must be a numpy array")
-    if not isinstance(X_test, np.ndarray) and test_elite:
-        raise TypeError("X_test must be a numpy array")
-    if not isinstance(y_test, np.ndarray) and test_elite:
-        raise TypeError("y_test must be a numpy array") 
-    if not isinstance(pop_size, int):
-        raise TypeError("pop_size must be an int")
-    if not isinstance(n_iter, int):
-        raise TypeError("n_iter must be an int")
-    if not isinstance(elitism, bool):
-        raise TypeError("elitism must be a bool")
-    if not isinstance(n_elites, int):
-        raise TypeError("n_elites must be an int")
-    if not isinstance(init_depth, int):
-        raise TypeError("init_depth must be an int")
-    if not isinstance(log_path, str):
-        raise TypeError("log_path must be a str")
-    if not isinstance(tournament_size, int):
-        raise TypeError("tournament_size must be an int")
+    # Define the expected types for each parameter
+    expected_types = {
+        'X_train': np.ndarray,
+        'y_train': np.ndarray,
+        'X_test': (np.ndarray, type(None)),  # Can be None
+        'y_test': (np.ndarray, type(None)),  # Can be None
+        'pop_size': int,
+        'n_iter': int,
+        'elitism': bool,
+        'n_elites': int,
+        'init_depth': int,
+        'log_path': str,
+        'prob_const': (float, int),
+        'tree_functions': list,
+        'tree_constants': list,
+        'log': int,
+        'verbose': int,
+        'minimization': bool,
+        'test_elite': bool,
+        'fitness_function': str,
+        'initializer': str,
+        'tournament_size': int,
+        'ms_lower': int,
+        'ms_upper': int,
+        'p_inflate': float,
+        'p_struct': float,
+        'mode': str,
+    }
 
-    # assuring the prob_const is valid
-    if not (isinstance(prob_const, float) or isinstance(prob_const, int)):
-        raise TypeError("prob_const must be a float (or an int when probability is 1 or 0)")
+    # Validate the type of each provided parameter
+    for param, value in kwargs.items():
+        if param in expected_types:
+            expected_type = expected_types[param]
+            if not isinstance(value, expected_type):
+                raise TypeError(f"{param} must be of type {expected_type}")
 
-    if not 0 <= prob_const <= 1:
+    # Additional validations based on parameter values
+    if 'prob_const' in kwargs and not 0 <= kwargs['prob_const'] <= 1:
         raise ValueError("prob_const must be a number between 0 and 1")
 
-    if n_iter < 1:
+    if 'n_iter' in kwargs and kwargs['n_iter'] < 1:
         raise ValueError("n_iter must be greater than 0")
 
-    # Ensuring the functions and constants passed are valid
-    if not isinstance(tree_functions, list) or len(tree_functions) == 0:
-        raise TypeError("tree_functions must be a non-empty list")
+    if 'tree_constants' in kwargs:
+        tree_constants = kwargs['tree_constants']
+        if not all(isinstance(elem, (int, float)) and not isinstance(elem, bool) for elem in tree_constants):
+            raise TypeError("tree_constants must be a list containing only integers and floats")
 
-    if not isinstance(tree_constants, list) or len(tree_constants) == 0:
-        raise TypeError("tree_constants must be a non-empty list")
+    if 'log' in kwargs and not 0 <= kwargs['log'] <= 4:
+        raise ValueError("log must be between 0 and 4")
 
-    assert all(isinstance(elem, (int, float)) and not isinstance(elem, bool) for elem in tree_constants), \
-    "tree_constants must be a list containing only integers and floats"
+    if 'verbose' in kwargs and not 0 <= kwargs['verbose'] <= 1:
+        raise ValueError("verbose must be either 0 or 1")
 
-    if not isinstance(log, int):
-        raise TypeError("log_level must be an int")
-
-    assert 0 <= log <= 4, "log_level must be between 0 and 4"
-
-    if not isinstance(verbose, int):
-        raise TypeError("verbose level must be an int")
-
-    assert 0 <= verbose <= 1, "verbose level must be either 0 or 1"
-
-    if not isinstance(minimization, bool):
-        raise TypeError("minimization must be a bool")
-
-    if not isinstance(test_elite, bool):
-        raise TypeError("test_elite must be a bool")
-
-    if not isinstance(fitness_function, str):
-        raise TypeError("fitness_function must be a str")
-
-    if not isinstance(initializer, str):
-        raise TypeError("initializer must be a str")
-
-    if tournament_size < 2:
+    if 'tournament_size' in kwargs and kwargs['tournament_size'] < 2:
         raise ValueError("tournament_size must be at least 2")
 
-    if ms_lower == ms_upper:
-        raise ValueError("ms_lower and ms_upper must be different")
-    
-    if ms_lower > ms_upper:
-        raise ValueError("ms_lower must be smaller than ms_upper")
-    
-    if not isinstance(p_inflate, float) and p_inflate != 0:
-        raise TypeError("p_inflate must be a float")
-    
-    if not isinstance(p_struct, float) and p_struct != 0:
-        raise TypeError("p_struct must be a float")
-    
-    if p_inflate < 0 or p_struct < 0:
-        raise ValueError("p_inflate and p_struct must be greater or equal to 0")
-    
-    if p_inflate + p_struct > 1:
-        raise ValueError("p_inflate + p_struct must be smaller or equal to 1")
-    
-    if not isinstance(mode, str):
-        raise ValueError("mode must a string: 'normal', 'exp', 'uniform'")
+    if 'ms_lower' in kwargs and 'ms_upper' in kwargs:
+        if kwargs['ms_lower'] == kwargs['ms_upper']:
+            raise ValueError("ms_lower and ms_upper must be different")
+        if kwargs['ms_lower'] > kwargs['ms_upper']:
+            raise ValueError("ms_lower must be smaller than ms_upper")
+
+    if 'p_inflate' in kwargs and kwargs['p_inflate'] < 0:
+        raise ValueError("p_inflate must be greater or equal to 0")
+
+    if 'p_struct' in kwargs and kwargs['p_struct'] < 0:
+        raise ValueError("p_struct must be greater or equal to 0")
+
+    if 'p_inflate' in kwargs and 'p_struct' in kwargs:
+        if kwargs['p_inflate'] + kwargs['p_struct'] > 1:
+            raise ValueError("p_inflate + p_struct must be smaller or equal to 1")
+
+    if 'mode' in kwargs and kwargs['mode'] not in ["normal", "exp", "uniform"]:
+        raise ValueError("mode must be one of: 'normal', 'exp', 'uniform'")
+
+    # Ensure that if test_elite is True, X_test and y_test must not be None
+    if kwargs.get('test_elite', False):
+        if kwargs.get('X_test') is None or kwargs.get('y_test') is None:
+            raise ValueError("If test_elite is True, X_test and y_test cannot be None")
+
+    # Add more validations as necessary based on the parameters provided
     
 
 def check_slim_version(slim_version):

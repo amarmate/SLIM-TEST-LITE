@@ -67,11 +67,10 @@ class Tree:
         self.CONSTANTS = Tree.CONSTANTS
 
         self.repr_ = repr_
-        # self.depth = tree_depth(Tree.FUNCTIONS)(repr_)
-        # self.node_count = len(list(flatten(self.repr_)))
         self.depth, self.nodes_count = tree_depth_and_nodes(Tree.FUNCTIONS)(repr_)
         self.fitness = None
         self.test_fitness = None
+        self.train_semantics, self.test_semantics = None, None
 
     def apply_tree(self, inputs):
         """
@@ -95,6 +94,23 @@ class Tree:
             TERMINALS=self.TERMINALS,
             CONSTANTS=self.CONSTANTS
         )
+    
+    def calculate_semantics(self, inputs, testing=False):
+        """
+        Calculate the semantics for the tree.
+
+        Parameters
+        ----------
+        inputs : np.ndarray
+            Input data for calculating semantics.
+        testing : bool
+            Boolean indicating if the calculation is for testing semantics.
+        """
+        if testing and self.test_semantics is None:
+            self.test_semantics = self.apply_tree(inputs)
+        elif self.train_semantics is None:
+            self.train_semantics = self.apply_tree(inputs)
+
 
     def evaluate(self, ffunction, X, y, testing=False, new_data = False):
         """

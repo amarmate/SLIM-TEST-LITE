@@ -30,19 +30,22 @@ from slim_gsgp_lib_np.algorithms.GP.gp import GP
 from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
 from slim_gsgp_lib_np.config.gp_config import *
-from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
+from slim_gsgp_lib_np.selection.selection_algorithms import selector as selection_algorithm
 from slim_gsgp_lib_np.utils.logger import log_settings
 from slim_gsgp_lib_np.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
+import numpy as np 
 
 
 # todo: would not be better to first log the settings and then perform the algorithm?
 
-def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None, y_test: torch.Tensor = None,
+def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_test: np.ndarray = None,
        dataset_name: str = None,
        pop_size: int = gp_parameters["pop_size"],
        n_iter: int = gp_solve_parameters["n_iter"],
        p_xo: float = gp_parameters['p_xo'],
        elitism: bool = gp_solve_parameters["elitism"], n_elites: int = gp_solve_parameters["n_elites"],
+       selector: str = gp_parameters["selector"],
+       eps_fraction: float = 1e-6,
        max_depth: int | None = gp_solve_parameters["max_depth"],
        init_depth: int = gp_pi_init["init_depth"],
        log_path: str = None, seed: int = gp_parameters["seed"],
@@ -53,23 +56,27 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
        initializer: str = gp_parameters["initializer"],
        n_jobs: int = gp_solve_parameters["n_jobs"],
        prob_const: float = gp_pi_init["p_c"],
+       prob_terminal: float = gp_pi_init["p_t"],
        tree_functions: list = list(FUNCTIONS.keys()),
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
-       test_elite: bool = gp_solve_parameters["test_elite"]):
+       test_elite: bool = gp_solve_parameters["test_elite"],
+       run_info: list = None,
+       full_return: bool = False
+       ):
 
     """
     Main function to execute the StandardGP algorithm on specified datasets
 
     Parameters
     ----------
-    X_train: (torch.Tensor)
+    X_train: (np.ndarray)
         Training input data.
-    y_train: (torch.Tensor)
+    y_train: (np.ndarray)
         Training output data.
-    X_test: (torch.Tensor), optional
+    X_test: (np.ndarray), optional
         Testing input data.
-    y_test: (torch.Tensor), optional
+    y_test: (np.ndarray), optional
         Testing output data.
     dataset_name : str, optional
         Dataset name, for logging purposes
@@ -105,6 +112,8 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
         Number of parallel jobs to run (default is 1).
     prob_const : float, optional
         The probability of a constant being chosen rather than a terminal in trees creation (default: 0.2).
+    prob_terminal : float, optional
+        The probability of a terminal being chosen rather than a function in trees creation (default: 0.7).
     tree_functions : list, optional
         List of allowed functions that can appear in the trees. Check documentation for the available functions.
     tree_constants : list, optional
@@ -113,6 +122,10 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
         Tournament size to utilize during selection. Only applicable if using tournament selection. (Default is 2)
     test_elite : bool, optional
         Whether to test the elite individual on the test set after each generation.
+    run_info : list, optional
+        Information about the run (default is None).
+    full_return : bool, optional
+        If True, returns the elite and full population. If False, returns only the best individual.
 
     Returns
     -------
@@ -192,7 +205,7 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
             if len(valid_functions) > 1 else valid_functions[0])
 
     try:
-        gp_pi_init['CONSTANTS'] = {f"constant_{str(n).replace('-', '_')}": lambda _, num=n: torch.tensor(num)
+        gp_pi_init['CONSTANTS'] = {f"constant_{str(n).replace('-', '_')}": lambda _, num=n: np.array(num)
                                    for n in tree_constants}
     except KeyError as e:
         valid_constants = list(CONSTANTS)
@@ -201,6 +214,7 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
             if len(valid_constants) > 1 else valid_constants[0])
 
     gp_pi_init["p_c"] = prob_const
+    gp_pi_init["p_t"] = prob_terminal
     gp_pi_init["init_pop_size"] = pop_size # TODO: why init pop_size != than rest?
     gp_pi_init["init_depth"] = init_depth
 
@@ -215,16 +229,17 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
     )
     gp_parameters["initializer"] = initializer_options[initializer]
 
-    if minimization:
-        gp_parameters["selector"] = tournament_selection_min(tournament_size)
-        gp_parameters["find_elit_func"] = get_best_min
-    else:
-        gp_parameters["selector"] = tournament_selection_max(tournament_size)
-        gp_parameters["find_elit_func"] = get_best_max
+    gp_parameters["selector"] = selection_algorithm(problem='min' if minimization else 'max', 
+                                         type=selector, 
+                                         pool_size=tournament_size, 
+                                         eps_fraction=eps_fraction,
+    )
+
+    gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max
     gp_parameters["seed"] = seed
     #   *************** GP_SOLVE_PARAMETERS ***************
 
-    gp_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name]
+    gp_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name] if run_info is None else run_info
     gp_solve_parameters["log"] = log_level
     gp_solve_parameters["verbose"] = verbose
     gp_solve_parameters["log_path"] = log_path
@@ -260,6 +275,8 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
         unique_run_id=unique_run_id,
     )
 
+    if full_return: 
+        return optimizer.elite, optimizer.population
     return optimizer.elite
 
 

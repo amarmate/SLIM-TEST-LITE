@@ -22,8 +22,9 @@
 """
 Population class implementation for evaluating genetic programming individuals.
 """
-from joblib import Parallel, delayed
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import _execute_tree
+# from joblib import Parallel, delayed
+# from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import _execute_tree
+import numpy as np 
 
 
 class Population:
@@ -45,39 +46,173 @@ class Population:
         """
         self.population = pop
         self.size = len(pop)
-        self.nodes_count = sum(ind.node_count for ind in pop)
-        self.fit = None
+        self.nodes_count = sum(ind.nodes_count for ind in pop)
+        self.fit, self.test_fit = None, None
 
-    def evaluate(self, ffunction, X, y, n_jobs=1):
+    def calculate_semantics(self, inputs, testing=False):
         """
-        Evaluates the population given a certain fitness function, input data (X), and target data (y).
-
-        Attributes a fitness tensor to the population.
+        Calculate the semantics for each tree in the population.
 
         Parameters
         ----------
-        ffunction : function
-            Fitness function to evaluate the individuals.
-        X : torch.Tensor
-            The input data (which can be training or testing).
-        y : torch.Tensor
-            The expected output (target) values.
-        n_jobs : int
-            The maximum number of concurrently running jobs for joblib parallelization.
+        inputs : torch.Tensor
+            Input data for calculating semantics.
+        testing : bool, optional
+            Boolean indicating if the calculation is for testing semantics.
 
         Returns
         -------
         None
         """
-        # Evaluates individuals' semantics
-        y_pred = Parallel(n_jobs=n_jobs)(
-            delayed(_execute_tree)(
-                individual.repr_, X,
-                individual.FUNCTIONS, individual.TERMINALS, individual.CONSTANTS
-            ) for individual in self.population
-        )
-        # Evaluate fitnesses
-        self.fit = [ffunction(y, y_pred_ind) for y_pred_ind in y_pred]
+        # computing the semantics for all the trees in the population
+        if testing and hasattr(self, "test_semantics"):
+            print("Warning: Testing semantics already calculated.")
+            return
+        if not testing and hasattr(self, "train_semantics"):
+            print("Warning: Training semantics already calculated.")
+            return
+        
+        [
+            tree.calculate_semantics(inputs, testing)
+            for tree in self.population
+        ]
 
-        # Assign individuals' fitness
-        [self.population[i].__setattr__('fitness', f) for i, f in enumerate(self.fit)]
+        # computing testing semantics, if applicable
+        if testing:
+            # settingulation semantics to be a list with all the semantics of all trees
+            self.test_semantics = np.array([
+                tree.test_semantics for tree in self.population
+            ])
+
+        else:
+            # setting the population semantics to be a list with all the semantics of all trees
+            self.train_semantics = np.array([
+                tree.train_semantics for tree in self.population
+            ])
+
+
+    def calculate_errors_case(self, target):
+        """
+        Calculate the errors case for each individual in the population.
+
+        Parameters
+        ----------
+        y_train : torch.Tensor
+            Expected output (target) values for training.
+
+        Returns
+        -------
+        None
+        """        
+        errors = self.train_semantics - np.stack([target] * self.train_semantics.shape[0])
+        self.errors_case = errors
+
+
+    def evaluate(self, target, testing=False):
+        """
+        Evaluate the population using the errors per case with MSE
+
+        Parameters
+        ----------
+        ffunction : Callable
+            Fitness function to evaluate the individuals.
+        target : torch.Tensor        
+            Expected output (target) values.
+
+        Returns
+        -------
+        None
+        """
+        if testing and not hasattr(self, "test_semantics"):
+            raise ValueError("Testing semantics not calculated.")
+        
+        elif not testing and not hasattr(self, "train_semantics"):
+            raise ValueError("Training semantics not calculated.")
+
+        # Check if errors case is already calculated
+        if testing: 
+            sem = self.test_semantics 
+            errors = sem - np.stack([target] * sem.shape[0])
+            fitness = np.sqrt(np.mean(errors**2, axis=1))
+            self.test_fit = fitness
+            for i, individual in enumerate(self.population):
+                individual.test_fitness = fitness[i]
+        
+        else: 
+            fitness = np.sqrt(np.mean(self.errors_case**2, axis=1))
+            self.fit = fitness
+            for i, individual in enumerate(self.population):
+                individual.fitness = fitness[i]
+
+    def __getitem__(self, item):
+        """
+        Get the individual at the specified index.
+
+        Parameters
+        ----------
+        item : int
+            Index of the individual to get.
+
+        Returns
+        -------
+        Individual
+            The individual at the specified index.
+        """
+        return self.population[item]
+    
+    def __len__(self):
+        """
+        Return the size of the population.
+
+        Returns
+        -------
+        int
+            Size of the population.
+        """
+        return self.size
+    
+    def __iter__(self):
+        """
+        Return an iterator over the population.
+
+        Returns
+        -------
+        Iterator
+            Iterator over the population.
+        """
+        return iter(self.population)
+            
+
+    # def evaluate(self, ffunction, X, y, n_jobs=1):
+    #     """
+    #     Evaluates the population given a certain fitness function, input data (X), and target data (y).
+
+    #     Attributes a fitness tensor to the population.
+
+    #     Parameters
+    #     ----------
+    #     ffunction : function
+    #         Fitness function to evaluate the individuals.
+    #     X : torch.Tensor
+    #         The input data (which can be training or testing).
+    #     y : torch.Tensor
+    #         The expected output (target) values.
+    #     n_jobs : int
+    #         The maximum number of concurrently running jobs for joblib parallelization.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     # Evaluates individuals' semantics
+    #     y_pred = Parallel(n_jobs=n_jobs)(
+    #         delayed(_execute_tree)(
+    #             individual.repr_, X,
+    #             individual.FUNCTIONS, individual.TERMINALS, individual.CONSTANTS
+    #         ) for individual in self.population
+    #     )
+    #     # Evaluate fitnesses
+    #     self.fit = [ffunction(y, y_pred_ind) for y_pred_ind in y_pred]
+
+    #     # Assign individuals' fitness
+    #     [self.population[i].__setattr__('fitness', f) for i, f in enumerate(self.fit)]

@@ -27,14 +27,11 @@ import random
 import time
 
 import numpy as np
-from slim_gsgp_lib_torch.algorithms.GP.representations.population import Population
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree import Tree
-from slim_gsgp_lib_torch.utils.diversity import niche_entropy
-from slim_gsgp_lib_torch.utils.logger import logger
-from slim_gsgp_lib_torch.utils.utils import verbose_reporter
-
-from joblib import Parallel, delayed
-
+from slim_gsgp_lib_np.algorithms.GP.representations.population import Population
+from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
+from slim_gsgp_lib_np.utils.diversity import niche_entropy
+from slim_gsgp_lib_np.utils.logger import logger
+from slim_gsgp_lib_np.utils.utils import verbose_reporter
 
 class GP:
     def __init__(
@@ -156,7 +153,6 @@ class GP:
             The number of jobs for parallel processing. Default is 1.
         """
         # setting the seeds
-        torch.manual_seed(self.seed)
         np.random.seed(self.seed)
         random.seed(self.seed)
 

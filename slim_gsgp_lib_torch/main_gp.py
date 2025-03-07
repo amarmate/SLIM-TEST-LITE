@@ -26,13 +26,13 @@ logging the results for further analysis.
 import uuid
 import os
 import warnings
-from slim_gsgp_lib_torch.algorithms.GP.gp import GP
-from slim_gsgp_lib_torch.algorithms.GP.operators.mutators import mutate_tree_subtree
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import tree_depth
-from slim_gsgp_lib_torch.config.gp_config import *
-from slim_gsgp_lib_torch.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
-from slim_gsgp_lib_torch.utils.logger import log_settings
-from slim_gsgp_lib_torch.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
+from slim_gsgp_lib_np.algorithms.GP.gp import GP
+from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
+from slim_gsgp_lib_np.config.gp_config import *
+from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
+from slim_gsgp_lib_np.utils.logger import log_settings
+from slim_gsgp_lib_np.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
 
 
 # todo: would not be better to first log the settings and then perform the algorithm?
@@ -56,7 +56,8 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
        tree_functions: list = list(FUNCTIONS.keys()),
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
-       test_elite: bool = gp_solve_parameters["test_elite"]):
+       test_elite: bool = gp_solve_parameters["test_elite"],
+       full_return = False):
 
     """
     Main function to execute the StandardGP algorithm on specified datasets
@@ -113,6 +114,8 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
         Tournament size to utilize during selection. Only applicable if using tournament selection. (Default is 2)
     test_elite : bool, optional
         Whether to test the elite individual on the test set after each generation.
+    full_return : bool, optional
+        If True, returns the full population and the best individual. If False, returns only the best individual.
 
     Returns
     -------
@@ -260,12 +263,15 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
         unique_run_id=unique_run_id,
     )
 
+    if full_return:
+        return optimizer.elite, optimizer.population
+
     return optimizer.elite
 
 
 if __name__ == "__main__":
-    from slim_gsgp_lib_torch.datasets.data_loader import load_resid_build_sale_price
-    from slim_gsgp_lib_torch.utils.utils import train_test_split
+    from slim_gsgp_lib_np.datasets.data_loader import load_resid_build_sale_price
+    from slim_gsgp_lib_np.utils.utils import train_test_split
 
     X, y = load_resid_build_sale_price(X_y=True)
 

@@ -22,31 +22,38 @@
 """
 This script sets up the configuration dictionaries for the execution of the GP algorithm
 """
-from slim_gsgp_lib_torch.algorithms.GP.operators.crossover_operators import crossover_trees
-from slim_gsgp_lib_torch.initializers.initializers import rhh, grow, full
-from slim_gsgp_lib_torch.selection.selection_algorithms import tournament_selection_min
+from slim_gsgp_lib_np.algorithms.GP.operators.crossover_operators import crossover_trees
+from slim_gsgp_lib_np.initializers.initializers import rhh, grow, full
+from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_min
 
-from slim_gsgp_lib_torch.evaluators.fitness_functions import *
-from slim_gsgp_lib_torch.utils.utils import protected_div
-import torch
+from slim_gsgp_lib_np.evaluators.fitness_functions import *
+from slim_gsgp_lib_np.utils.utils import protected_div
+import numpy as np
 
 # Define functions and constants
 # todo use only one dictionary for the parameters of each algorithm
 
 FUNCTIONS = {
-    'add': {'function': torch.add, 'arity': 2},
-    'subtract': {'function': torch.sub, 'arity': 2},
-    'multiply': {'function': torch.mul, 'arity': 2},
+    'add': {'function': np.add, 'arity': 2},
+    'subtract': {'function': np.subtract, 'arity': 2},
+    'multiply': {'function': np.multiply, 'arity': 2},
     'divide': {'function': protected_div, 'arity': 2}
 }
 
-CONSTANTS = {
-    'constant_2': lambda _: torch.tensor(2.0),
-    'constant_3': lambda _: torch.tensor(3.0),
-    'constant_4': lambda _: torch.tensor(4.0),
-    'constant_5': lambda _: torch.tensor(5.0),
-    'constant__1': lambda _: torch.tensor(-1.0)
-}
+# CONSTANTS = {
+#     'constant_2': lambda _: np.array(2.0),
+#     'constant_3': lambda _: np.array(3.0),
+#     'constant_4': lambda _: np.array(4.0),
+#     'constant_5': lambda _: np.array(5.0),
+#     'constant__1': lambda _: np.array(-1.0)
+# }
+
+# constants = [round(-1 + (2 * i) / (40 - 1), 2) for i in range(40) if np.abs(i) > 0.1]
+# CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in constants}
+
+constants = [round(i*0.05, 2) for i in range(2, 21)] + [round(-i*0.05, 2) for i in range(2, 21)]
+CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in constants}
+
 
 # Set parameters
 settings_dict = {"p_test": 0.2}
@@ -68,7 +75,7 @@ gp_solve_parameters = {
 # GP parameters
 gp_parameters = {
     "initializer": "rhh",
-    "selector": tournament_selection_min(2),
+    "selector": 'tournament',
     "crossover": crossover_trees(FUNCTIONS),
     "settings_dict": settings_dict,
     "p_xo": 0.8,
@@ -79,7 +86,8 @@ gp_parameters = {
 gp_pi_init = {
     'FUNCTIONS': FUNCTIONS,
     'CONSTANTS': CONSTANTS,
-    "p_c": 0,
+    "p_c": 0.2,
+    "p_t": 0.7,
     "init_depth": 6
 }
 

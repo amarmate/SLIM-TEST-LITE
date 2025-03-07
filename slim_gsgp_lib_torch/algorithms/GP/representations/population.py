@@ -23,7 +23,7 @@
 Population class implementation for evaluating genetic programming individuals.
 """
 from joblib import Parallel, delayed
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import _execute_tree
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import _execute_tree
 
 
 class Population:
@@ -81,3 +81,31 @@ class Population:
 
         # Assign individuals' fitness
         [self.population[i].__setattr__('fitness', f) for i, f in enumerate(self.fit)]
+
+
+    def __len__(self):
+        """
+        Return the size of the population.
+
+        Returns
+        -------
+        int
+            The size of the population.
+        """
+        return self.size
+    
+    def __getitem__(self, item):
+        """
+        Get an individual from the population by index.
+
+        Parameters
+        ----------
+        item : int
+            The index of the individual to retrieve.
+
+        Returns
+        -------
+        Tree
+            The individual at the specified index.
+        """
+        return self.population[item]

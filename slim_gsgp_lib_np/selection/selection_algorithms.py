@@ -29,8 +29,8 @@ import numpy as np
 def selector(problem='min', 
              type='tournament', 
              pool_size=2, 
-             eps_fraction=1e-4,
-             targets=None):
+             eps_fraction=1e-4,):
+    
     """
     Returns a selection function based on the specified problem and selection type.
 
@@ -45,9 +45,6 @@ def selector(problem='min',
         Number of individuals participating in the tournament. Defaults to 2.
     eps_fraction : float, optional
         The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-4.
-    targets : torch.Tensor, optional
-        The true target values for each entry in the dataset. Required for lexicase selection and epsilon lexicase
-        selection. Defaults to None.
     pressure_size : float, optional
         Pressure for size in rank selection. Defaults to 1e-4.
 
@@ -57,13 +54,14 @@ def selector(problem='min',
         A selection function that selects an individual from a population based on the specified problem and selection
         type.
     """
+    
     if problem == 'min':
         if type == 'tournament':
             return tournament_selection_min(pool_size)
         elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(targets, eps_fraction, mode='min')
+            return epsilon_lexicase_selection(eps_fraction, mode='min')
         elif type == 'lexicase':
-            return lexicase_selection(targets, mode='min')
+            return lexicase_selection(mode='min')
         elif type == 'rank_based':
             return rank_based(mode='min', pool_size=pool_size)
         elif type == 'roulette':
@@ -76,9 +74,9 @@ def selector(problem='min',
         if type == 'tournament':
             return tournament_selection_max(pool_size)
         elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(targets, eps_fraction, mode='max')
+            return epsilon_lexicase_selection(eps_fraction, mode='max')
         elif type == 'lexicase':
-            return lexicase_selection(targets, mode='max')
+            return lexicase_selection(mode='max')
         elif type == 'rank_based':
             return rank_based(mode='max', pool_size=pool_size)
         elif type == 'roulette':
@@ -237,15 +235,13 @@ def tournament_selection_min_size(pool_size, pressure_size=1e-4):
     return ts
 
 
-def lexicase_selection(targets, mode='min'):
+def lexicase_selection(mode='min'):
     """
     Returns a function that performs lexicase selection to select an individual with the lowest fitness
     from a population.
 
     Parameters
     ----------
-    targets : torch.Tensor
-        The true target values for each entry in the dataset (y_train).
     mode : str, optional
         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
 
@@ -318,87 +314,13 @@ def lexicase_selection(targets, mode='min'):
 
 
 
-# def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
-#     """
-#     Returns a function that performs epsilon lexicase selection to select an individual with the lowest (or highest) fitness
-#     from a population.
-
-#     Parameters
-#     ----------
-#     targets : torch.Tensor
-#         The true target values for each entry in the dataset (y_train).
-#     eps_fraction : float, optional
-#         The fraction of the population's standard deviation to use as the epsilon threshold. Defaults to 1e-7.
-#     mode : str, optional
-#         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
-
-#     Returns
-#     -------
-#     Callable
-#         A selection function that, when given a population, returns the selected individual.
-#     """
-#     def els(pop):
-#         """
-#         Perform epsilon lexicase selection on a population of individuals.
-
-#         Parameters
-#         ----------
-#         pop : Population
-#             The population from which to select an individual. It is assumed that pop has attributes:
-#             - population: list of Individual
-#             - errors_case: a numpy array of shape (N, num_cases) with error values for each individual
-#             - fit: numpy array of fitness values for each individual
-
-#         Returns
-#         -------
-#         Individual
-#             The selected individual.
-#         """
-#         errors = pop.errors_case            # shape: (N, num_cases)
-#         fitness_values = pop.fit
-#         fitness_std = np.std(fitness_values)  # Before was using the mean
-#         epsilon = eps_fraction * fitness_std
-#         num_cases = targets.shape[0]
-
-#         # Start with all individuals represented by their indices.
-#         candidate_indices = np.arange(len(pop.population))
-#         case_order = random.sample(range(num_cases), 5)
-        
-#         for case_idx in case_order:
-#             # Evaluate the squared error for current candidates on the selected case.
-#             current_errors = errors[candidate_indices, case_idx] ** 2
-            
-#             if mode == 'min':
-#                 best_value = np.min(current_errors)
-#                 mask = current_errors <= best_value + epsilon
-#             elif mode == 'max':
-#                 best_value = np.max(current_errors)
-#                 mask = current_errors >= best_value - epsilon
-#             else:
-#                 raise ValueError("Invalid mode. Use 'min' or 'max'.")
-            
-#             candidate_indices = candidate_indices[mask]
-#             if candidate_indices.size == 1:
-#                 return pop.population[candidate_indices[0]]
-#             # If candidate_indices becomes empty (unlikely), break and select at random.
-#             if candidate_indices.size == 0:
-#                 break
-        
-#         # If multiple candidates remain, select one at random.
-#         return pop.population[random.choice(candidate_indices.tolist())]
-    
-#     return els
-
-
-def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
+def epsilon_lexicase_selection(eps_fraction=1e-7, mode='min'):
     """
     Returns a function that performs epsilon lexicase selection to select an individual with the lowest fitness
     from a population.
 
     Parameters
     ----------
-    targets : torch.Tensor
-        The true target values for each entry in the dataset (y_train)
     eps_fraction : float, optional
         The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-6.
     mode : str, optional
@@ -433,8 +355,6 @@ def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
         ----------
         pop : list of Individual
             The population from which to select parents.
-        targets : torch.Tensor
-            The true target values for each entry in the dataset.
         epsilon : float, optional
             The epsilon threshold for lexicase selection. Defaults to 1e-6.
 
@@ -449,7 +369,7 @@ def epsilon_lexicase_selection(targets, eps_fraction=1e-7, mode='min'):
         fitness_std = np.std(fitness_values)
         epsilon = eps_fraction * fitness_std
     
-        num_cases = targets.shape[0]
+        num_cases = errors[0].shape[0]
 
         # Start with all individuals in the pool
         pool = pop.population.copy()

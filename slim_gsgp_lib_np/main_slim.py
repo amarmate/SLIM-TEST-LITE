@@ -52,7 +52,7 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
          p_struct: float = slim_gsgp_parameters["p_struct"],
          p_xo: float = slim_gsgp_parameters["p_xo"],
          decay_rate: float = slim_gsgp_parameters["decay_rate"],
-         mode: str = 'norm',
+         mode: str = 'exp',
          p_struct_xo: float = slim_gsgp_parameters["p_struct_xo"],
          mut_xo_operator: str = slim_gsgp_parameters["mut_xo_operator"],
          selector: str = slim_gsgp_parameters["selector"],
@@ -300,8 +300,8 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     slim_gsgp_parameters['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
                                                 type=selector, 
                                                 pool_size=tournament_size,
-                                                eps_fraction=eps_fraction,
-                                                targets=y_train)
+                                                eps_fraction=eps_fraction)
+    
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
     slim_gsgp_parameters['timeout'] = timeout
 

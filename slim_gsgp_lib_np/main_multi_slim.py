@@ -45,6 +45,7 @@ from slim_gsgp_lib_np.algorithms.SLIM_GSGP.representations.population import Pop
 
 # -----------------------------------  GP -----------------------------------
 from slim_gsgp_lib_np.utils.logger import log_settings
+from slim_gsgp_lib_np.main_gp import gp
 
 ELITES = {}
 UNIQUE_RUN_ID = uuid.uuid1()
@@ -52,7 +53,7 @@ ALGORITHM = "MULTI_SLIM"
 
 def multi_slim(
         X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_test: np.ndarray = None, dataset_name: str = None,
-        slim_parameters: dict = None, slim_version: str = "SLIM+SIG2", population: Population = None,
+        params_gp: dict = None, gp_version: str = "SLIM+SIG2", population: Population = None,
         pop_size : int = multi_pi_init["pop_size"], 
         n_iter : int = multi_solve_params["n_iter"],
         p_mut: float = multi_params["p_mut"],
@@ -88,26 +89,39 @@ def multi_slim(
 
     # Calling the SLIM-GSGP algorithm 
     if population is None:
-        elite, population = slim(
-            X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
-            full_return=True, seed=seed, verbose=verbose, log_level=log_level,
-            run_info=[ALGORITHM, slim_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
-            log_path=log_path,
-            **slim_parameters.__dict__)
-    
+        if gp_version == "gp": 
+            elite, population = gp(
+                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
+                full_return=True, seed=seed, verbose=verbose, log_level=log_level, log_path=log_path, 
+                run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
+                **params_gp.__dict__)
+        else:
+            elite, population = slim(
+                X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
+                full_return=True, seed=seed, verbose=verbose, log_level=log_level, slim_version=gp_version,
+                run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
+                log_path=log_path,
+                **params_gp.__dict__)
+            
     else: 
         elite = population[0]
 
     # Setting the train and test semantics for the population for speeding up evaluation during multi-slim
-    for ind in population.population:
-        ind.version = elite.version
+    for ind in population:
+        ind.version = elite.version if gp_version != "gp" else None
         ind.train_semantics = ind.predict(X_train)
-        ind.test_semantics = ind.predict(X_test)
+        ind.test_semantics = ind.predict(X_test) if X_test is not None else None
         
     # ------------------------ PI INIT ------------------------------
-    multi_pi_init['FUNCTIONS'] = elite.collection[0].FUNCTIONS
-    multi_pi_init['TERMINALS'] = elite.collection[0].TERMINALS
-    multi_pi_init['CONSTANTS'] = elite.collection[0].CONSTANTS
+    if gp_version == "gp":
+        multi_pi_init['FUNCTIONS'] = elite.FUNCTIONS
+        multi_pi_init['TERMINALS'] = elite.TERMINALS
+        multi_pi_init['CONSTANTS'] = elite.CONSTANTS
+
+    else:
+        multi_pi_init['FUNCTIONS'] = elite.collection[0].FUNCTIONS
+        multi_pi_init['TERMINALS'] = elite.collection[0].TERMINALS
+        multi_pi_init['CONSTANTS'] = elite.collection[0].CONSTANTS
     
     # population.population = population.population[:20]
     multi_pi_init['SPECIALISTS'] = {f'S_{i}' : ind for i, ind in enumerate(population.population)}
@@ -122,8 +136,8 @@ def multi_slim(
     # ------------------- MULTI_SLIM PARAMETERS ----------------------
     multi_params['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
                                                 type=selector, 
-                                                pool_size=tournament_size,
-                                                targets=y_train)
+                                                pool_size=tournament_size)
+    
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
     multi_params['mutator'] = mutator(FUNCTIONS=multi_pi_init['FUNCTIONS'],
                                       TERMINALS=multi_pi_init['TERMINALS'],
@@ -147,7 +161,7 @@ def multi_slim(
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
 
     # ---------------- MULTI_SLIM SOLVE PARAMETERS --------------------
-    multi_solve_params['run_info'] = [ALGORITHM, slim_version, UNIQUE_RUN_ID, dataset_name]
+    multi_solve_params['run_info'] = [ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name]
     multi_solve_params['ffunction'] = fitness_function_options[fitness_function]
     multi_solve_params['log'] = log_level
     multi_solve_params['verbose'] = verbose
@@ -171,16 +185,15 @@ def multi_slim(
 
     log_settings(
         path=os.path.join(os.getcwd(), "log", "slim_settings.csv"),
-        settings_dict=[slim_parameters,
+        settings_dict=[params_gp,
                        multi_pi_init,
                        multi_params, 
                        multi_solve_params],
         unique_run_id=UNIQUE_RUN_ID
     ) if log_level > 0 else None
 
-    optimizer.elite.version = slim_version
-    optimizer.elite.iteration = optimizer.iteration
-    optimizer.elite.early_stop = optimizer.stop_training
+    # optimizer.elite.iteration = optimizer.iteration
+    # optimizer.elite.early_stop = optimizer.stop_training
     
     if full_return: 
         return optimizer.elite, optimizer.population, population 

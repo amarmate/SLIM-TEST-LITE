@@ -27,15 +27,11 @@ import random
 import time
 
 import numpy as np
-import torch
-from slim_gsgp_lib_torch.algorithms.GP.representations.population import Population
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree import Tree
-from slim_gsgp_lib_torch.utils.diversity import niche_entropy
-from slim_gsgp_lib_torch.utils.logger import logger
-from slim_gsgp_lib_torch.utils.utils import verbose_reporter
-
-from joblib import Parallel, delayed
-
+from slim_gsgp_lib_np.algorithms.GP.representations.population import Population
+from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
+from slim_gsgp_lib_np.utils.diversity import niche_entropy
+from slim_gsgp_lib_np.utils.logger import logger
+from slim_gsgp_lib_np.utils.utils import verbose_reporter
 
 class GP:
     def __init__(
@@ -157,7 +153,6 @@ class GP:
             The number of jobs for parallel processing. Default is 1.
         """
         # setting the seeds
-        torch.manual_seed(self.seed)
         np.random.seed(self.seed)
         random.seed(self.seed)
 
@@ -169,7 +164,10 @@ class GP:
         )
 
         # evaluating the intial population
-        population.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs)
+        population.calculate_semantics(X_train, testing=False)
+        population.calculate_errors_case(y_train)
+        population.evaluate(target=y_train, testing=False)
+        self.population = population
 
         end = time.time()
 
@@ -195,8 +193,8 @@ class GP:
                 "fitness": self.elite.fitness,
                 "test_fitness": self.elite.test_fitness,
                 "time": end - start,
-                "nodes": self.elite.node_count,
-                "avg_nodes": np.mean([ind.node_count for ind in population.population]),
+                "nodes": self.elite.nodes_count,
+                "avg_nodes": np.mean([ind.nodes_count for ind in population.population]),
             }
             verbose_reporter(
                 verbose_params, 
@@ -242,8 +240,8 @@ class GP:
                     "fitness": self.elite.fitness,
                     "test_fitness": self.elite.test_fitness,
                     "time": end - start,
-                    "nodes": self.elite.node_count,
-                    "avg_nodes": np.mean([ind.node_count for ind in population.population]),
+                    "nodes": self.elite.nodes_count,
+                    "avg_nodes": np.mean([ind.nodes_count for ind in population.population]),
                 }
                 verbose_reporter(
                     verbose_params, 
@@ -313,8 +311,8 @@ class GP:
                 offs1, offs2 = self.crossover(
                     p1.repr_,
                     p2.repr_,
-                    tree1_n_nodes=p1.node_count,
-                    tree2_n_nodes=p2.node_count,
+                    tree1_n_nodes=p1.nodes_count,
+                    tree2_n_nodes=p2.nodes_count,
                 )
 
                 # assuring the offspring do not exceed max_depth
@@ -326,8 +324,8 @@ class GP:
                         offs1, offs2 = self.crossover(
                             p1.repr_,
                             p2.repr_,
-                            tree1_n_nodes=p1.node_count,
-                            tree2_n_nodes=p2.node_count,
+                            tree1_n_nodes=p1.nodes_count,
+                            tree2_n_nodes=p2.nodes_count,
                         )
 
                 # grouping the offspring in a list to be added to the offspring population
@@ -337,12 +335,12 @@ class GP:
                 # choosing a parent
                 p1 = self.selector(population)
                 # generating a mutated offspring from the parent
-                offs1 = self.mutator(p1.repr_, num_of_nodes=p1.node_count)
+                offs1 = self.mutator(p1.repr_, num_of_nodes=p1.nodes_count)
 
                 # making sure the offspring does not exceed max_depth
                 if max_depth is not None:
                     while depth_calculator(offs1) > max_depth:
-                        offs1 = self.mutator(p1.repr_, num_of_nodes=p1.node_count)
+                        offs1 = self.mutator(p1.repr_, num_of_nodes=p1.nodes_count)
 
                 # adding the offspring to a list, to be added to the offspring population
                 offspring = [offs1]
@@ -356,8 +354,11 @@ class GP:
 
         # turning the offspring population into an instance of Population
         offs_pop = Population(offs_pop)
-        # evaluating the offspring population
-        offs_pop.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs)
+        offs_pop.calculate_semantics(X_train, testing=False)
+        offs_pop.calculate_errors_case(y_train)
+        offs_pop.evaluate(target=y_train, testing=False)
+
+        self.population = offs_pop
 
         # retuning the offspring population and the time control variable
         return offs_pop, start
@@ -382,7 +383,7 @@ class GP:
         if log == 2:
             add_info = [
                 self.elite.test_fitness,
-                self.elite.node_count,
+                self.elite.nodes_count,
                 float(niche_entropy([ind.repr_ for ind in population.population])),
                 np.std(population.fit),
                 log,
@@ -390,23 +391,23 @@ class GP:
         elif log == 3:
             add_info = [
                 self.elite.test_fitness,
-                self.elite.node_count,
-                " ".join([str(ind.node_count) for ind in population.population]),
+                self.elite.nodes_count,
+                " ".join([str(ind.nodes_count) for ind in population.population]),
                 " ".join([str(f) for f in population.fit]),
                 log,
             ]
         elif log == 4:
             add_info = [
                 self.elite.test_fitness,
-                self.elite.node_count,
+                self.elite.nodes_count,
                 float(niche_entropy([ind.repr_ for ind in population.population])),
                 np.std(population.fit),
-                " ".join([str(ind.node_count) for ind in population.population]),
+                " ".join([str(ind.nodes_count) for ind in population.population]),
                 " ".join([str(f) for f in population.fit]),
                 log,
             ]
         else:
-            add_info = [self.elite.test_fitness, self.elite.node_count, log]
+            add_info = [self.elite.test_fitness, self.elite.nodes_count, log]
 
         logger(
             log_path,
