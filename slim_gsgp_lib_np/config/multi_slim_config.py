@@ -39,7 +39,7 @@ class SlimParameters:
        - p_struct_xo: Structural crossover probability (default 0.0).
        - decay_rate: Decay rate for mutation probabilities (default 0.1).
        - mut_xo_operator: Mutation operator for crossover (default "rshuffle").
-       - eps_fraction: Fraction of the standard deviation of the error for elexicase (default 1e-5).
+       - n_cases: Number of cases used in lexicase selection (default 10).
        - callbacks: List of callbacks (default None).   
     
     2. SLIM_GSGP_PI_INIT: Parameters for initializing the candidate solutions.
@@ -60,6 +60,7 @@ class SlimParameters:
     # SLIM_GSGP_PARAMETERS
     initializer: str = "rhh"
     selector: str = "e_lexicase"
+    n_cases: int = 10
     p_xo: float = 0.0
     p_inflate: float = 0.2
     p_struct: float = 0.0
@@ -68,7 +69,6 @@ class SlimParameters:
     p_struct_xo: float = 0.0
     decay_rate: float = 0.1
     mut_xo_operator: str = "rshuffle"
-    eps_fraction: float = 1e-5
     callbacks: Optional[list] = None
     
     # SLIM_GSGP_PI_INIT parameters
@@ -99,7 +99,7 @@ class GPParameters:
         elitism (bool): Flag indicating whether elitism is applied.
         n_elites (int): Number of elite individuals to retain.
         selector (str): Selection method used in the algorithm.
-        eps_fraction (float): Fraction of the standard deviation of the error for selection (epsilon value).
+        n_cases (int): Number of cases used in lexicase selection.
         max_depth (Optional[int]): Maximum allowed tree depth.
         init_depth (int): Initial depth used for generating individuals.
         initializer (str): Initialization method.
@@ -114,7 +114,7 @@ class GPParameters:
     elitism: bool = True
     n_elites: int = 1
     selector: str = "e_lexicase"
-    eps_fraction: float = 1e-6  # same as 0.000001
+    n_cases: int = 10
     max_depth: Optional[int] = 15
     init_depth: int = 6
     initializer: str = "rhh"

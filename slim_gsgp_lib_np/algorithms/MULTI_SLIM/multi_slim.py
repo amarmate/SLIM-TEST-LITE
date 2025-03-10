@@ -268,7 +268,7 @@ class MULTI_SLIM:
         
         verbose_reporter(
                 params, 
-                first =iteration == 0,
+                first = iteration == 0,
                 precision=3, 
                 col_width=14
         )

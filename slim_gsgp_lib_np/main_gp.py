@@ -45,7 +45,6 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        p_xo: float = gp_parameters['p_xo'],
        elitism: bool = gp_solve_parameters["elitism"], n_elites: int = gp_solve_parameters["n_elites"],
        selector: str = gp_parameters["selector"],
-       eps_fraction: float = 1e-6,
        max_depth: int | None = gp_solve_parameters["max_depth"],
        init_depth: int = gp_pi_init["init_depth"],
        log_path: str = None, seed: int = gp_parameters["seed"],
@@ -60,6 +59,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        tree_functions: list = list(FUNCTIONS.keys()),
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
+       n_cases: int = 5, 
        test_elite: bool = gp_solve_parameters["test_elite"],
        run_info: list = None,
        full_return: bool = False
@@ -120,6 +120,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         List of constants allowed to appear in the trees.
     tournament_size : int, optional
         Tournament size to utilize during selection. Only applicable if using tournament selection. (Default is 2)
+    n_cases : int, optional
+        Number of cases to use for lexicase and epsilon lexicase selection (default is 5).
     test_elite : bool, optional
         Whether to test the elite individual on the test set after each generation.
     run_info : list, optional
@@ -232,7 +234,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_parameters["selector"] = selection_algorithm(problem='min' if minimization else 'max', 
                                          type=selector, 
                                          pool_size=tournament_size, 
-                                         eps_fraction=eps_fraction,
+                                         n_cases=n_cases
     )
 
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max

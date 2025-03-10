@@ -320,20 +320,23 @@ def tree_depth_and_nodes(tree, SPECIALISTS, depth=1):
     """
     if isinstance(tree, tuple):
         # Recursively compute stats for all children.
-        child_stats = [tree_depth_and_nodes(child, SPECIALISTS, depth + 1) for child in tree[1:]]
+        # child_stats = [tree_depth_and_nodes(child, SPECIALISTS, depth + 1) for child in tree[1:]]
+        child_stats = [tree_depth_and_nodes(child, SPECIALISTS, depth + 1) for child in tree]
         depth = max(depth, max(d for d, _, _ in child_stats))
         # Nodes is the sum of all children counts.
         nodes = sum(n for _, n, _ in child_stats)
         # Total nodes is the sum of the total_nodes of all children.
         total_nodes = sum(tn for _, _, tn in child_stats)
         return depth, nodes, total_nodes
-    else:
-        # # Leaf node: either a Condition object or a specialist.
-        # if hasattr(tree, "depth") and hasattr(tree, "nodes_count"):
-        #     return depth, 1, tree.nodes_count
-        # else:
+    
+    elif isinstance(tree, str):
         spec = SPECIALISTS[tree]
         return depth, 1, spec.nodes_count 
+    
+    # It is a condition 
+    else: 
+        return depth, 1, tree.nodes_count
+
                
 
 def _execute_tree(collection, X, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, testing=False, predict=False):

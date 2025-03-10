@@ -29,8 +29,8 @@ import numpy as np
 def selector(problem='min', 
              type='tournament', 
              pool_size=2, 
-             eps_fraction=1e-4,):
-    
+             n_cases=5,
+             particularity_pressure=20):
     """
     Returns a selection function based on the specified problem and selection type.
 
@@ -39,29 +39,30 @@ def selector(problem='min',
     problem : str, optional
         The type of problem to solve. Can be 'min' or 'max'. Defaults to 'min'.
     type : str, optional
-        The type of selection to perform. Can be 'tournament', 'e_lexicase', 'lexicase', 'roulette', 'rank_based' or 'tournament_size'.
-        Defaults to 'tournament'.
+        The type of selection to perform. Can be 'tournament', 'e_lexicase', 'lexicase', 
+        'roulette', 'rank_based', 'tournament_size', or 'dalex'. Defaults to 'tournament'.
     pool_size : int, optional
         Number of individuals participating in the tournament. Defaults to 2.
-    eps_fraction : float, optional
-        The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-4.
-    pressure_size : float, optional
-        Pressure for size in rank selection. Defaults to 1e-4.
+    n_cases : int, optional
+        Number of test cases to consider. Defaults to 5.
+    particularity_pressure : float, optional
+        Standard deviation used in DALex for sampling importance scores. Defaults to 20.
 
     Returns
     -------
     Callable
-        A selection function that selects an individual from a population based on the specified problem and selection
-        type.
+        A selection function that selects an individual from a population based on the specified problem and selection type.
     """
-    
+
     if problem == 'min':
         if type == 'tournament':
             return tournament_selection_min(pool_size)
         elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(eps_fraction, mode='min')
+            return epsilon_lexicase_selection(mode='min', n_cases=n_cases)
         elif type == 'lexicase':
-            return lexicase_selection(mode='min')
+            return lexicase_selection(mode='min', n_cases=n_cases)
+        elif type == 'dalex':
+            return dalex_selection(mode='min', n_cases=n_cases, particularity_pressure=particularity_pressure)
         elif type == 'rank_based':
             return rank_based(mode='min', pool_size=pool_size)
         elif type == 'roulette':
@@ -74,9 +75,11 @@ def selector(problem='min',
         if type == 'tournament':
             return tournament_selection_max(pool_size)
         elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(eps_fraction, mode='max')
+            return epsilon_lexicase_selection(mode='max', n_cases=n_cases)
         elif type == 'lexicase':
-            return lexicase_selection(mode='max')
+            return lexicase_selection(mode='max', n_cases=n_cases)
+        elif type == 'dalex':
+            return dalex_selection(mode='max', n_cases=n_cases, particularity_pressure=particularity_pressure)
         elif type == 'rank_based':
             return rank_based(mode='max', pool_size=pool_size)
         elif type == 'roulette':
@@ -235,7 +238,7 @@ def tournament_selection_min_size(pool_size, pressure_size=1e-4):
     return ts
 
 
-def lexicase_selection(mode='min'):
+def lexicase_selection(mode='min', n_cases=5):
     """
     Returns a function that performs lexicase selection to select an individual with the lowest fitness
     from a population.
@@ -244,6 +247,8 @@ def lexicase_selection(mode='min'):
     ----------
     mode : str, optional
         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
+    n_cases : int, optional
+        Number of test cases to consider. Defaults to 5.
 
     Returns
     -------
@@ -286,12 +291,12 @@ def lexicase_selection(mode='min'):
                 
         # Start with all individuals in the pool
         pool = population.population.copy()
-        case_order = random.sample(range(num_cases), 5)
+        case_order = random.sample(range(num_cases), n_cases)
                         
         # Iterate over test cases and filter individuals based on exact performance (no epsilon)
-        for i in range(5):
+        for i in range(n_cases):
             # Generate an int from 0 to num_cases
-            case_errors = errors[:, case_order[i]] ** 2
+            case_errors = np.abs(errors[:, case_order[i]])
             
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':                
@@ -301,30 +306,30 @@ def lexicase_selection(mode='min'):
                                                           
             # If only one individual remains, return it as the selected parent
             if len(best_individuals) == 1:
-                return pool[best_individuals[0]]
+                return pool[best_individuals[0]], i+1
             
             # Filter individuals based on exact performance and error
             pool = [pool[i] for i in best_individuals]
             errors = errors[best_individuals]
                     
         # If multiple individuals remain after all cases, return one at random
-        return random.choice(pool)
+        return random.choice(pool), i+1
 
     return ls  # Return the function that performs lexicase selection
 
 
 
-def epsilon_lexicase_selection(eps_fraction=1e-7, mode='min'):
+def epsilon_lexicase_selection(mode='min', n_cases=5):
     """
     Returns a function that performs epsilon lexicase selection to select an individual with the lowest fitness
     from a population.
 
     Parameters
     ----------
-    eps_fraction : float, optional
-        The fraction of the populations' standard deviation to use as the epsilon threshold. Defaults to 1e-6.
     mode : str, optional
         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
+    n_cases : int, optional
+        Number of test cases to consider. Defaults to 5.
 
     Returns
     -------
@@ -345,6 +350,7 @@ def epsilon_lexicase_selection(eps_fraction=1e-7, mode='min'):
     -----
     The returned function performs lexicase selection by receiving a population and returning the individual with the
     lowest fitness in the pool.
+    Epsilon is calculated with the median absolute deviation, as described in this paper: http://arxiv.org/abs/1905.13266
     """
 
     def els(pop):
@@ -365,19 +371,23 @@ def epsilon_lexicase_selection(eps_fraction=1e-7, mode='min'):
         """
         # Get errors for each individual on each test case
         errors = pop.errors_case
-        fitness_values = pop.fit
-        fitness_std = np.std(fitness_values)
-        epsilon = eps_fraction * fitness_std
-    
+        
+        # Use the median absolute deviation to set the epsilon threshold
         num_cases = errors[0].shape[0]
 
         # Start with all individuals in the pool
         pool = pop.population.copy()
-        case_order = random.sample(range(num_cases), 5)  # ADDED
+        case_order = random.sample(range(num_cases), n_cases)  # ADDED
 
         # Iterate over test cases and filter individuals based on epsilon threshold
-        for i in range(5):
-            case_errors = errors[:, case_order[i]] ** 2 
+        for i in range(n_cases):
+            case_idx = case_order[i] 
+            case_errors = errors[:, case_idx]  # Get errors for this test case
+
+            median_case = np.median(case_errors)
+            epsilon = np.median(np.abs(case_errors - median_case))  # Compute MAD for this case
+
+            case_errors = np.abs(case_errors)
 
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':
@@ -387,14 +397,14 @@ def epsilon_lexicase_selection(eps_fraction=1e-7, mode='min'):
 
             # If only one individual remains, return it as the selected parent
             if len(best_individuals) == 1:
-                return pool[best_individuals[0]]
+                return pool[best_individuals[0]], i+1
             
             # Filter individuals based on epsilon threshold
             pool = [pool[i] for i in best_individuals]
             errors = errors[best_individuals]
 
         # If multiple individuals remain after all cases, return one at random
-        return random.choice(pool)
+        return random.choice(pool), i+1
 
     return els
 
@@ -479,3 +489,51 @@ def roulette_wheel_selection(population):
     # return random.choices(population, weights=[ind.fitness for ind in population])[0]
     return random.choices(population)[0]
  
+
+def dalex_selection(mode='min', n_cases=5, particularity_pressure=20):
+    """
+    Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
+    to select an individual based on a weighted aggregation of test-case errors.
+
+    Parameters
+    ----------
+    mode : str, optional
+        'min' for minimization problems, 'max' for maximization problems. Defaults to 'min'.
+    n_cases : int, optional
+        Number of test cases to consider in each selection event. Defaults to 5.
+    particularity_pressure : float, optional
+        Standard deviation for the normal distribution used to sample importance scores.
+        Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
+
+    Returns
+    -------
+    Callable
+        A function that takes a population object and returns a tuple (selected individual, n_cases used).
+    """
+    def ds(pop):
+        # Get the error matrix (assumed shape: (n_individuals, n_total_cases))
+        errors = pop.errors_case 
+        num_total_cases = errors.shape[1]
+        
+        # Randomly select n_cases test cases
+        case_order = random.sample(range(num_total_cases), n_cases)
+        subset_errors = errors[:, case_order]
+        subset_errors = np.abs(subset_errors)
+        
+        # Sample importance scores from N(0, particularity_pressure)
+        I = np.random.normal(0, particularity_pressure, size=n_cases)
+        exp_I = np.exp(I - np.max(I))
+        weights = exp_I / np.sum(exp_I)
+        F = np.dot(subset_errors, weights)
+
+        if mode == 'min':
+            best_index = np.argmin(F)
+        elif mode == 'max':
+            best_index = np.argmax(F)
+        else:
+            raise ValueError("Invalid mode. Use 'min' or 'max'.")
+        
+        # Return the selected individual and the number of cases used (n_cases)
+        return pop.population[best_index]
+
+    return ds

@@ -265,6 +265,8 @@ class SLIM_GSGP:
         self.dataset = curr_dataset
         self.time_dict = {'struct':[], 'inflate':[], 'deflate':[], 'xo':[]}
 
+        self.lex_rounds_history = [0] if self.selector.__name__ == "els" else None 
+
         # calculating the testing semantics and the elite's testing fitness if test_elite is true
         if test_elite:
             self.elite.version = self.slim_version
@@ -289,6 +291,9 @@ class SLIM_GSGP:
     
         # begining the evolution process
         for it in range(1, n_iter + 1, 1):
+            if self.selector.__name__ == "els":
+                self.lex_rounds_history = []
+
             self.time_dict = {'struct':[], 'inflate':[], 'deflate':[], 'xo':[]}
             self.iteration += 1
             
@@ -315,6 +320,10 @@ class SLIM_GSGP:
                     offs_pop.extend(offs)
                 else:
                     p1 = self.selector(population)
+                    if self.selector.__name__ == "els":
+                        p1, i = p1
+                        self.lex_rounds_history.append(i)
+
                     if r < self.p_inflate + self.p_xo:
                         off1 = self.inflate_mutation_step(p1, X_train, X_test, reconstruct, max_depth)
                         
@@ -376,6 +385,11 @@ class SLIM_GSGP:
     def crossover_step(self, population, X_train, X_test, reconstruct):
         start = time.time()
         p1, p2 = self.selector(population), self.selector(population)
+        if self.selector.__name__ == "els":
+            p1, i1 = p1
+            p2, i2 = p2
+            self.lex_rounds_history.extend([i1, i2])   
+
         while p1 == p2:
             p1, p2 = self.selector(population), self.selector(population)
         offs = self.xo_operator(p1, p2, X=X_train, X_test=X_test, reconstruct=reconstruct)
@@ -529,6 +543,9 @@ class SLIM_GSGP:
                     "deflate": f"{np.round(1000*np.mean([self.time_dict['deflate']]),2) if self.time_dict['deflate'] != [] else 'N/A'} ({len(self.time_dict['deflate'])})",
                     "xo": f"{np.round(1000*np.mean([self.time_dict['xo']]),2) if self.time_dict['xo'] != [] else 'N/A'} ({len(self.time_dict['xo'])})",
                 }
+
+                if self.lex_rounds_history:
+                    stats_data["lex_r"] = np.mean(self.lex_rounds_history)
 
                 self.verbose_reporter(
                     stats_data,
