@@ -30,7 +30,9 @@ def selector(problem='min',
              type='tournament', 
              pool_size=2, 
              n_cases=5,
-             particularity_pressure=20):
+             particularity_pressure=20,
+             epsilon=1e-6
+             ):
     """
     Returns a selection function based on the specified problem and selection type.
 
@@ -39,7 +41,7 @@ def selector(problem='min',
     problem : str, optional
         The type of problem to solve. Can be 'min' or 'max'. Defaults to 'min'.
     type : str, optional
-        The type of selection to perform. Can be 'tournament', 'e_lexicase', 'lexicase', 
+        The type of selection to perform. Can be 'tournament', 'e_lexicase', 'lexicase', 'manual_e_lexicase', 
         'roulette', 'rank_based', 'tournament_size', or 'dalex'. Defaults to 'tournament'.
     pool_size : int, optional
         Number of individuals participating in the tournament. Defaults to 2.
@@ -47,6 +49,8 @@ def selector(problem='min',
         Number of test cases to consider. Defaults to 5.
     particularity_pressure : float, optional
         Standard deviation used in DALex for sampling importance scores. Defaults to 20.
+    epsilon : float, optional
+        Epsilon value used in epsilon lexicase selection. Defaults to 1e-6.
 
     Returns
     -------
@@ -59,6 +63,8 @@ def selector(problem='min',
             return tournament_selection_min(pool_size)
         elif type == 'e_lexicase':
             return epsilon_lexicase_selection(mode='min', n_cases=n_cases)
+        elif type == 'manual_e_lexicase':
+            return manual_epsilon_lexicase_selection(mode='min', n_cases=n_cases, epsilon=epsilon)
         elif type == 'lexicase':
             return lexicase_selection(mode='min', n_cases=n_cases)
         elif type == 'dalex':
@@ -76,6 +82,8 @@ def selector(problem='min',
             return tournament_selection_max(pool_size)
         elif type == 'e_lexicase':
             return epsilon_lexicase_selection(mode='max', n_cases=n_cases)
+        elif type == 'manual_e_lexicase':
+            return manual_epsilon_lexicase_selection(mode='max', n_cases=n_cases, epsilon=epsilon)
         elif type == 'lexicase':
             return lexicase_selection(mode='max', n_cases=n_cases)
         elif type == 'dalex':
@@ -317,6 +325,87 @@ def lexicase_selection(mode='min', n_cases=5):
 
     return ls  # Return the function that performs lexicase selection
 
+
+def manual_epsilon_lexicase_selection(mode='min', n_cases=5, epsilon=1e-6): 
+    """
+    Returns a function that performs manual epsilon lexicase selection to select an individual with the lowest fitness
+    from a population.
+
+    Parameters
+    ----------
+    mode : str, optional
+        The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
+    n_cases : int, optional
+        Number of test cases to consider. Defaults to 5.
+    epsilon : float, optional
+        The epsilon threshold for lexicase selection. Defaults to 1e-6.
+
+    Returns
+    -------
+    Callable
+        A function ('mels') that elects the individual with the lowest fitness in the pool.
+
+        Parameters
+        ----------
+        pop : Population
+            The population from which individuals are drawn.
+
+        Returns
+        -------
+        Individual
+            The individual with the lowest fitness in the pool.
+
+    Notes
+    -----
+    The returned function performs lexicase selection by receiving a population and returning the individual with the
+    lowest fitness in the pool.
+    """
+    def mels(pop):
+        """
+        Perform manual epsilon lexicase selection on a population of individuals.
+
+        Parameters
+        ----------
+        pop : list of Individual
+            The population from which to select parents.
+        epsilon : float, optional
+            The epsilon threshold for lexicase selection. Defaults to 1e-6.
+
+        Returns
+        -------
+        Individual
+            The selected parent individual.
+        """
+        # Get errors for each individual on each test case
+        errors = pop.errors_case
+        
+        # Start with all individuals in the pool
+        pool = pop.population.copy()
+        case_order = random.sample(range(errors.shape[1]), n_cases)  # ADDED
+
+        # Iterate over test cases and filter individuals based on epsilon threshold
+        for i in range(n_cases):
+            case_idx = case_order[i] 
+            case_errors = np.abs(errors[:, case_idx])  # Get errors for this test case
+
+            # Get the best error on this test case across all individuals in the pool
+            if mode == 'min':
+                best_individuals = np.where(case_errors <= np.min(case_errors) + epsilon)[0]
+            elif mode == 'max':
+                best_individuals = np.where(case_errors >= np.max(case_errors) - epsilon)[0]
+
+            # If only one individual remains, return it as the selected parent
+            if len(best_individuals) == 1:
+                return pool[best_individuals[0]], i+1
+            
+            # Filter individuals based on epsilon threshold
+            pool = [pool[i] for i in best_individuals]
+            errors = errors[best_individuals]
+
+        # If multiple individuals remain after all cases, return one at random
+        return random.choice(pool), i+1
+    
+    return mels
 
 
 def epsilon_lexicase_selection(mode='min', n_cases=5):

@@ -300,7 +300,7 @@ def mutator(FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
             return mutate_prune(tree, SPECIALISTS, FUNCTIONS)  
         elif r < 0.2:
             return mutate_expand(tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, depth_condition, max_depth, p_c, p_t)
-        elif r < 0.5:
+        elif r < 0.4:
             return mutate_specialist(tree, SPECIALISTS) 
         elif r < 0.8:
             return mutate_condition(tree, depth_condition, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t, decay_rate) 

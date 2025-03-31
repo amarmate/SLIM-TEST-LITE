@@ -60,8 +60,11 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
        n_cases: int = 5, 
+       particularity_pressure: float = 20,
+       epsilon: float = 1e-6,
        test_elite: bool = gp_solve_parameters["test_elite"],
        run_info: list = None,
+       callbacks: list = None,
        full_return: bool = False
        ):
 
@@ -122,10 +125,16 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         Tournament size to utilize during selection. Only applicable if using tournament selection. (Default is 2)
     n_cases : int, optional
         Number of cases to use for lexicase and epsilon lexicase selection (default is 5).
+    particularity_pressure : float, optional
+        Pressure to apply to the particularity selection algorithm (default is 20).
+    epsilon : float, optional
+        Epsilon value to use for manual epsilon lexicase selection (default is 1e-6).
     test_elite : bool, optional
         Whether to test the elite individual on the test set after each generation.
     run_info : list, optional
         Information about the run (default is None).
+    callbacks : list, optional
+        List of callbacks to use during the optimization process.
     full_return : bool, optional
         If True, returns the elite and full population. If False, returns only the best individual.
 
@@ -234,11 +243,14 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_parameters["selector"] = selection_algorithm(problem='min' if minimization else 'max', 
                                          type=selector, 
                                          pool_size=tournament_size, 
-                                         n_cases=n_cases
+                                         n_cases=n_cases,
+                                         particularity_pressure=particularity_pressure, 
+                                         epsilon=epsilon 
     )
 
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max
     gp_parameters["seed"] = seed
+    gp_parameters["callbacks"] = callbacks
     #   *************** GP_SOLVE_PARAMETERS ***************
 
     gp_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name] if run_info is None else run_info

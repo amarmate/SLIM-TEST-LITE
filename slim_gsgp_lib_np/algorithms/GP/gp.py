@@ -48,6 +48,7 @@ class GP:
         pop_size=100,
         seed=0,
         settings_dict=None,
+        callbacks=None, 
     ):
         """
         Initialize the Genetic Programming algorithm.
@@ -76,6 +77,8 @@ class GP:
             Seed for random number generation. Default is 0.
         settings_dict : dict, optional
             Additional settings dictionary.
+        callbacks : list, optional
+            List of callbacks to be executed during the evolutionary process
         """
         self.pi_init = pi_init
         self.selector = selector
@@ -88,6 +91,7 @@ class GP:
         self.seed = seed
         self.find_elit_func = find_elit_func
         self.settings_dict = settings_dict
+        self.callbacks = callbacks if callbacks is not None else []
 
         Tree.FUNCTIONS = pi_init["FUNCTIONS"]
         Tree.TERMINALS = pi_init["TERMINALS"]
@@ -142,18 +146,24 @@ class GP:
 
         # Initialize the time tracker for mutation and crossover.
         self.time_dict = {'mutation': [], 'xo': []}
-        if self.selector.__name__ == "els":
+        if self.selector.__name__ in ["els", "mels"]:
             self.lex_rounds = [0]
 
         # Verbose reporting.
         self.print_results(0, start, end) if verbose != 0 else None
 
-        # EVOLUTIONARY PROCESS
+        for callback in self.callbacks:
+            callback.on_train_start(self)
+
+        # ------------------------- EVOLUTIONARY PROCESS -------------------------
         for it in range(1, n_iter + 1):
-            self.lex_rounds = [] if self.selector.__name__ == "els" else None
+            self.lex_rounds = [] if self.selector.__name__ in ["els", "mels"] else None
 
             # Reset the timing dictionary for the new generation.
             self.time_dict = {'mutation': [], 'xo': []}
+
+            for callback in self.callbacks:
+                callback.on_generation_start(self, it)
 
             # Evolve the population for this generation.
             offs_pop, gen_start = self.evolve_population(
@@ -176,6 +186,12 @@ class GP:
             # Logging the generation and verbose reporting.
             self.log_generation(it, population, gen_end - gen_start, log, log_path, run_info) if log != 0 else None
             self.print_results(it, gen_start, gen_end) if verbose != 0 else None
+
+            for callback in self.callbacks:
+                callback.on_generation_end(self, it, gen_start, gen_end)
+        
+        for callback in self.callbacks:
+            callback.on_train_end(self)
 
     def evolve_population(
         self,
@@ -232,7 +248,7 @@ class GP:
             p1 = self.selector(population)
             p2 = self.selector(population)
 
-        if self.selector.__name__ == "els":
+        if self.selector.__name__ in ["els", "mels"]:
             p1, i1 = p1
             p2, i2 = p2
             self.lex_rounds.extend([i1, i2])
@@ -268,7 +284,7 @@ class GP:
         # Select a parent and mutate.
         p1 = self.selector(population) 
 
-        if self.selector.__name__ == "els":
+        if self.selector.__name__ in ["els", "mels"]:
             p1, i1 = p1
             self.lex_rounds.append(i1)
 
@@ -341,7 +357,7 @@ class GP:
             "mut": f"{np.round(1000*np.mean([self.time_dict['mutation']]),2) if self.time_dict['mutation'] != [] else 'N/A'} ({len(self.time_dict['mutation'])})",
             "xo": f"{np.round(1000*np.mean([self.time_dict['xo']]),2) if self.time_dict['xo'] != [] else 'N/A'} ({len(self.time_dict['xo'])})",
         }
-        if self.selector.__name__ == "els":
+        if self.selector.__name__ in ["els", "mels"]:
             params["lex_r"] = np.mean(self.lex_rounds)
         
         verbose_reporter(

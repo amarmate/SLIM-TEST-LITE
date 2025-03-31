@@ -100,6 +100,7 @@ class GPParameters:
         n_elites (int): Number of elite individuals to retain.
         selector (str): Selection method used in the algorithm.
         n_cases (int): Number of cases used in lexicase selection.
+        epsilon (float): epsilon value to use for manual epsilon lexicase selection. 
         max_depth (Optional[int]): Maximum allowed tree depth.
         init_depth (int): Initial depth used for generating individuals.
         initializer (str): Initialization method.
@@ -107,7 +108,10 @@ class GPParameters:
         prob_terminal (float): Terminal probability during initialization.
         tree_functions (List): List of available function nodes (derived from the keys of FUNCTIONS).
         tree_constants (List): List of available constant nodes (derived from CONSTANTS, with some parsing).
+        callbacks (List): List of callbacks to be executed during the algorithm.
+        particularity_pressure (float): Pressure to apply to the particularity of the individuals (dalex).
     """
+
     pop_size: int = 100
     n_iter: int = 1000
     p_xo: float = 0.2
@@ -115,6 +119,7 @@ class GPParameters:
     n_elites: int = 1
     selector: str = "e_lexicase"
     n_cases: int = 10
+    epsilon: float = 1e-6,
     max_depth: Optional[int] = 15
     init_depth: int = 6
     initializer: str = "rhh"
@@ -122,6 +127,8 @@ class GPParameters:
     prob_terminal: float = 0.7
     tree_functions: list = field(default_factory=lambda: FUNCTIONS)
     tree_constants: list = field(default_factory=lambda: CONSTANTS)
+    callbacks: list = None
+    particularity_pressure: float = 20
 
 # ---------------------------- MULTI SLIM SOLVE parameters ----------------------------
 multi_solve_params = {
