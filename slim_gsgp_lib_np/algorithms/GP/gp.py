@@ -49,6 +49,7 @@ class GP:
         seed=0,
         settings_dict=None,
         callbacks=None, 
+        elite_tree=None,
     ):
         """
         Initialize the Genetic Programming algorithm.
@@ -79,6 +80,8 @@ class GP:
             Additional settings dictionary.
         callbacks : list, optional
             List of callbacks to be executed during the evolutionary process
+        elite_tree : Tree, optional
+            Tree object representing the elite individual to add to the population.
         """
         self.pi_init = pi_init
         self.selector = selector
@@ -92,6 +95,7 @@ class GP:
         self.find_elit_func = find_elit_func
         self.settings_dict = settings_dict
         self.callbacks = callbacks if callbacks is not None else []
+        self.elite_tree = Tree(elite_tree.repr_) if elite_tree is not None else None
 
         Tree.FUNCTIONS = pi_init["FUNCTIONS"]
         Tree.TERMINALS = pi_init["TERMINALS"]
@@ -128,6 +132,11 @@ class GP:
 
         # Initialize the population.
         population = Population([Tree(tree) for tree in self.initializer(**self.pi_init)])
+        
+        if self.elite_tree is not None:
+            population.population.pop()
+            population.population.append(self.elite_tree)
+
         population.calculate_semantics(X_train, testing=False)
         population.calculate_errors_case(y_train)
         population.evaluate(target=y_train, testing=False)

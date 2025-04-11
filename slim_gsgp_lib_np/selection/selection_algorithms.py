@@ -29,7 +29,7 @@ import numpy as np
 def selector(problem='min', 
              type='tournament', 
              pool_size=2, 
-             n_cases=5,
+             down_sampling=5,
              particularity_pressure=20,
              epsilon=1e-6
              ):
@@ -45,8 +45,8 @@ def selector(problem='min',
         'roulette', 'rank_based', 'tournament_size', or 'dalex'. Defaults to 'tournament'.
     pool_size : int, optional
         Number of individuals participating in the tournament. Defaults to 2.
-    n_cases : int, optional
-        Number of test cases to consider. Defaults to 5.
+    down_sampling : float, optional
+        Down sampling rate for lexicase selection. Defaults to 5.
     particularity_pressure : float, optional
         Standard deviation used in DALex for sampling importance scores. Defaults to 20.
     epsilon : float, optional
@@ -62,13 +62,13 @@ def selector(problem='min',
         if type == 'tournament':
             return tournament_selection_min(pool_size)
         elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(mode='min', n_cases=n_cases)
+            return epsilon_lexicase_selection(mode='min', down_sampling=down_sampling)
         elif type == 'manual_e_lexicase':
-            return manual_epsilon_lexicase_selection(mode='min', n_cases=n_cases, epsilon=epsilon)
+            return manual_epsilon_lexicase_selection(mode='min', down_sampling=down_sampling, epsilon=epsilon)
         elif type == 'lexicase':
-            return lexicase_selection(mode='min', n_cases=n_cases)
+            return lexicase_selection(mode='min', down_sampling=down_sampling)
         elif type == 'dalex':
-            return dalex_selection(mode='min', n_cases=n_cases, particularity_pressure=particularity_pressure)
+            return dalex_selection(mode='min', down_sampling=down_sampling, particularity_pressure=particularity_pressure)
         elif type == 'rank_based':
             return rank_based(mode='min', pool_size=pool_size)
         elif type == 'roulette':
@@ -81,13 +81,13 @@ def selector(problem='min',
         if type == 'tournament':
             return tournament_selection_max(pool_size)
         elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(mode='max', n_cases=n_cases)
+            return epsilon_lexicase_selection(mode='max', down_sampling=down_sampling)
         elif type == 'manual_e_lexicase':
-            return manual_epsilon_lexicase_selection(mode='max', n_cases=n_cases, epsilon=epsilon)
+            return manual_epsilon_lexicase_selection(mode='max', down_sampling=down_sampling, epsilon=epsilon)
         elif type == 'lexicase':
-            return lexicase_selection(mode='max', n_cases=n_cases)
+            return lexicase_selection(mode='max', down_sampling=down_sampling)
         elif type == 'dalex':
-            return dalex_selection(mode='max', n_cases=n_cases, particularity_pressure=particularity_pressure)
+            return dalex_selection(mode='max', down_sampling=down_sampling, particularity_pressure=particularity_pressure)
         elif type == 'rank_based':
             return rank_based(mode='max', pool_size=pool_size)
         elif type == 'roulette':
@@ -246,7 +246,7 @@ def tournament_selection_min_size(pool_size, pressure_size=1e-4):
     return ts
 
 
-def lexicase_selection(mode='min', n_cases=5):
+def lexicase_selection(mode='min', down_sampling=0.5):
     """
     Returns a function that performs lexicase selection to select an individual with the lowest fitness
     from a population.
@@ -255,8 +255,8 @@ def lexicase_selection(mode='min', n_cases=5):
     ----------
     mode : str, optional
         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
-    n_cases : int, optional
-        Number of test cases to consider. Defaults to 5.
+    down_sampling : float, optional
+        Proportion of test cases to sample. Defaults to 0.5.
 
     Returns
     -------
@@ -299,6 +299,7 @@ def lexicase_selection(mode='min', n_cases=5):
                 
         # Start with all individuals in the pool
         pool = population.population.copy()
+        n_cases = int(num_cases * down_sampling)  
         case_order = random.sample(range(num_cases), n_cases)
                         
         # Iterate over test cases and filter individuals based on exact performance (no epsilon)
@@ -326,7 +327,7 @@ def lexicase_selection(mode='min', n_cases=5):
     return ls  # Return the function that performs lexicase selection
 
 
-def manual_epsilon_lexicase_selection(mode='min', n_cases=5, epsilon=1e-6): 
+def manual_epsilon_lexicase_selection(mode='min', down_sampling=0.5, epsilon=1e-6): 
     """
     Returns a function that performs manual epsilon lexicase selection to select an individual with the lowest fitness
     from a population.
@@ -335,8 +336,8 @@ def manual_epsilon_lexicase_selection(mode='min', n_cases=5, epsilon=1e-6):
     ----------
     mode : str, optional
         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
-    n_cases : int, optional
-        Number of test cases to consider. Defaults to 5.
+    down_sampling : float, optional
+        Proportion of test cases to sample. Defaults to 0.5.
     epsilon : float, optional
         The epsilon threshold for lexicase selection. Defaults to 1e-6.
 
@@ -381,6 +382,8 @@ def manual_epsilon_lexicase_selection(mode='min', n_cases=5, epsilon=1e-6):
         
         # Start with all individuals in the pool
         pool = pop.population.copy()
+        num_cases = errors.shape[1]  # Number of test cases
+        n_cases = int(num_cases * down_sampling)  # Number of test cases to sample
         case_order = random.sample(range(errors.shape[1]), n_cases)  # ADDED
 
         # Iterate over test cases and filter individuals based on epsilon threshold
@@ -408,7 +411,7 @@ def manual_epsilon_lexicase_selection(mode='min', n_cases=5, epsilon=1e-6):
     return mels
 
 
-def epsilon_lexicase_selection(mode='min', n_cases=5):
+def epsilon_lexicase_selection(mode='min', down_sampling=0.5):
     """
     Returns a function that performs epsilon lexicase selection to select an individual with the lowest fitness
     from a population.
@@ -417,8 +420,8 @@ def epsilon_lexicase_selection(mode='min', n_cases=5):
     ----------
     mode : str, optional
         The mode of selection. Can be 'min' or 'max'. Defaults to 'min'.
-    n_cases : int, optional
-        Number of test cases to consider. Defaults to 5.
+    down_sampling : float, optional
+        Proportion of test cases to sample. Defaults to 0.5.
 
     Returns
     -------
@@ -440,6 +443,7 @@ def epsilon_lexicase_selection(mode='min', n_cases=5):
     The returned function performs lexicase selection by receiving a population and returning the individual with the
     lowest fitness in the pool.
     Epsilon is calculated with the median absolute deviation, as described in this paper: http://arxiv.org/abs/1905.13266
+    The semi-dynamic version is implemented, which helps save computational power: http://arxiv.org/abs/1709.05394
     """
 
     def els(pop):
@@ -458,7 +462,8 @@ def epsilon_lexicase_selection(mode='min', n_cases=5):
         Individual
             The selected parent individual.
         """
-        # Get errors for each individual on each test case
+        # Calculate the MAD for the population 
+        pop.calculate_mad() 
         errors = pop.errors_case
         
         # Use the median absolute deviation to set the epsilon threshold
@@ -466,16 +471,18 @@ def epsilon_lexicase_selection(mode='min', n_cases=5):
 
         # Start with all individuals in the pool
         pool = pop.population.copy()
-        case_order = random.sample(range(num_cases), n_cases)  # ADDED
+        # case_order = random.sample(range(num_cases), n_cases)  # ADDED
 
         # Iterate over test cases and filter individuals based on epsilon threshold
+        n_cases = int(num_cases * down_sampling)
         for i in range(n_cases):
-            case_idx = case_order[i] 
+            # case_idx = case_order[i] 
+            case_idx = random.choice(range(num_cases))
             case_errors = errors[:, case_idx]  # Get errors for this test case
 
-            median_case = np.median(case_errors)
-            epsilon = np.median(np.abs(case_errors - median_case))  # Compute MAD for this case
-
+            # median_case = np.median(case_errors)
+            # epsilon = np.median(np.abs(case_errors - median_case))  # Compute MAD for this case
+            epsilon = pop.mad[case_idx]  # Get the MAD for this case
             case_errors = np.abs(case_errors)
 
             # Get the best error on this test case across all individuals in the pool
@@ -579,7 +586,7 @@ def roulette_wheel_selection(population):
     return random.choices(population)[0]
  
 
-def dalex_selection(mode='min', n_cases=5, particularity_pressure=20):
+def dalex_selection(mode='min', down_sampling=0.5, particularity_pressure=20):
     """
     Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
     to select an individual based on a weighted aggregation of test-case errors.
@@ -588,8 +595,8 @@ def dalex_selection(mode='min', n_cases=5, particularity_pressure=20):
     ----------
     mode : str, optional
         'min' for minimization problems, 'max' for maximization problems. Defaults to 'min'.
-    n_cases : int, optional
-        Number of test cases to consider in each selection event. Defaults to 5.
+    down_sampling : float, optional
+        Proportion of test cases to sample. Defaults to 0.5.
     particularity_pressure : float, optional
         Standard deviation for the normal distribution used to sample importance scores.
         Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
@@ -603,6 +610,7 @@ def dalex_selection(mode='min', n_cases=5, particularity_pressure=20):
         # Get the error matrix (assumed shape: (n_individuals, n_total_cases))
         errors = pop.errors_case 
         num_total_cases = errors.shape[1]
+        n_cases = int(num_total_cases * down_sampling)
         
         # Randomly select n_cases test cases
         case_order = random.sample(range(num_total_cases), n_cases)

@@ -258,3 +258,20 @@ class Tree:
 
     def __str__(self):
         return self.get_simple_representation()
+    
+    def __copy__(self):
+        """
+        Create a deep copy of the Tree object.
+        """
+        new_tree = Tree(self.collection)
+        new_tree.FUNCTIONS = self.FUNCTIONS
+        new_tree.TERMINALS = self.TERMINALS
+        new_tree.CONSTANTS = self.CONSTANTS
+        new_tree.SPECIALISTS = self.SPECIALISTS
+        new_tree.depth = self.depth
+        new_tree.nodes_count = self.nodes_count
+        new_tree.total_nodes = self.total_nodes
+        new_tree.train_semantics = self.train_semantics
+        new_tree.test_semantics = self.test_semantics
+        
+        return new_tree

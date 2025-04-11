@@ -107,6 +107,21 @@ class Population:
         errors = self.train_semantics - np.stack([target] * self.train_semantics.shape[0])
         self.errors_case = errors
 
+    def calculate_mad(self): 
+        """
+        Calculate the Mean Absolute Deviation (MAD) for the population.
+
+        Returns 
+        -------
+        None
+        """
+        # if not hasattr(self, "errors_case"):
+        #     raise ValueError("Errors case not calculated.")
+        if hasattr(self, "mad"):
+            return 
+        
+        median_case = np.median(self.errors_case, axis=0)
+        self.mad = np.median(np.abs(self.errors_case - median_case), axis=0)
 
     def evaluate(self, target, testing=False):
         """

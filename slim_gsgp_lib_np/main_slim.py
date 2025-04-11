@@ -56,7 +56,9 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
          p_struct_xo: float = slim_gsgp_parameters["p_struct_xo"],
          mut_xo_operator: str = slim_gsgp_parameters["mut_xo_operator"],
          selector: str = slim_gsgp_parameters["selector"],
-         n_cases: int = 10, 
+         down_sampling: float = 0.5, 
+         particularity_pressure: float = 20,
+         epsilon: float = 1e-7,
          log_path: str = None,
          seed: int = slim_gsgp_parameters["seed"],
          log_level: int = slim_gsgp_solve_parameters["log"],
@@ -122,8 +124,12 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     selector : str, optional
         The selection algorithm to use for selecting individuals for the next generation.
         Default is tournament selection, options are: 'tournament', 'lexicase', 'e_lexicase', 'rank_based', 'roulette', 'tournament_size'.
-    n_cases : int, optional
-        Number of cases to use in epsilon lexicase selection. Default 10.
+    down_sampling : float, optional
+        The fraction of the population to use in down-sampling. Default is 0.5.
+    particularity_pressure : float, optional
+        The pressure to apply to the particularity of the individuals. Default is 20.
+    epsilon : float, optional
+        The epsilon value to use in epsilon lexicase selection. Default is 1e-7.
     eps_fraction : float, optional
         The fraction of the population to use in epsilon lexicase selection. Default 1e-7.
     log_path : str, optional
@@ -302,7 +308,9 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     slim_gsgp_parameters['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
                                                 type=selector, 
                                                 pool_size=tournament_size,
-                                                n_cases=n_cases)
+                                                down_sampling=down_sampling,
+                                                particularity_pressure=particularity_pressure,
+                                                epsilon=epsilon)
     
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
     slim_gsgp_parameters['timeout'] = timeout

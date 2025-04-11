@@ -27,6 +27,7 @@ import uuid
 import os
 import warnings
 from slim_gsgp_lib_np.algorithms.GP.gp import GP
+from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
 from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
 from slim_gsgp_lib_np.config.gp_config import *
@@ -59,13 +60,14 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        tree_functions: list = list(FUNCTIONS.keys()),
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
-       n_cases: int = 5, 
+       down_sampling: float = 0.5, 
        particularity_pressure: float = 20,
        epsilon: float = 1e-6,
        test_elite: bool = gp_solve_parameters["test_elite"],
        run_info: list = None,
        callbacks: list = None,
-       full_return: bool = False
+       full_return: bool = False,
+       elite_tree: Tree = None,
        ):
 
     """
@@ -123,8 +125,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         List of constants allowed to appear in the trees.
     tournament_size : int, optional
         Tournament size to utilize during selection. Only applicable if using tournament selection. (Default is 2)
-    n_cases : int, optional
-        Number of cases to use for lexicase and epsilon lexicase selection (default is 5).
+    down_sampling : float, optional
+        Down sampling value to use for the particularity selection algorithm (default is 0.5).
     particularity_pressure : float, optional
         Pressure to apply to the particularity selection algorithm (default is 20).
     epsilon : float, optional
@@ -137,6 +139,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         List of callbacks to use during the optimization process.
     full_return : bool, optional
         If True, returns the elite and full population. If False, returns only the best individual.
+    elite_tree : Tree, optional
+        An elite tree to add to the original population.
 
     Returns
     -------
@@ -204,7 +208,6 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     algo = "StandardGP"
 
     #   *************** GP_PI_INIT ***************
-
     TERMINALS = get_terminals(X_train)
     gp_pi_init["TERMINALS"] = TERMINALS
     try:
@@ -230,7 +233,6 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_pi_init["init_depth"] = init_depth
 
     #  *************** GP_PARAMETERS ***************
-
     gp_parameters["p_xo"] = p_xo
     gp_parameters["p_m"] = 1 - gp_parameters["p_xo"]
     gp_parameters["pop_size"] = pop_size
@@ -243,7 +245,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_parameters["selector"] = selection_algorithm(problem='min' if minimization else 'max', 
                                          type=selector, 
                                          pool_size=tournament_size, 
-                                         n_cases=n_cases,
+                                         down_sampling=down_sampling,
                                          particularity_pressure=particularity_pressure, 
                                          epsilon=epsilon 
     )
@@ -251,6 +253,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max
     gp_parameters["seed"] = seed
     gp_parameters["callbacks"] = callbacks
+    gp_parameters["elite_tree"] = elite_tree
+    
     #   *************** GP_SOLVE_PARAMETERS ***************
 
     gp_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name] if run_info is None else run_info
