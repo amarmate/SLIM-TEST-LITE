@@ -93,7 +93,7 @@ class Population:
 
     def calculate_errors_case(self, target):
         """
-        Calculate the errors case for each individual in the population.
+        Calculate the errors case for each individual in the population (absolute values).
 
         Parameters
         ----------
@@ -104,7 +104,7 @@ class Population:
         -------
         None
         """        
-        errors = self.train_semantics - np.stack([target] * self.train_semantics.shape[0])
+        errors = np.abs(self.train_semantics - np.stack([target] * self.train_semantics.shape[0]))
         self.errors_case = errors
 
     def calculate_mad(self): 

@@ -305,7 +305,7 @@ def lexicase_selection(mode='min', down_sampling=0.5):
         # Iterate over test cases and filter individuals based on exact performance (no epsilon)
         for i in range(n_cases):
             # Generate an int from 0 to num_cases
-            case_errors = np.abs(errors[:, case_order[i]])
+            case_errors = errors[:, case_order[i]]
             
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':                
@@ -389,7 +389,7 @@ def manual_epsilon_lexicase_selection(mode='min', down_sampling=0.5, epsilon=1e-
         # Iterate over test cases and filter individuals based on epsilon threshold
         for i in range(n_cases):
             case_idx = case_order[i] 
-            case_errors = np.abs(errors[:, case_idx])  # Get errors for this test case
+            case_errors = errors[:, case_idx]  # Get errors for this test case
 
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':
@@ -483,7 +483,6 @@ def epsilon_lexicase_selection(mode='min', down_sampling=0.5):
             # median_case = np.median(case_errors)
             # epsilon = np.median(np.abs(case_errors - median_case))  # Compute MAD for this case
             epsilon = pop.mad[case_idx]  # Get the MAD for this case
-            case_errors = np.abs(case_errors)
 
             # Get the best error on this test case across all individuals in the pool
             if mode == 'min':
@@ -606,16 +605,20 @@ def dalex_selection(mode='min', down_sampling=0.5, particularity_pressure=20):
     Callable
         A function that takes a population object and returns a tuple (selected individual, n_cases used).
     """
+
     def ds(pop):
         # Get the error matrix (assumed shape: (n_individuals, n_total_cases))
         errors = pop.errors_case 
         num_total_cases = errors.shape[1]
-        n_cases = int(num_total_cases * down_sampling)
-        
-        # Randomly select n_cases test cases
-        case_order = random.sample(range(num_total_cases), n_cases)
-        subset_errors = errors[:, case_order]
-        subset_errors = np.abs(subset_errors)
+
+        if down_sampling == 1:
+            n_cases = num_total_cases
+            subset_errors = errors
+
+        else: 
+            n_cases = int(num_total_cases * down_sampling)
+            case_order = random.sample(range(num_total_cases), n_cases)
+            subset_errors = errors[:, case_order]
         
         # Sample importance scores from N(0, particularity_pressure)
         I = np.random.normal(0, particularity_pressure, size=n_cases)

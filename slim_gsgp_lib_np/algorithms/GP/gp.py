@@ -31,7 +31,7 @@ from slim_gsgp_lib_np.algorithms.GP.representations.population import Population
 from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
 from slim_gsgp_lib_np.utils.diversity import niche_entropy
 from slim_gsgp_lib_np.utils.logger import logger
-from slim_gsgp_lib_np.utils.diversity import gsgp_pop_div_from_vectors
+from slim_gsgp_lib_np.utils.diversity import (gsgp_pop_div_from_vectors, gsgp_pop_div_from_vectors_var)
 from slim_gsgp_lib_np.utils.utils import verbose_reporter
 
 class GP:
@@ -253,9 +253,11 @@ class GP:
         # Select two distinct parents.
         p1 = self.selector(population)
         p2 = self.selector(population)
-        while p1 == p2:
-            p1 = self.selector(population)
-            p2 = self.selector(population)
+
+        # SELF XO IS ALLOWED
+        # while p1 == p2:
+        #     p1 = self.selector(population)
+        #     p2 = self.selector(population)
 
         if self.selector.__name__ in ["els", "mels"]:
             p1, i1 = p1
@@ -264,21 +266,17 @@ class GP:
 
         # Generate offspring from the selected parents.
         offs1, offs2 = self.crossover(
-            p1.repr_,
-            p2.repr_,
-            tree1_n_nodes=p1.nodes_count,
-            tree2_n_nodes=p2.nodes_count,
+            p1,
+            p2,
         )
 
-        # Ensure the offspring do not exceed the maximum allowed depth.
-        if max_depth is not None:
-            while depth_calculator(offs1) > max_depth or depth_calculator(offs2) > max_depth:
-                offs1, offs2 = self.crossover(
-                    p1.repr_,
-                    p2.repr_,
-                    tree1_n_nodes=p1.nodes_count,
-                    tree2_n_nodes=p2.nodes_count,
-                )
+        # # Ensure the offspring do not exceed the maximum allowed depth.
+        # if max_depth is not None:
+        #     while depth_calculator(offs1) > max_depth or depth_calculator(offs2) > max_depth:
+        #         offs1, offs2 = self.crossover(
+        #             p1,
+        #             p2,
+        #         )
 
         elapsed = time.time() - start
         self.time_dict['xo'].append(elapsed)
@@ -362,7 +360,8 @@ class GP:
             "time": end - start,
             "nodes": self.elite.nodes_count,
             "avg_nodes": np.mean([ind.nodes_count for ind in self.population.population]),
-            "div": int(self.calculate_diversity()),
+            # "div": int(gsgp_pop_div_from_vectors(self.population.train_semantics)),
+            "div (var)" : int(gsgp_pop_div_from_vectors_var(self.population.train_semantics)),
             "mut": f"{np.round(1000*np.mean([self.time_dict['mutation']]),2) if self.time_dict['mutation'] != [] else 'N/A'} ({len(self.time_dict['mutation'])})",
             "xo": f"{np.round(1000*np.mean([self.time_dict['xo']]),2) if self.time_dict['xo'] != [] else 'N/A'} ({len(self.time_dict['xo'])})",
         }
@@ -376,8 +375,6 @@ class GP:
                 col_width=14
         )
 
-    def calculate_diversity(self):
-        return gsgp_pop_div_from_vectors(self.population.train_semantics)
 
 
 

@@ -29,6 +29,7 @@ import warnings
 from slim_gsgp_lib_np.algorithms.GP.gp import GP
 from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
 from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
+from slim_gsgp_lib_np.algorithms.GP.operators.crossover_operators import crossover_trees
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
 from slim_gsgp_lib_np.config.gp_config import *
 from slim_gsgp_lib_np.selection.selection_algorithms import selector as selection_algorithm
@@ -60,7 +61,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        tree_functions: list = list(FUNCTIONS.keys()),
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
-       down_sampling: float = 0.5, 
+       down_sampling: float = 1, 
        particularity_pressure: float = 20,
        epsilon: float = 1e-6,
        test_elite: bool = gp_solve_parameters["test_elite"],
@@ -240,6 +241,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         gp_pi_init['init_depth'],  gp_pi_init["TERMINALS"], gp_pi_init['CONSTANTS'], gp_pi_init['FUNCTIONS'],
         p_c=gp_pi_init['p_c']
     )
+    gp_parameters["crossover"] = crossover_trees(FUNCTIONS=FUNCTIONS, max_depth=max_depth)
+    
     gp_parameters["initializer"] = initializer_options[initializer]
 
     gp_parameters["selector"] = selection_algorithm(problem='min' if minimization else 'max', 

@@ -24,6 +24,7 @@ Utility functions and tree operations for genetic programming.
 """
 
 import random
+from collections import defaultdict
 import numpy as np
 
 
@@ -619,3 +620,42 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
         elif repr_ in CONSTANTS:
             return np.full((X.shape[0],), CONSTANTS[repr_](None))
             # return CONSTANTS[repr_](None)
+
+
+def get_indices_with_levels(tree):
+    """
+    Returns a dictionary mapping each depth level to a list of index paths
+    pointing to subtrees or terminal nodes at that level.
+
+    Parameters
+    ----------
+    tree : tuple
+        The root node of the tree.
+
+    Returns
+    -------
+    dict
+        A dictionary {level: [index_paths]}.
+    """
+    indices_by_level = defaultdict(list)
+
+    def traverse(sub_tree, path=(), level=0):
+        if not isinstance(sub_tree, tuple):
+            indices_by_level[level].append(path)
+        else:
+            if path != ():
+                indices_by_level[level].append(path)
+            op, left, right = sub_tree
+            traverse(left, path + (1,), level + 1)
+            traverse(right, path + (2,), level + 1)
+
+    traverse(tree)
+    indices_by_level[0].append(())
+
+    return dict(indices_by_level)
+
+def get_depth(tree):
+    if not isinstance(tree, tuple):
+        return 1
+    _, left, right = tree
+    return 1 + max(get_depth(left), get_depth(right))

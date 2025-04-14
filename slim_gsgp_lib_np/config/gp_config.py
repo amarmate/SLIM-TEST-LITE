@@ -22,7 +22,6 @@
 """
 This script sets up the configuration dictionaries for the execution of the GP algorithm
 """
-from slim_gsgp_lib_np.algorithms.GP.operators.crossover_operators import crossover_trees
 from slim_gsgp_lib_np.initializers.initializers import rhh, grow, full
 from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_min
 
@@ -76,7 +75,6 @@ gp_solve_parameters = {
 gp_parameters = {
     "initializer": "rhh",
     "selector": 'tournament',
-    "crossover": crossover_trees(FUNCTIONS),
     "settings_dict": settings_dict,
     "p_xo": 0.8,
     "pop_size": 100,

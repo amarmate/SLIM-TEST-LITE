@@ -22,6 +22,7 @@
 
 import numpy as np 
 from scipy.stats import entropy
+from scipy.spatial.distance import pdist
 
 def niche_entropy(repr_, n_niches=10):
     """
@@ -90,4 +91,8 @@ def gsgp_pop_div_from_vectors(sem_vectors):
     
     # Return the mean of the distances
     return np.mean(upper_triangle_distances)
+
+
+def gsgp_pop_div_from_vectors_var(sem_vectors):
+    return np.sqrt(2 * np.var(sem_vectors))
 
