@@ -296,11 +296,11 @@ def mutator(FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS,
     """
     def mutation(tree):
         r = random.random()
-        if r < 0.1:
+        if r < 0.15:
             return mutate_prune(tree, SPECIALISTS, FUNCTIONS)  
-        elif r < 0.2:
+        elif r < 0.3:
             return mutate_expand(tree, FUNCTIONS, TERMINALS, CONSTANTS, SPECIALISTS, depth_condition, max_depth, p_c, p_t)
-        elif r < 0.4:
+        elif r < 0.55:
             return mutate_specialist(tree, SPECIALISTS) 
         elif r < 0.8:
             return mutate_condition(tree, depth_condition, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t, decay_rate) 

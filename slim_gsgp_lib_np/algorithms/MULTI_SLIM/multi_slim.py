@@ -7,7 +7,7 @@ import numpy as np
 
 from slim_gsgp_lib_np.utils.logger import logger
 from slim_gsgp_lib_np.utils.utils import verbose_reporter
-from slim_gsgp_lib_np.utils.diversity import gsgp_pop_div_from_vectors
+from slim_gsgp_lib_np.utils.diversity import (gsgp_pop_div_from_vectors, gsgp_pop_div_from_vectors_var)
 
 class MULTI_SLIM:
     def __init__(self, pi_init, mutator, xo_operator, selector, initializer, find_elit_func,
@@ -324,4 +324,4 @@ class MULTI_SLIM:
         )
 
     def calculate_diversity(self):
-        return gsgp_pop_div_from_vectors(self.population.train_semantics)
+        return gsgp_pop_div_from_vectors_var(self.population.train_semantics)

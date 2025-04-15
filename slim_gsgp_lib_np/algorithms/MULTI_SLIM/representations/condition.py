@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-Condition class implementation for representing condition structures in multi-slil programming.
+Condition class implementation for representing condition structures in multi-slim programming.
 """
 
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import _execute_tree, tree_depth_and_nodes

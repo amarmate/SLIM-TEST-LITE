@@ -70,6 +70,7 @@ def homologus_xo(max_depth):
             offs2 = replace_subtree(p2, idx_2, tree_1)
 
         return Tree(offs1), Tree(offs2)
+    
     return xo
 
 

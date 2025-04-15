@@ -72,6 +72,9 @@ def multi_slim(
         minimization: bool = True,
         log_path: str = None,
         selector: str = multi_params["selector"],
+        down_sampling: float = 0.5, 
+        particularity_pressure: float = 20,
+        epsilon: float = 1e-6,
         decay_rate: float = multi_params["decay_rate"],
         callbacks: list = None, 
         timeout: int = 100,
@@ -157,7 +160,11 @@ def multi_slim(
     multi_params['decay_rate'] = decay_rate
     multi_params['selector'] = selection_algorithm(problem='min' if minimization else 'max',
                                                 type=selector,
-                                                pool_size=tournament_size)
+                                                pool_size=tournament_size,
+                                                down_sampling=down_sampling, 
+                                                particularity_pressure=particularity_pressure,
+                                                epsilon=epsilon)
+    
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
 
     # ---------------- MULTI_SLIM SOLVE PARAMETERS --------------------
