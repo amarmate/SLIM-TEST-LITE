@@ -28,7 +28,9 @@ import os
 import warnings
 from slim_gsgp_lib_np.algorithms.GP.gp import GP
 from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
-from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree
+# from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree as mutator
+from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutator
+
 from slim_gsgp_lib_np.algorithms.GP.operators.crossover_operators import crossover_trees
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
 from slim_gsgp_lib_np.config.gp_config import *
@@ -237,12 +239,17 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_parameters["p_xo"] = p_xo
     gp_parameters["p_m"] = 1 - gp_parameters["p_xo"]
     gp_parameters["pop_size"] = pop_size
-    gp_parameters["mutator"] = mutate_tree_subtree(
-        gp_pi_init['init_depth'],  gp_pi_init["TERMINALS"], gp_pi_init['CONSTANTS'], gp_pi_init['FUNCTIONS'],
-        p_c=gp_pi_init['p_c']
+    gp_parameters["mutator"] = mutator(
+        FUNCTIONS=gp_pi_init['FUNCTIONS'],
+        TERMINALS=gp_pi_init['TERMINALS'],
+        CONSTANTS=gp_pi_init['CONSTANTS'],
+        max_depth=max_depth,
+        p_c=gp_pi_init['p_c'],
+        p_t=gp_pi_init['p_t'],
     )
+
     gp_parameters["crossover"] = crossover_trees(FUNCTIONS=FUNCTIONS, max_depth=max_depth)
-    
+
     gp_parameters["initializer"] = initializer_options[initializer]
 
     gp_parameters["selector"] = selection_algorithm(problem='min' if minimization else 'max', 

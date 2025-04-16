@@ -29,11 +29,11 @@ def dataset3(n=500, seed=0, noise=0):
 def run_gp():
     start = time.time()
     X, y, _ = dataset3(n=500, seed=0, noise=0)
-    X_train, _, y_train, _ = train_test_split(X, y, p_test=0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2)
 
-    elite, gp_pop = gp(X_train=X_train, y_train=y_train, full_return=True, test_elite=False, dataset_name='test',
-                       selector='dalex', n_iter=40, pop_size=1000, verbose=1,
-                       max_depth=8, init_depth=3, p_xo=0.8, seed=0, down_sampling=1,
+    elite, gp_pop = gp(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, test_elite=True,
+                      full_return=True, dataset_name='test', selector='dalex', n_iter=40, pop_size=1000, 
+                      verbose=1, max_depth=8, init_depth=3, p_xo=0.8, seed=0, down_sampling=1,
     )
     print('Time taken:', time.time() - start)
 

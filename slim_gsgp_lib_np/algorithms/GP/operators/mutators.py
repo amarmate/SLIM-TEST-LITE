@@ -25,11 +25,20 @@ Mutator operator implementation.
 """
 
 import random
-
 import numpy as np
+
 from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import (create_grow_random_tree,
                                                                 random_subtree,
                                                                 substitute_subtree)
+
+from slim_gsgp_lib_np.utils.utils import (
+        get_subtree,
+        create_grow_random_tree,
+        swap_sub_tree,
+    )
+
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import get_indices_with_levels, get_depth
+
 
 
 # Function to perform mutation on a tree.
@@ -167,7 +176,7 @@ def mutate_tree_node(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c):
     return m_tn
 
 
-def mutate_tree_subtree(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c):
+def mutate_tree_subtree(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c, **kwargs):
     """
     Generates a function for performing subtree mutation within a tree representation.
 
@@ -258,3 +267,255 @@ def mutate_tree_subtree(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c):
         else:
             return tree1 # if tree1 is a terminal
     return inner_mut
+
+
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def mutate_tree_subtree_dc(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t):
+    """
+    Returns a function to perform subtree mutation with depth constraint.
+
+    Parameters
+    ----------
+    max_depth : int
+        Maximum depth of the resulting tree after mutation.
+    TERMINALS, CONSTANTS, FUNCTIONS : dict
+        Sets of elements allowed in the trees.
+    p_c : float
+        Probability of selecting a constant during random tree creation.
+    p_t : float
+        Probability of selecting a terminal during random tree creation.
+
+    Returns
+    -------
+    Callable
+        A mutation function that respects tree depth limits.
+    """
+
+    def mut(tree1):
+        if not isinstance(tree1, tuple):
+            return tree1
+
+        indices_with_levels = get_indices_with_levels(tree1)
+        level = random.choice(list(indices_with_levels.keys()))
+        index = random.choice(indices_with_levels[level])
+
+        max_depth_new_subtree = max_depth - level - 1 
+
+        if max_depth_new_subtree < 1:
+            if random.random() < p_c: 
+                new_subtree = random.choice(list(CONSTANTS.keys()))
+            else: 
+                new_subtree = random.choice(list(TERMINALS.keys()))
+
+        else: 
+            new_subtree = create_grow_random_tree(
+                depth=max_depth_new_subtree,
+                FUNCTIONS=FUNCTIONS,
+                TERMINALS=TERMINALS,
+                CONSTANTS=CONSTANTS,
+                p_c=p_c,
+                p_t=p_t,
+            )
+
+        return swap_sub_tree(tree1, new_subtree, list(index))
+
+    return mut
+
+def mutate_tree_point(TERMINALS, CONSTANTS, FUNCTIONS, p_c):
+    """
+    Returns a function to perform point mutation on a tree.
+
+    This mutation replaces a randomly selected node (function or terminal)
+    with another of the same type and arity.
+
+    Parameters
+    ----------
+    TERMINALS, CONSTANTS, FUNCTIONS : dict
+        Sets of elements allowed in the trees.
+    p_c : float
+        Probability of choosing a constant for terminal mutation.
+
+    Returns
+    -------
+    Callable
+        A mutation function that performs point mutation.
+    """
+    def mut(tree1):
+        if not isinstance(tree1, tuple):
+            return tree1
+
+        indices_with_levels = get_indices_with_levels(tree1)
+        all_indices = [index for indices in indices_with_levels.values() for index in indices]
+        index = random.choice(all_indices)
+        subtree = get_subtree(tree1, list(index))
+
+        # Point mutation depends on what kind of node we hit
+        if isinstance(subtree, tuple):
+            func, left, right = subtree
+            # Replace with a different function (same arity)
+            possible_funcs = [funcs for funcs, data in FUNCTIONS.items() if data['arity'] == FUNCTIONS[func]['arity']]  
+            if not possible_funcs:
+                return tree1  # No replacement possible
+            new_func = random.choice(possible_funcs)
+            new_subtree = (new_func, left, right)
+
+        else:
+            # Its a terminal or constant 
+            if random.random() < p_c:
+                new_subtree = random.choice(list(CONSTANTS.keys()))
+            else:
+                new_subtree = random.choice(list(TERMINALS.keys()))
+
+        return swap_sub_tree(tree1, new_subtree, list(index))
+
+    return mut
+
+
+def prune_mutation_tree(TERMINALS, CONSTANTS, p_c):
+    """
+    Returns a function to perform prune mutation on a tree.
+
+    This mutation selects a random subtree (i.e. a node occurrence, regardless of type)
+    and replaces it with a terminal or constant. The decision to use a constant vs. a
+    terminal is made according to the probability p_c.
+
+    Parameters
+    ----------
+    TERMINALS, CONSTANTS : dict
+        Dictionaries containing the available terminal and constant elements.
+    p_c : float
+        The probability of selecting a constant for the replacement.
+
+    Returns
+    -------
+    Callable
+        A mutation function that performs prune mutation.
+    """
+    def mut(tree):
+        # If the tree is not a tuple (i.e. already a terminal), nothing to prune.
+        if not isinstance(tree, tuple):
+            return tree
+
+        # Obtain all node occurrences with their index paths.
+        indices_with_levels = get_indices_with_levels(tree)
+        all_indices = [index for level in indices_with_levels.values() for index in level][:-1]
+
+        # Select a random occurrence from the tree.
+        chosen_index = random.choice(all_indices)
+        
+        # Determine the replacement: constant (with probability p_c) or terminal.
+        if random.random() < p_c:
+            replacement = random.choice(list(CONSTANTS.keys()))
+        else:
+            replacement = random.choice(list(TERMINALS.keys()))
+        
+        # Replace the subtree at the selected index with the replacement.
+        mutated_tree = swap_sub_tree(tree, replacement, list(chosen_index))
+        return mutated_tree
+
+    return mut
+
+
+def mutate_tree_hoist(TERMINALS, CONSTANTS, p_c):
+    """
+    Performs branch-local hoist mutation by replacing ancestral nodes with 
+    selected subtree while maintaining tree validity.
+    
+    Parameters
+    ----------
+    TERMINALS : dict
+        Valid terminal symbols
+    CONSTANTS : dict
+        Valid constant symbols
+    p_c : float
+        Probability of selecting constant when replacing terminals
+        
+    Returns
+    -------
+    Callable
+        A hoist mutation function operating within single branches
+    """
+    def get_substitution_levels(index, possible=[]):
+        if len(index) == 0:
+            return possible
+        else: 
+            possible.append(index[:-1])
+            return get_substitution_levels(index[:-1], possible)
+
+    def mutate(tree): 
+        indices_levels = get_indices_with_levels(tree)
+        level = random.choice(list(indices_levels.keys())[:-1])
+        index = random.choice(indices_levels[level])
+        hoist_subtree = get_subtree(tree, list(index))
+        depth_subtree = get_depth(hoist_subtree)
+
+        possible_substitutions = get_substitution_levels(index, [])
+
+        if len(possible_substitutions) == 1 and depth_subtree == 1:
+            # If the subtree is a terminal, we cannot replace the full tree with a terminal, so we substitute the node
+            if random.random() < p_c:
+                new_terminal = random.choice(list(CONSTANTS.keys()))
+            else:
+                new_terminal = random.choice(list(TERMINALS.keys()))
+            
+            return swap_sub_tree(tree, new_terminal, list(index))
+
+        else: 
+            substitution_index = random.choice(possible_substitutions) if depth_subtree > 1 else random.choice(possible_substitutions[:-1])
+            return swap_sub_tree(tree, hoist_subtree, list(substitution_index))
+        
+    return mutate
+
+
+def mutator(FUNCTIONS, TERMINALS, CONSTANTS,
+                  max_depth, p_c=0.3, p_t=0.5, **kwargs):
+    """
+    Aggregate basic mutation operators (subtree, point, prune, hoist) 
+    into a single callable that randomly applies one.
+
+    Parameters
+    ----------
+    FUNCTIONS : dict
+        Function nodes.
+    TERMINALS : dict
+        Terminal symbols.
+    CONSTANTS : dict
+        Constant symbols.
+    max_depth : int
+        Maximum depth allowed for generated trees.
+    p_c : float
+        Probability of using a constant during random tree generation or mutation.
+    p_t : float
+        Probability of using a terminal during random tree generation.
+
+    Returns
+    -------
+    Callable
+        A mutation function that accepts a tree and returns a mutated tree.
+    """
+    subtree_mut = mutate_tree_subtree_dc(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t)
+    # subtree_mut_original = mutate_tree_subtree(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c)
+    point_mut = mutate_tree_point(TERMINALS, CONSTANTS, FUNCTIONS, p_c)
+    prune_mut = prune_mutation_tree(TERMINALS, CONSTANTS, p_c)
+    hoist_mut = mutate_tree_hoist(TERMINALS, CONSTANTS, p_c)
+
+    def mutation(tree, num_of_nodes):
+        r = random.random()
+        # if r < 0.3:
+        #     return subtree_mut_original(tree, num_of_nodes)
+        if r < 0.45:
+            return subtree_mut(tree)
+        elif r < 0.65:
+            return point_mut(tree)
+        elif r < 0.85:
+            return prune_mut(tree)
+        else:
+            return hoist_mut(tree)
+
+    return mutation

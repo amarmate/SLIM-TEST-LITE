@@ -295,12 +295,16 @@ class GP:
             p1, i1 = p1
             self.lex_rounds.append(i1)
 
-        offs1 = self.mutator(p1.repr_, num_of_nodes=p1.nodes_count)
+        offs1 = self.mutator(p1.repr_, 
+                             num_of_nodes=p1.nodes_count
+                             )
 
         # Ensure the mutated offspring does not exceed the maximum allowed depth.
         if max_depth is not None:
             while depth_calculator(offs1) > max_depth:
-                offs1 = self.mutator(p1.repr_, num_of_nodes=p1.nodes_count)
+                offs1 = self.mutator(p1.repr_, 
+                                     num_of_nodes=p1.nodes_count
+                                     )
 
         elapsed = time.time() - start
         self.time_dict['mutation'].append(elapsed)
