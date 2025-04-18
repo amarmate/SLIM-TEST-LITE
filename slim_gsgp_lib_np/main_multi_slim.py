@@ -78,12 +78,43 @@ def multi_slim(
         decay_rate: float = multi_params["decay_rate"],
         callbacks: list = None, 
         timeout: int = 100,
-        full_return: bool = False
+        full_return: bool = False,
+        elite_tree: Tree = None,
+        
 ):
     """
     Main function to execute the MULTI_SLIM GSGP algorithm on specified datasets.
 
+    Parameters
+    ----------
+    X_train : np.ndarray
+        Training data features.
+    y_train : np.ndarray
+        Training data labels.
+    X_test : np.ndarray, optional
+        Test data features. Default is None.
+    y_test : np.ndarray, optional
+        Test data labels. Default is None.
+    dataset_name : str, optional
+        Name of the dataset. Default is None.
+    params_gp : dict, optional
+        Parameters for the GP algorithm. Default is None.   
+    gp_version : str, optional  
+        Version of the GP algorithm to use. Default is "SLIM+SIG2". 
+    population : Population, optional
+        Predefined population for the algorithm. Default is None.
+    pop_size : int, optional
+        Size of the population. Default is 100.
+    n_iter : int, optional
+        Number of iterations for the algorithm. Default is 100.
+    p_mut : float, optional
+        Probability of mutation. Default is 0.1.
+    depth_condition : int, optional
+        Maximum depth condition for the trees. Default is 5.
+
+
     """
+    
     # Validate the inputs given  TODO 
     # validate_parameters()
     if dataset_name is None:
@@ -166,6 +197,7 @@ def multi_slim(
                                                 epsilon=epsilon)
     
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
+    multi_params['elite_tree'] = elite_tree
 
     # ---------------- MULTI_SLIM SOLVE PARAMETERS --------------------
     multi_solve_params['run_info'] = [ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name]

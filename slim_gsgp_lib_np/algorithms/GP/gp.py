@@ -137,7 +137,7 @@ class GP:
             population.population.pop()
             population.population.append(self.elite_tree)
 
-        population.calculate_semantics(X_train, testing=False)
+        population.calculate_semantics(inputs=X_train, testing=False)
         population.calculate_errors_case(y_train)
         population.evaluate(target=y_train, testing=False)
         self.population = population

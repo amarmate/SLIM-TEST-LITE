@@ -10,8 +10,20 @@ from slim_gsgp_lib_np.utils.utils import verbose_reporter
 from slim_gsgp_lib_np.utils.diversity import (gsgp_pop_div_from_vectors, gsgp_pop_div_from_vectors_var)
 
 class MULTI_SLIM:
-    def __init__(self, pi_init, mutator, xo_operator, selector, initializer, find_elit_func,
-                 p_mut, p_xo, seed, callbacks, decay_rate):
+    def __init__(self, 
+                 pi_init, 
+                 mutator, 
+                 xo_operator, 
+                 selector, 
+                 initializer, 
+                 find_elit_func,
+                 p_mut, 
+                 p_xo, 
+                 seed, 
+                 callbacks, 
+                 decay_rate,
+                 elite_tree,
+                ):
         """
         Initialize the MULTI_SLIM optimizer.
 
@@ -42,6 +54,9 @@ class MULTI_SLIM:
             List of callback functions to be invoked each iteration.
         decay_rate : float
             Decay rate parameter used in some mutation operations.
+        elite_tree : Tree, optional
+            Tree object representing the elite individual to add to the population.
+
         """
         # Save parameters
         self.pi_init = pi_init
@@ -57,6 +72,7 @@ class MULTI_SLIM:
         self.callbacks = callbacks if callbacks is not None else []
         self.decay_rate = decay_rate
         self.stop_training = False
+        self.elite_tree = Tree(elite_tree.collection) if elite_tree is not None else None
 
         # Set tree representation parameters
         Tree.FUNCTIONS = pi_init["FUNCTIONS"]
@@ -125,8 +141,13 @@ class MULTI_SLIM:
         start = time.time()
         population = Population([Tree(tree) for tree in self.initializer(**self.pi_init)])
 
+        if self.elite_tree is not None:
+            population.population.pop()
+            population.population.append(self.elite_tree)
+
         # Evaluate the initial population.
         population.calculate_semantics(inputs=X_train, testing=False)
+        population.calculate_errors_case(y_train)
         population.evaluate(target=y_train, testing=False)
         end = time.time()
 
@@ -152,6 +173,9 @@ class MULTI_SLIM:
             )
 
         # Display and log results
+        if self.selector.__name__ in ["els", "mels"]:
+            self.lex_rounds = [0]
+
         self.print_results(0, start, end) if verbose > 0 else None
         self.log_results(0, start, end)
 
@@ -163,6 +187,7 @@ class MULTI_SLIM:
 
         # Main evolutionary loop.
         for it in range(1, n_iter + 1, 1):
+            self.lex_rounds = [] if self.selector.__name__ in ["els", "mels"] else None
             self.time_dict = {'mutation':[], 'xo':[]}
             self.iteration += 1
 
@@ -195,10 +220,14 @@ class MULTI_SLIM:
             # Check if the offspring population is larger than the population size
             if len(offs_pop) > population.size:
                 offs_pop = offs_pop[: population.size]
+            
+            # print(offs_pop[:5])
+            # print(type(offs_pop[0]))
 
             # Evaluate the offspring population
             offs_pop = Population(offs_pop) 
             offs_pop.calculate_semantics(inputs=X_train, testing=False)
+            offs_pop.calculate_errors_case(y_train)
             offs_pop.evaluate(target=y_train, testing=False)
 
             # Replace the current population with the offspring population P = P'
@@ -234,12 +263,14 @@ class MULTI_SLIM:
     # ------------------------------------ Helper functions ------------------------------------
     def crossover_step(self):  
         start = time.time()
-        while True:
-            parent1, parent2 = self.selector(self.population), self.selector(self.population)
-            if parent1 != parent2:
-                break  
-                
-        offs = self.xo_operator(parent1, parent2)
+        p1, p2 = self.selector(self.population), self.selector(self.population)
+
+        if self.selector.__name__ in ["els", "mels"]:
+            p1, i1 = p1
+            p2, i2 = p2
+            self.lex_rounds.extend([i1, i2])
+
+        offs = self.xo_operator(p1, p2)
         self.time_dict['xo'].append(time.time() - start)
         # print(parent1.depth, parent2.depth, offs[0].depth, offs[1].depth)
         return offs
@@ -247,6 +278,11 @@ class MULTI_SLIM:
     def mutation_step(self): 
         start = time.time()
         parent = self.selector(self.population)
+
+        if self.selector.__name__ in ["els", "mels"]:
+            parent, i = parent
+            self.lex_rounds.append(i)
+
         offs = self.mutator(parent)
         self.time_dict['mutation'].append(time.time() - start)
         return offs
@@ -265,6 +301,9 @@ class MULTI_SLIM:
             "mut": f"{np.round(1000*np.mean([self.time_dict['mutation']]),2) if self.time_dict['mutation'] != [] else 'N/A'} ({len(self.time_dict['mutation'])})",
             "xo": f"{np.round(1000*np.mean([self.time_dict['xo']]),2) if self.time_dict['xo'] != [] else 'N/A'} ({len(self.time_dict['xo'])})",
         }
+
+        if self.selector.__name__ in ["els", "mels"]:
+            params["lex_r"] = np.mean(self.lex_rounds)
         
         verbose_reporter(
                 params, 

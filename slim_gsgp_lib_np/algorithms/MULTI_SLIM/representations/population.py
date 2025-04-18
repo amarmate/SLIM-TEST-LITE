@@ -119,6 +119,68 @@ class Population:
                 tree.train_semantics for tree in self.population
             ])
 
+    def calculate_errors_case(self, target):
+        """
+        Calculate the errors case for each individual in the population (absolute values).
+
+        Parameters
+        ----------
+        y_train : torch.Tensor
+            Expected output (target) values for training.
+
+        Returns
+        -------
+        None
+        """        
+        errors = np.abs(self.train_semantics - np.stack([target] * self.train_semantics.shape[0]))
+        self.errors_case = errors
+
+    def calculate_mad(self): 
+        """
+        Calculate the Mean Absolute Deviation (MAD) for the population.
+
+        Returns 
+        -------
+        None
+        """
+        # if not hasattr(self, "errors_case"):
+        #     raise ValueError("Errors case not calculated.")
+        if hasattr(self, "mad"):
+            return 
+        
+        median_case = np.median(self.errors_case, axis=0)
+        self.mad = np.median(np.abs(self.errors_case - median_case), axis=0)
+
+
+    # def evaluate(self, target, testing=False):
+    #     """
+    #     Evaluate the population using the errors per case with MSE
+
+    #     Parameters
+    #     ----------
+    #     ffunction : Callable
+    #         Fitness function to evaluate the individuals.
+    #     target : torch.Tensor        
+    #         Expected output (target) values.
+
+    #     Returns
+    #     -------
+    #     None
+    #     """
+    #     if testing and not hasattr(self, "test_semantics"):
+    #         raise ValueError("Testing semantics not calculated.")
+        
+    #     elif not testing and not hasattr(self, "train_semantics"):
+    #         raise ValueError("Training semantics not calculated.")
+
+    #     # Check if errors case is already calculated
+    #     sem = self.test_semantics if testing else self.train_semantics
+    #     errors = sem - np.stack([target] * sem.shape[0])
+    #     fitness = np.sqrt(np.mean(errors**2, axis=1))
+    #     self.fit = fitness
+    #     for i, individual in enumerate(self.population):
+    #         individual.fitness = fitness[i]
+
 
     def evaluate(self, target, testing=False):
         """
@@ -142,14 +204,21 @@ class Population:
             raise ValueError("Training semantics not calculated.")
 
         # Check if errors case is already calculated
-        sem = self.test_semantics if testing else self.train_semantics
-        errors = sem - np.stack([target] * sem.shape[0])
-        fitness = np.sqrt(np.mean(errors**2, axis=1))
-        self.fit = fitness
-        for i, individual in enumerate(self.population):
-            individual.fitness = fitness[i]
-            
+        if testing: 
+            sem = self.test_semantics 
+            errors = sem - np.stack([target] * sem.shape[0])
+            fitness = np.sqrt(np.mean(errors**2, axis=1))
+            self.test_fit = fitness
+            for i, individual in enumerate(self.population):
+                individual.test_fitness = fitness[i]
         
+        else: 
+            fitness = np.sqrt(np.mean(self.errors_case**2, axis=1))
+            self.fit = fitness
+            for i, individual in enumerate(self.population):
+                individual.fitness = fitness[i]
+
+            
     def __len__(self):
         """
         Return the size of the population.
@@ -176,3 +245,14 @@ class Population:
             The individual at the specified index.
         """
         return self.population[item]
+    
+    def __iter__(self):
+        """
+        Return an iterator over the population.
+
+        Returns
+        -------
+        Iterator
+            Iterator over the population.
+        """
+        return iter(self.population)
