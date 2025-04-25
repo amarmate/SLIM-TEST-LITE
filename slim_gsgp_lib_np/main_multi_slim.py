@@ -157,7 +157,12 @@ def multi_slim(
         multi_pi_init['TERMINALS'] = elite.collection[0].TERMINALS
         multi_pi_init['CONSTANTS'] = elite.collection[0].CONSTANTS
     
-    # population.population = population.population[:20]
+    # Order population by fitness 
+    population.population.sort(key=lambda x: x.fitness, reverse=not minimization)
+    # len_pop = len(population.population)
+    # population.population = population.population[int(len_pop/20):int(len_pop-len_pop/5)]
+    # population.population = population.population[:int(len_pop-len_pop/4)]
+
     multi_pi_init['SPECIALISTS'] = {f'S_{i}' : ind for i, ind in enumerate(population.population)}
 
     multi_pi_init['p_c'] = prob_const

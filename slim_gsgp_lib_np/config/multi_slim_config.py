@@ -9,6 +9,7 @@ from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.crossovers import *
 from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_min
 from slim_gsgp_lib_np.evaluators.fitness_functions import *
 from slim_gsgp_lib_np.utils.utils import (get_best_min, protected_div)
+from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree as GPTree
 
 # MULTI SLIM
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import initializer
@@ -129,6 +130,7 @@ class GPParameters:
     tree_constants: list = field(default_factory=lambda: CONSTANTS)
     callbacks: list = None
     particularity_pressure: float = 20
+    elite_tree: GPTree = None
 
 # ---------------------------- MULTI SLIM SOLVE parameters ----------------------------
 multi_solve_params = {
