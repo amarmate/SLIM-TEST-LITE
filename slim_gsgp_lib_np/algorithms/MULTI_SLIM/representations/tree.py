@@ -275,3 +275,28 @@ class Tree:
         new_tree.test_semantics = self.test_semantics
         
         return new_tree
+    
+    def __getitem__(self, item):
+        """
+        Get an individual from the population by index.
+        
+        Parameters
+        ----------
+        item : int
+            The index of the individual to retrieve.
+
+        Returns
+        -------
+        Tree
+            The individual at the specified index.
+        """
+        element = self.collection
+        try: 
+            for id in item: 
+                element = element[id]
+        except IndexError:
+            print("Index not found")
+        except TypeError:
+            print("Invalid index type")
+    
+        return element

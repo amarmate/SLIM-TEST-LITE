@@ -129,6 +129,7 @@ def multi_slim(
                 full_return=True, seed=seed, verbose=verbose, log_level=log_level, log_path=log_path, 
                 run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
                 **params_gp.__dict__)
+            population.population.sort(key=lambda x: x.fitness, reverse=not minimization)
         else:
             elite, population = slim(
                 X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
@@ -136,6 +137,7 @@ def multi_slim(
                 run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
                 log_path=log_path,
                 **params_gp.__dict__)
+            population.population.sort(key=lambda x: x.fitness, reverse=not minimization)
             
     else: 
         elite = population[0]
@@ -158,7 +160,6 @@ def multi_slim(
         multi_pi_init['CONSTANTS'] = elite.collection[0].CONSTANTS
     
     # Order population by fitness 
-    population.population.sort(key=lambda x: x.fitness, reverse=not minimization)
     # len_pop = len(population.population)
     # population.population = population.population[int(len_pop/20):int(len_pop-len_pop/5)]
     # population.population = population.population[:int(len_pop-len_pop/4)]

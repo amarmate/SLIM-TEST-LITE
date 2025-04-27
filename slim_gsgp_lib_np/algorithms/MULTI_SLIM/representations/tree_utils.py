@@ -523,11 +523,11 @@ def get_condition_indices(tree, path=None, FUNCTIONS=None):
     # Terminals are not traversed.
     return indices
 
-def get_specialist_indices(tree, path=None, SPECIALISTS=None, depth=1):
+def get_specialist_indices(tree, path=None, depth=1, **kwargs):
     """
     Recursively collects the indices (paths) to specialist terminals in the tree.
     
-    A specialist is assumed to be a terminal (non-tuple) that appears as a key in SPECIALISTS.
+    A specialist is assumed to be a terminal of type string.
     
     Parameters
     ----------
@@ -535,8 +535,6 @@ def get_specialist_indices(tree, path=None, SPECIALISTS=None, depth=1):
         The tree representation.
     path : list of int, optional
         The current path (used in recursion). Default is [].
-    SPECIALISTS : dict, optional
-        Dictionary of specialists (keys are used as terminal symbols).
     depth : int, 1
         The current depth of the recursion.
 
@@ -550,13 +548,9 @@ def get_specialist_indices(tree, path=None, SPECIALISTS=None, depth=1):
     indices = []
     if isinstance(tree, tuple):
         for i, child in enumerate(tree):
-            indices.extend(get_specialist_indices(child, path + [i], SPECIALISTS, depth=depth+1))
-    else:
-        if SPECIALISTS is None:
-            # If no specialists dictionary is provided, return an empty list.
-            return []
-        if tree in SPECIALISTS:
-            indices.append((path, depth))
+            indices.extend(get_specialist_indices(child, path + [i], depth=depth+1))
+    elif isinstance(tree, str):
+        indices.append((path, depth))
     return indices
 
 
