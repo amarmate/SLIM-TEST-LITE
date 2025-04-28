@@ -70,7 +70,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        run_info: list = None,
        callbacks: list = None,
        full_return: bool = False,
-       elite_tree: Tree = None,
+       elite_tree: list = None,
        ):
 
     """
@@ -142,8 +142,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         List of callbacks to use during the optimization process.
     full_return : bool, optional
         If True, returns the elite and full population. If False, returns only the best individual.
-    elite_tree : Tree, optional
-        An elite tree to add to the original population.
+    elite_tree : List of trees, optional
+        Elite trees to add to the original population.
 
     Returns
     -------
@@ -263,6 +263,13 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max
     gp_parameters["seed"] = seed
     gp_parameters["callbacks"] = callbacks
+
+    if type(elite_tree) != list:
+        elite_tree = [elite_tree]
+    
+    if elite_tree[0] is None:
+        elite_tree = None 
+    
     gp_parameters["elite_tree"] = elite_tree
     
     #   *************** GP_SOLVE_PARAMETERS ***************

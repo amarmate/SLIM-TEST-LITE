@@ -154,7 +154,7 @@ def load_synthetic6(n=500, seed=0, noise=0):
     y_clean = np.array([f6(xi) for xi in x])
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
-    mask_1 = np.where(x[:, 1] + 2*x[:, 2] < 0.8, True, False)
+    mask_1 = np.where(x[:, 1] + 2*x[:, 2] < 4, True, False)
     mask_2 = np.logical_not(mask_1)
     mask = [mask_1, mask_2]
     return x, y_noisy, mask, mask

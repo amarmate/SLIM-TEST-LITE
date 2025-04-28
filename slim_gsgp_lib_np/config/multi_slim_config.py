@@ -130,7 +130,7 @@ class GPParameters:
     tree_constants: list = field(default_factory=lambda: CONSTANTS)
     callbacks: list = None
     particularity_pressure: float = 20
-    elite_tree: GPTree = None
+    elite_tree: list = None
 
 # ---------------------------- MULTI SLIM SOLVE parameters ----------------------------
 multi_solve_params = {
