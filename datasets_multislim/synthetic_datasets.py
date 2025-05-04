@@ -4,6 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 def load_synthetic1(n=500, seed=0, noise=0):
     """
     Synthetic dataset with no pieces
+    POLYNOMIAL
     """
     def f1(x): 
         return 4*x[0]**4 - 3*x[0]**3 - 5*x[0]**2 + 4*x[0] + 3
@@ -21,6 +22,7 @@ def load_synthetic2(n=500, seed=0, noise=0):
     """
     Synthetic dataset with a single threshold-based piecewise function and a slight class imbalance
     The functions are simple
+    ABSOLUTE
     """
     def f2(x):
         if x[0] < 0.8:
@@ -44,6 +46,7 @@ def load_synthetic3(n=500, seed=0, noise=0):
     """
     Synthetic dataset with a single threshold-based piecewise function and a slight class imbalance
     The functions are harder
+    CURVED
     """
     def f3(x): 
         if x[0] < -1: 
@@ -51,7 +54,7 @@ def load_synthetic3(n=500, seed=0, noise=0):
         else: 
             return x[0]**4 - 3*x[0]**3 + 2*x[0]**2 - 4
     
-    np.random.seed(seed)
+    np.random.seed(seed)    
     x = np.random.uniform(-3, 3, size=(n, 2))
     x[:, 1] = x[:, 1] * 0.1
     print('Class 1 has', np.sum(x[:, 0] < -1), 'samples, and class 2 has', np.sum(x[:, 0] >= -1), 'samples')
@@ -67,33 +70,34 @@ def load_synthetic4(n=500, seed=0, noise=0):
     """
     Synthetic dataset with a triple threshold-based piecewise function representing tax owed based on income
     Since the values are large, the dataset has to be scaled 
+    TAX
     """
     def f4(x): 
-        if x[0] < 50000: 
+        if x[0] < 500: 
             return 0.1 * x[0]
-        elif x[0] < 100000:
+        elif x[0] < 1000:
             # return 5000 + 0.2 * (x[0] - 50000)
-            return 5000 + 0.3 * (x[0] - 50000)
-        elif x[0] < 150000:
+            return 50 + 0.3 * (x[0] - 500)
+        elif x[0] < 1500:
             # return 15000 + 0.3 * (x[0] - 100000)
-            return 20000 + 0.55 * (x[0] - 100000)
+            return 200 + 0.55 * (x[0] - 1000)
         else:
             # return 30000 + 0.5 * (x[0] - 150000)
-            return 47500 + 0.8 * (x[0] - 150000)
+            return 475 + 0.8 * (x[0] - 1500)
 
         
     np.random.seed(seed)
-    x = np.random.uniform(10000, 200000, size=(n, 2))
+    x = np.random.uniform(100, 2000, size=(n, 2))
     x[:, 1] = x[:, 1] * 0.1
-    print('Class distribution: ', np.sum(x[:, 0] < 50000), np.sum((x[:, 0] >= 50000) & (x[:, 0] < 100000)), np.sum((x[:, 0] >= 100000) & (x[:, 0] < 150000)), np.sum(x[:, 0] >= 150000))
+    print('Class distribution: ', np.sum(x[:, 0] < 500), np.sum((x[:, 0] >= 500) & (x[:, 0] < 1000)), np.sum((x[:, 0] >= 1000) & (x[:, 0] < 1500)), np.sum(x[:, 0] >= 1500))
     y_clean = np.array([f4(xi) for xi in x])
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
 
-    mask_1 = np.where(x[:, 0] < 50000, True, False)
-    mask_2 = np.logical_and(x[:, 0] >= 50000, x[:, 0] < 100000)
-    mask_3 = np.logical_and(x[:, 0] >= 100000, x[:, 0] < 150000)
-    mask_4 = np.where(x[:, 0] >= 150000, True, False)
+    mask_1 = np.where(x[:, 0] < 500, True, False)
+    mask_2 = np.logical_and(x[:, 0] >= 500, x[:, 0] < 1000)
+    mask_3 = np.logical_and(x[:, 0] >= 1000, x[:, 0] < 1500)
+    mask_4 = np.where(x[:, 0] >= 1500, True, False)
     mask = [mask_1, mask_2, mask_3, mask_4]
     
     # Scale X,y 
@@ -105,67 +109,37 @@ def load_synthetic4(n=500, seed=0, noise=0):
 
 def load_synthetic5(n=500, seed=0, noise=0): 
     """
-    Synthetic dataset with a triple threshold-based piecewise function 
-    """
-
-    def f5(x): 
-        if x[0] < 0.6: 
-            return 1.4 * x[0] + 0.1
-        elif x[0] < 1.2:
-            return 0.9
-        elif x[0] < 1.8:
-            return -0.8 * x[0] + 1.85
-        else:
-            return -2.1 * x[0] + 4.2
-    np.random.seed(seed)
-    x = np.random.uniform(0, 2.5, size=(n, 2))
-    x[:, 1] = x[:, 1] * 0.1
-
-    print('Class distribution: ', np.sum(x[:, 0] < 0.6), np.sum((x[:, 0] >= 0.6) & (x[:, 0] < 1.2)), np.sum((x[:, 0] >= 1.2) & (x[:, 0] < 1.8)), np.sum(x[:, 0] >= 1.8))
-    y_clean = np.array([f5(xi) for xi in x])
-    std_dev = np.std(y_clean)
-    y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
-    mask_1 = np.where(x[:, 0] < 0.6, True, False)
-
-    mask_2 = np.logical_and(x[:, 0] >= 0.6, x[:, 0] < 1.2)
-    mask_3 = np.logical_and(x[:, 0] >= 1.2, x[:, 0] < 1.8)
-    mask_4 = np.where(x[:, 0] >= 1.8, True, False)
-
-    mask = [mask_1, mask_2, mask_3, mask_4]
-    return x, y_noisy, mask, mask 
-
-
-def load_synthetic6(n=500, seed=0, noise=0): 
-    """
     Synthetic dataset with a double threshold-based piecewise function 
     Harder conditions that do not depend solely on x[0]
     Easy function
+    SEPARATED
     """
 
     def f6(x): 
-        if x[1] + 2*x[2] < 4: 
+        if 2*x[1]**2 - x[2] < 4: 
             return 0.8*x[0]
         else: 
             return -0.2*x[0] + 0.1*x[1]
         
     np.random.seed(seed)
     x = np.random.uniform(0, 3, size=(n, 3))
-    print('Class distribution: ', np.sum(x[:, 1] + 2*x[:, 2] < 4), np.sum(x[:, 1] + 2*x[:, 2] >= 4))
+    print('Class distribution: ', np.sum(2*x[:, 1]**2 - x[:, 2] < 4), np.sum(2*x[:, 1]**2 - x[:, 2] >= 4))
     y_clean = np.array([f6(xi) for xi in x])
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
-    mask_1 = np.where(x[:, 1] + 2*x[:, 2] < 4, True, False)
+    mask_1 = np.where(2*x[:, 1]**2 - x[:, 2] < 4, True, False)
     mask_2 = np.logical_not(mask_1)
     mask = [mask_1, mask_2]
     return x, y_noisy, mask, mask
 
 
-def load_synthetic7(n=500, seed=0, noise=0):
+def load_synthetic6(n=500, seed=0, noise=0):
     """
     Synthetic dataset simulating retail sales with different regimes on weekdays versus weekends.
     - x[:,0] represents the day of the week (0 to 6, with <5 considered weekdays, >=5 as weekend).
     - x[:,1] is the promotion intensity (0 to 1).
     The functions now use quadratic adjustments instead of sine and cosine.
+    SALES
     """
     np.random.seed(seed)
     # Simulate day-of-week as integers from 0 to 6.
@@ -175,8 +149,11 @@ def load_synthetic7(n=500, seed=0, noise=0):
     x = np.hstack([day, promo])
     
     def f8(x):
+        # High promotion intensity, doesn't really matter the day
+        if x[1] > 0.85: 
+            return 200 - 2 * (1.2*x[0] - 6)**2 + 10 * x[1]
         # x[0]: day, x[1]: promotion intensity
-        if x[0] < 5:  # Weekdays
+        if x[0] < 5:  # Weekdays            
             # Quadratic bump: (day-2.5)^2 gives a bump around the middle of the week.
             return 100 + 10 * x[0] + 20 * x[1] - 0.5 * (x[0] - 2.5)**2
         else:         # Weekends
@@ -187,17 +164,18 @@ def load_synthetic7(n=500, seed=0, noise=0):
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
 
-    print('Class distribution: ', np.sum(x[:, 0] < 5), np.sum(x[:, 0] >= 5))
+    print('Class distribution: ', np.sum(x[:, 1] > 0.85), np.sum((x[:, 0] < 5) & (x[:, 1] <= 0.85)), np.sum((x[:, 0] >= 5) & (x[:, 1] <= 0.85)))
     
     # Create masks for weekdays and weekends
-    mask_weekday = (x[:, 0] < 5)
-    mask_weekend = (x[:, 0] >= 5)
-    mask = [mask_weekday, mask_weekend]
+    mask_weekday = (x[:, 0] < 5) & (x[:, 1] <= 0.85)
+    mask_weekend = (x[:, 0] >= 5) & (x[:, 1] <= 0.85)
+    mask_high_promo = (x[:, 1] > 0.85)  # High promotion intensity
+    mask = np.array([mask_weekday, mask_weekend, mask_high_promo])
     
     return x, y_noisy, mask, mask
 
 
-def load_synthetic8(n=500, seed=0, noise=0):
+def load_synthetic7(n=500, seed=0, noise=0):
     """
     Synthetic dataset simulating housing prices based on geographic location.
     - x contains two features: normalized latitude and longitude.
@@ -205,6 +183,7 @@ def load_synthetic8(n=500, seed=0, noise=0):
       * Urban: distance < 0.3.
       * Suburban: distance >= 0.3.
     Adjustments now use quadratic terms instead of sine/cosine.
+    HOUSING
     """
     np.random.seed(seed)
     x = np.random.uniform(0, 1, size=(n, 2))
@@ -213,13 +192,13 @@ def load_synthetic8(n=500, seed=0, noise=0):
     def urban_price(x):
         # Price decays quadratically with distance from center.
         dist = np.linalg.norm(x - center)
-        return 500000 * (1 - 2 * dist + 1.5 * dist**2)
+        return 50 * (1 - 2 * dist + 1.5 * dist**2)
     
     def suburban_price(x):
         # Price with a different quadratic adjustment beyond the threshold.
         dist = np.linalg.norm(x - center)
         # Shift the polynomial so that dist = 0.3 is the reference.
-        return 300000 * (1 - (dist - 0.3)) + 50000 * (dist - 0.3)**2
+        return 30 * (1 - (dist - 0.3)) + 5 * (dist - 0.3)**2
     
     def f9(x):
         dist = np.linalg.norm(x - center)
@@ -243,7 +222,7 @@ def load_synthetic8(n=500, seed=0, noise=0):
     return x, y_noisy, mask, mask 
 
 
-def load_synthetic9(n=500, seed=0, noise=0):
+def load_synthetic8(n=500, seed=0, noise=0):
     """
     Synthetic dataset simulating an insurance risk score in a smooth, real-world fashion.
     
@@ -263,11 +242,12 @@ def load_synthetic9(n=500, seed=0, noise=0):
       
     Each regime has its own risk function (a different linear relationship) and the overall output
     is given by a smoothly weighted sum of these functions.
+    INSURANCE
     """
     np.random.seed(seed)
     
     # Generate features.
-    age = np.random.uniform(18, 70, n)
+    age = np.random.uniform(16, 70, n)
     experience = np.random.uniform(0, 50, n)
     driving_risk = np.random.uniform(0, 1, n)
     x = np.column_stack([age, experience, driving_risk])
@@ -281,10 +261,10 @@ def load_synthetic9(n=500, seed=0, noise=0):
     
     # Define regime-specific risk functions.
     # Here, coefficients are chosen for illustration so that each regime has a slightly different slope relative to the inputs.
-    f1 = 0.5 * age + 0.10 * experience + 5 * driving_risk      # Regime 1: Young drivers.
-    f2 = 0.6 * age + 0.05 * experience + 10 * driving_risk     # Regime 2: Transitioning to middle age.
-    f3 = 0.4 * age + 0.20 * experience + 15 * driving_risk     # Regime 3: Middle-aged drivers.
-    f4 = 0.7 * age + 0.15 * experience + 20 * driving_risk     # Regime 4: Older drivers.
+    f1 = -0.2 * age + 0.30 * experience + 25 * driving_risk      # Regime 1: Young drivers.
+    f2 = -0.1 * age + 0.20 * experience + 20 * driving_risk     # Regime 2: Transitioning to middle age.
+    f3 = 0.2 * age + 0.15 * experience + 15 * driving_risk     # Regime 3: Middle-aged drivers.
+    f4 = 0.7 * age + 0.05 * experience + 10 * driving_risk     # Regime 4: Older drivers.
     
     # The overall output is the smooth blend of the four regimes.
     y_clean = w1 * f1 + w2 * f2 + w3 * f3 + w4 * f4
@@ -304,69 +284,210 @@ def load_synthetic9(n=500, seed=0, noise=0):
     
     return x, y_noisy, mask, mask
 
-def load_synthetic10(n=500, seed=0, noise=0):
+
+def load_synthetic9(n=500, seed=0, noise=0):
     """
     Synthetic dataset simulating bug risk estimation for software modules.
-    
-    Features (all normalized to [0, 1]):
-      - x[:,0]: LOC (Lines of Code)
-      - x[:,1]: Complexity (Cyclomatic Complexity)
-      - x[:,2]: Churn (Recent code change rate)
-    
-    The risk score is computed using piecewise conditions that combine AND and OR:
-      Piece 1: If ((LOC > 0.7 AND Complexity > 0.7) OR (Churn > 0.8)), then:
-                risk = 5*LOC + 3*Complexity + 2*Churn + 10  (High risk)
-      Piece 2: Else if (LOC < 0.3 AND Churn < 0.5), then:
-                risk = 1*LOC + 2*Complexity + 1.5*Churn     (Low risk)
-      Piece 3: Else:
-                risk = 3*LOC + 2.5*Complexity + 2*Churn + 5   (Moderate risk)
-    
-    Noise can be added as a percentage of the standard deviation of the clean risk scores.
-    The function returns the input features, the (possibly noisy) risk score, and masks for each piece.
+
+    Features (normalized to [0,1]):
+      - x[:,0]: LOC
+      - x[:,1]: Complexity
+      - x[:,2]: Churn
+
+    Piecewise risk:
+      Piece 1: ((LOC > 0.5 AND Complexity > 0.7) OR (Churn > 0.8))
+      Piece 2: (LOC < 0.3 AND Churn < 0.5)
+      Piece 3: else
+    BUG
+    """
+    import numpy as np
+    np.random.seed(seed)
+
+    # generate features
+    x = np.random.uniform(0, 1, size=(n, 3))
+
+    # scoring function
+    def risk_score(xi):
+        loc, comp, churn = xi
+        if (loc > 0.5 and comp > 0.7) or (churn > 0.8):
+            return 5*loc + 3*comp + 2*churn + 1
+        elif loc < 0.3 and churn < 0.5:
+            return 1*loc + 2*comp + 1.5*churn
+        else:
+            return 3*loc + 2.5*comp + 2*churn + 5
+
+    # compute outputs
+    y_clean = np.array([risk_score(xi) for xi in x])
+    std = np.std(y_clean)
+    y_noisy = y_clean + np.random.normal(0, (noise/100)*std, size=n)
+
+    # define exclusive condition masks
+    c1 = (x[:,0] > 0.5) & (x[:,1] > 0.7)            # LOC>0.7 & Comp>0.7
+    c2 = (~c1) & (x[:,2] > 0.8)                     # Churn>0.8 but not c1
+    c3 = (~c1 & ~c2) & (x[:,0] < 0.3) & (x[:,2] < 0.5)  # LOC<0.3 & Churn<0.5, not c1/c2
+    c4 = ~(c1 | c2 | c3)                            # everything else
+
+    # segment masks follow the piece definitions
+    mask1 = c1 | c2      # piece 1
+    mask2 = c3           # piece 2
+    mask3 = c4           # piece 3
+
+    masks = [mask1, mask2, mask3]
+    condition_masks = [c1, c2, c3, c4]
+
+    print("Segment counts:", [m.sum() for m in masks])        # sums to 500
+    print("Condition counts:", [c.sum() for c in condition_masks])  # sums to 500
+
+    return x, y_noisy, masks, condition_masks
+
+
+def load_synthetic_10(n=600, seed=0, noise=0):
+    """
+    Synthetic stress-strain dataset for 3 materials: ABS plastic, Aluminum 6061-T6, Mild steel.
+    Balanced elastic/plastic per material → 6 masks.
+
+    - Features:
+        x[:,0]: strain ε (0 to 0.2)
+        x[:,1]: temperature T (°C, 20 to 500)
+        x[:,2]: strain rate ε̇ (s⁻¹, 0.001 to 10)
+        x[:,3]: material index (0=ABS,1=Al,2=Steel)
+    - Target:
+        stress σ (MPa)
+    Materials properties (at 20°C):
+      ABS: E≈2.35 GPa, σ_m≈44.8 MPa  
+      Al6061-T6: E≈68.9 GPa, σ_m≈276 MPa  
+      Mild steel: E≈210 GPa, σ_m≈350 MPa
+    Hardening coeff H₀, exponent n₀, and strain rate sensitivity m₀ chosen to reflect typical work-hardening.
     """
     np.random.seed(seed)
     
-    # Generate features uniformly in [0, 1] for all three attributes.
-    x = np.random.uniform(0, 1, size=(n, 3))
+    # 1) assign materials equally
+    mats = np.repeat(np.arange(3), n//3)
+    np.random.shuffle(mats)
     
-    def risk_score(x):
-        loc, comp, churn = x[0], x[1], x[2]
-        # Piece 1: High bug risk
-        if (loc > 0.7 and comp > 0.7) or (churn > 0.8):
-            return 5*loc + 3*comp + 2*churn + 1
-        # Piece 2: Low bug risk
-        elif loc < 0.3 and churn < 0.5:
-            return 1*loc + 2*comp + 1.5*churn
-        # Piece 3: Moderate bug risk
+    # 2) sample temp and rate
+    temp = np.random.uniform(20, 500, n)
+    rate = np.random.uniform(0.001, 10, n)
+    
+    # 3) base props per material
+    E0 = np.array([2.35e3, 68.9e3, 210e3])  # MPa
+    sigma_m = np.array([44.8, 276, 350])   # MPa
+    H0 = np.array([100, 1000, 1500])        # MPa
+    n0 = np.array([0.1, 0.2, 0.3])
+    m0 = np.array([0.02, 0.03, 0.04])       # strain rate sensitivity exponents
+    
+    # map to samples
+    E0_s = E0[mats]
+    sigma_m_s = sigma_m[mats]
+    H0_s = H0[mats]
+    n0_s = n0[mats]
+    m0_s = m0[mats]
+    
+    # temp dependence (linear degrade)
+    E = E0_s * (1 - 0.0003 * (temp - 20))
+    sigma_yield = sigma_m_s * (1 - 0.0002 * (temp - 20))
+    epsilon_yield = sigma_yield / E
+    H = H0_s * (1 - 0.0005 * (temp - 20))
+    n_exp = n0_s + 0.0001 * (temp - 20)
+    
+    # 4) sample strain for balanced regimes per material
+    strain = np.empty(n)
+    elastic = np.random.rand(n) < 0.5
+    # below yield
+    strain[elastic] = np.random.uniform(0, 0.9 * epsilon_yield[elastic])
+    # above yield
+    strain[~elastic] = np.random.uniform(1.1 * epsilon_yield[~elastic], 0.2)
+    
+    # assemble features
+    x = np.column_stack([strain, temp, rate, mats])
+    
+    # 5) compute stress
+    stress = np.empty(n)
+    # Elastic regime
+    stress[elastic] = E[elastic] * strain[elastic]
+    # Plastic regime with strain rate effect
+    delta = strain[~elastic] - epsilon_yield[~elastic]
+    strain_rate_ref = 0.001
+    strain_rate_factor = 1 + m0_s[~elastic] * np.log(rate[~elastic] / strain_rate_ref)
+    strain_rate_factor = np.maximum(strain_rate_factor, 1)  # ensure factor >= 1
+    stress[~elastic] = (
+        sigma_yield[~elastic]
+        + H[~elastic] * (delta ** n_exp[~elastic]) * strain_rate_factor
+    )
+    
+    # 6) add noise
+    std = np.std(stress)
+    y_noisy = stress + np.random.normal(0, (noise/100)*std, size=n)
+    
+    # 7) create 6 masks: for each material × regime
+    masks = []
+    for m in range(3):
+        masks.append((mats == m) & elastic)
+        masks.append((mats == m) & ~elastic)
+    
+    print("Mask counts (ABS-elastic, ABS-plastic, Al-elastic, Al-plastic, Steel-elastic, Steel-plastic):")
+    print([mask.sum() for mask in masks])
+    
+    return x, y_noisy, masks, masks
+
+
+def load_synthetic12(n=500, seed=0, noise=0):
+    """
+    Synthetic dataset simulating vehicle stopping distances under different road and slope conditions.
+    - Features:
+        x[:, 0] = speed (m/s)
+        x[:, 1] = road type (0 = dry, 1 = wet, 2 = snow)
+        x[:, 2] = slope angle (radians)
+        x[:, 3] = driver reaction time (seconds)
+    - Target:
+        Total stopping distance.
+    - 6 segments:
+        Determined by (road type) × (slope direction: uphill or downhill).
+    """
+    import numpy as np
+
+    np.random.seed(seed)
+    g = 9.81  # gravitational acceleration
+    x = np.empty((n, 4))
+    
+    # Feature ranges
+    x[:, 0] = np.random.uniform(10, 30, size=n)  # speed in m/s
+    x[:, 1] = np.random.choice([0, 1, 2], size=n)  # road type
+    x[:, 2] = np.random.uniform(-0.2, 0.2, size=n)  # slope angle in radians (~±11.5°)
+    x[:, 3] = np.random.uniform(0.5, 1.5, size=n)  # reaction time in seconds
+
+    mu_map = {0: 0.8, 1: 0.4, 2: 0.2}
+
+    def f9(xi):
+        v, r, theta, t_r = xi
+        mu = mu_map[int(r)]
+        reaction = v * t_r
+        if theta >= 0:
+            braking = v**2 / (2 * g * (mu + np.tan(theta)))
+            segment = int(r) * 2
         else:
-            return 3*loc + 2.5*comp + 2*churn + 5
+            braking = v**2 / (2 * g * (mu - abs(np.tan(theta))))
+            segment = int(r) * 2 + 1
+        return reaction + braking, segment
+
+    y_clean = []
+    segments = []
+    for xi in x:
+        y_val, seg = f9(xi)
+        y_clean.append(y_val)
+        segments.append(seg)
     
-    # Compute the clean risk score for each sample.
-    y_clean = np.array([risk_score(xi) for xi in x])
+    y_clean = np.array(y_clean)
+    segments = np.array(segments)
     
-    # Optionally add noise based on a percentage of the output standard deviation.
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
-    
-    # Create masks for each regime.
-    # Mask for Piece 1: High risk where ((LOC > 0.7 and Complexity > 0.7) OR (Churn > 0.8))
-    mask1 = np.logical_or(np.logical_and(x[:,0] > 0.7, x[:,1] > 0.7), (x[:,2] > 0.8))
-    
-    # Mask for Piece 2: Low risk where (LOC < 0.3 and Churn < 0.5)
-    mask2 = np.logical_and(x[:,0] < 0.3, x[:,2] < 0.5)
-    
-    # Mask for Piece 3: The remaining cases (moderate risk)
-    mask3 = ~(mask1 | mask2)
 
-    c1 = x[:, 0] > 0.7
-    c2 = x[:, 1] > 0.7
-    c3 = x[:, 2] > 0.8
-    c4 = x[:, 0] < 0.3
-    c5 = x[:, 2] < 0.5
+    # Normalize target
+    y_noisy = (y_noisy - np.min(y_noisy)) / (np.max(y_noisy) - np.min(y_noisy))
 
-    
-    mask = [mask1, mask2, mask3]
-    condition_masks = [c1, c2, c3, c4, c5]
-    print('Class distribution: ', np.sum(mask1), np.sum(mask2), np.sum(mask3))
-    
-    return x, y_noisy, mask, condition_masks 
+    # Create segment masks
+    mask = [(segments == i) for i in range(6)]
+
+    print('Segment distribution:', [np.sum(m) for m in mask])
+    return x, y_noisy, mask, mask
