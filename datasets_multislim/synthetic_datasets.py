@@ -491,3 +491,126 @@ def load_synthetic12(n=500, seed=0, noise=0):
 
     print('Segment distribution:', [np.sum(m) for m in mask])
     return x, y_noisy, mask, mask
+
+
+def load_synthetic_11(n=600, seed=0, noise=0):
+    """
+    Synthetic dataset for 8-bit signed addition with latent overflow label in X, with optional noise on the modulo sum.
+    
+    - Inputs:
+        n     : number of samples
+        seed  : random seed
+        noise : standard deviation of Gaussian noise added to sum_mod (in least significant bit units)
+    - Features (X):
+        X[:,0]: operand a (signed 8-bit: -128 to 127)
+        X[:,1]: operand b (signed 8-bit: -128 to 127)
+        X[:,2]: overflow flag (0=no overflow, 1=overflow)
+    - Target (y):
+        sum_mod_noisy = (a + b) mod 256, reinterpreted as signed 8-bit, plus Gaussian noise
+    """
+    np.random.seed(seed)
+    low, high = -128, 127
+    
+    # sample operands
+    a = np.random.randint(low, high+1, size=n)
+    b = np.random.randint(low, high+1, size=n)
+    
+    # compute true sum and modulo sum
+    true_sum = a + b
+    sum_mod_unsigned = np.mod(true_sum, 256)
+    sum_mod = ((sum_mod_unsigned + 128) % 256) - 128
+    
+    # overflow flag (latent in features)
+    overflow = ((true_sum < low) | (true_sum > high)).astype(int)
+    
+    # add Gaussian noise to sum_mod
+    if noise > 0:
+        # noise interpreted in same units as sum_mod (integer LSBs)
+        sum_mod = sum_mod.astype(float)
+        sum_mod += np.random.normal(0, noise, size=n)
+        # round back to integer and clip to signed 8-bit range
+        sum_mod = np.round(sum_mod).astype(int)
+        sum_mod = np.clip(sum_mod, low, high)
+    
+    # assemble feature matrix X and target y
+    X = np.column_stack([a, b, overflow])
+    y = sum_mod
+    return X, y
+
+def load_synthetic_12(n=600, seed=0, noise=0, balance=False, verbose=False):
+    """
+    Synthetic dataset mimicking one simplified SHA-256 step: a 4-input modular addition,
+    with optional balancing of overflow_count classes.
+
+    - Inputs (X):
+        X[:,0]: word w0 (unsigned 32-bit integer)
+        X[:,1]: word w1 (unsigned 32-bit integer)
+        X[:,2]: word w2 (unsigned 32-bit integer)
+        X[:,3]: word w3 (unsigned 32-bit integer)
+        X[:,4]: overflow_count (number of times the 32-bit sum wrapped modulo 2^32)
+    - Target (y):
+        sum_mod = (w0 + w1 + w2 + w3) mod 2^32 (decimal), with optional noise
+
+    - balance: if True, samples so that each overflow_count class (0,1,2,3,...) is approximately equally represented.
+    - verbose: if True, prints overflow count distribution
+    """
+    rng = np.random.default_rng(seed)
+    mod_base = 2**32
+
+    def sample_batch(k):
+        # sample k raw words, return X_words, sum_raw
+        Xw = rng.integers(0, mod_base, size=(k, 4), dtype=np.uint64)
+        sum_r = Xw.sum(axis=1)
+        return Xw, sum_r
+
+    if not balance:
+        # uniform sampling
+        X_words, sum_raw = sample_batch(n)
+    else:
+        target_classes = 4  # wraps 0,1,2,3
+        per_class = int(np.ceil(n / target_classes))
+        X_list, y_list = [], []
+        counts = {i: 0 for i in range(target_classes)}
+        # keep sampling until each class has per_class samples or pool large enough
+        while sum(counts.values()) < per_class * target_classes:
+            Xw, sum_r = sample_batch(per_class * target_classes)
+            wraps = (sum_r // mod_base).astype(int)
+            for i in range(target_classes):
+                mask = wraps == i
+                needed = per_class - counts[i]
+                if needed > 0:
+                    sel = np.where(mask)[0][:needed]
+                    for idx in sel:
+                        X_list.append(Xw[idx])
+                        y_list.append(sum_r[idx])
+                        counts[i] += 1
+            # break if enough
+        # combine and truncate to n
+        X_words = np.array(X_list[:n], dtype=np.uint64)
+        sum_raw = np.array(y_list[:n], dtype=np.uint64)
+
+    # compute overflow_count and modulo sum
+    overflow_count = (sum_raw // mod_base).astype(np.uint32)
+    sum_mod = (sum_raw % mod_base).astype(np.uint64)
+
+    # Divide sum_mod by 1e9 and the variables as well, so that we can see normal values 
+    sum_mod = sum_mod / 1e9
+    X_words = X_words / 1e9
+    
+    # add noise if requested
+    if noise > 0:
+        y = sum_mod.astype(float) + rng.normal(0, noise, size=n)
+        y = np.floor(y).astype(np.uint64) % mod_base
+    else:
+        y = sum_mod
+
+    # assemble X including overflow count
+    X = np.column_stack([X_words, overflow_count])
+
+    if verbose:
+        unique, counts = np.unique(overflow_count, return_counts=True)
+        print("Overflow count distribution:")
+        for u, c in zip(unique, counts):
+            print(f" wraps={u}: {c} samples")
+
+    return X, y
