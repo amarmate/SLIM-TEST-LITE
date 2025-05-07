@@ -28,9 +28,7 @@ import os
 import warnings
 from slim_gsgp_lib_np.algorithms.GP.gp import GP
 from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
-# from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutate_tree_subtree as mutator
 from slim_gsgp_lib_np.algorithms.GP.operators.mutators import mutator
-
 from slim_gsgp_lib_np.algorithms.GP.operators.crossover_operators import crossover_trees
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth
 from slim_gsgp_lib_np.config.gp_config import *

@@ -27,7 +27,7 @@ Mutator operator implementation.
 import random
 import numpy as np
 
-from slim_gsgp_lib_torch.algorithms.GP.representations.tree_utils import (create_grow_random_tree,
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import (create_grow_random_tree,
                                                                 random_subtree,
                                                                 substitute_subtree)
 
