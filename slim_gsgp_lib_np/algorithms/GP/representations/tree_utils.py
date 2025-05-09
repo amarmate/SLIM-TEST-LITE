@@ -109,26 +109,19 @@ def create_grow_random_tree(depth,
         The generated tree representation according to the specified parameters.
     """
     
-    # If depth is 1 or a terminal is selected and it's not the first call
     if (depth <= 1 or random.random() < p_t) and not first_call:
         if random.random() > p_c:
             return random.choice(list(TERMINALS.keys()))
         else:
             return random.choice(list(CONSTANTS.keys()))
-    
-    # If a function is selected
-    else:
-        node = random.choice(list(FUNCTIONS.keys()))
-        if FUNCTIONS[node]["arity"] == 2:
-            left_subtree = create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS,
-                                                   p_c, p_t, False)
-            right_subtree = create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS,
-                                                    p_c, p_t, False)
-            return (node, left_subtree, right_subtree)
-        else:
-            left_subtree = create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS,
-                                                   p_c, p_t, False)
-            return (node, left_subtree)
+
+    node = random.choice(list(FUNCTIONS.keys()))
+    arity = FUNCTIONS[node]["arity"]
+    children = [
+        create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_t, False)
+        for _ in range(arity)
+    ]
+    return (node, *children)    
 
 def create_full_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
     """
@@ -158,25 +151,19 @@ def create_full_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
     str
         The terminal or constant node selected, depending on depth and random probabilities.
     """
-    # if the maximum depth is 1, choose a terminal node
     if depth <= 1:
-        # choosing between a terminal or a constant to be the terminal node
         if random.random() > p_c:
-            node = random.choice(list(TERMINALS.keys()))
+            return random.choice(list(TERMINALS.keys()))
         else:
-            node = random.choice(list(CONSTANTS.keys()))
-    # if the depth isn't one, choose a random function
-    else:
-        node = np.random.choice(list(FUNCTIONS.keys()))
-        # building the tree based on the arity of the chosen function
-        if FUNCTIONS[node]["arity"] == 2:
-            left_subtree = create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
-            right_subtree = create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
-            node = (node, left_subtree, right_subtree)
-        else:
-            left_subtree = create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
-            node = (node, left_subtree)
-    return node
+            return random.choice(list(CONSTANTS.keys()))
+
+    node = random.choice(list(FUNCTIONS.keys()))
+    arity = FUNCTIONS[node]["arity"]
+    children = [
+        create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
+        for _ in range(arity)
+    ]
+    return (node, *children)
 
 def create_neutral_tree(operator, FUNCTIONS, CONSTANTS):
     """
@@ -542,13 +529,10 @@ def tree_depth(FUNCTIONS):
         if not isinstance(tree, tuple):
             return 1
         else:
-            if FUNCTIONS[tree[0]]["arity"] == 2:
-                left_depth = depth(tree[1])
-                right_depth = depth(tree[2])
-            elif FUNCTIONS[tree[0]]["arity"] == 1:
-                left_depth = depth(tree[1])
-                right_depth = 0
-            return 1 + max(left_depth, right_depth)
+            arity = FUNCTIONS[tree[0]]["arity"]
+            children = tree[1:1+arity]
+            child_depths = [depth(child) for child in children]
+            return 1 + max(child_depths)
 
     return depth
 
@@ -556,18 +540,21 @@ def tree_depth_and_nodes(FUNCTIONS):
     def depth_and_nodes(tree):
         if not isinstance(tree, tuple):
             return 1, 1
-        
-        if FUNCTIONS[tree[0]]["arity"] == 2:
-            left_depth, left_nodes = depth_and_nodes(tree[1])
-            right_depth, right_nodes = depth_and_nodes(tree[2])
-            depth = 1 + max(left_depth, right_depth)
-            nodes = 1 + left_nodes + right_nodes
-        elif FUNCTIONS[tree[0]]["arity"] == 1:
-            left_depth, left_nodes = depth_and_nodes(tree[1])
-            depth = 1 + left_depth
-            nodes = 1 + left_nodes
-        
-        return depth, nodes
+
+        func = tree[0]
+        arity = FUNCTIONS[func]["arity"]
+        args = tree[1:1+arity]
+
+        depths = []
+        total_nodes = 1  # count current node
+
+        for child in args:
+            child_depth, child_nodes = depth_and_nodes(child)
+            depths.append(child_depth)
+            total_nodes += child_nodes
+
+        depth = 1 + max(depths) if depths else 1
+        return depth, total_nodes
 
     return depth_and_nodes
 
@@ -592,44 +579,41 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
 
     Returns
     -------
-    float
-        Output of the evaluated tree representation.
+    np.ndarray
+        Output of the evaluated tree representation for all rows in X.
     """
-    if isinstance(repr_, tuple):  # If it's a function node
+    if isinstance(repr_, tuple):  # Function node
         function_name = repr_[0]
-        if FUNCTIONS[function_name]["arity"] == 2:
-            left_subtree, right_subtree = repr_[1], repr_[2]
-            left_result = _execute_tree(left_subtree, X, FUNCTIONS, TERMINALS,
-                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
-            right_result = _execute_tree(right_subtree, X, FUNCTIONS, TERMINALS,
-                                         CONSTANTS)  # equivalent to Tree(right_subtree).apply_tree(inputs) if no parallelization were used
-            output = FUNCTIONS[function_name]["function"](
-                left_result, right_result
-            )
-        else:
-            left_subtree = repr_[1]
-            left_result = _execute_tree(left_subtree, X, FUNCTIONS, TERMINALS,
-                                        CONSTANTS)  # equivalent to Tree(left_subtree).apply_tree(inputs) if no parallelization were used
-            output = FUNCTIONS[function_name]["function"](left_result)
+        arity = FUNCTIONS[function_name]["arity"]
+        children = repr_[1:1 + arity]
+
+        # Recursively evaluate all child nodes
+        child_results = [
+            _execute_tree(child, X, FUNCTIONS, TERMINALS, CONSTANTS)
+            for child in children
+        ]
+
+        # Apply the function to the evaluated children
+        output = FUNCTIONS[function_name]["function"](*child_results)
 
         return bound_value(output, -1e12, 1e12)
 
-    else:  # If it's a terminal node
+    else:  # Terminal or constant
         if repr_ in TERMINALS:
             return X[:, TERMINALS[repr_]]
         elif repr_ in CONSTANTS:
             return np.full((X.shape[0],), CONSTANTS[repr_](None))
-            # return CONSTANTS[repr_](None)
-
 
 def get_indices_with_levels(tree):
     """
     Returns a dictionary mapping each depth level to a list of index paths
     pointing to subtrees or terminal nodes at that level.
 
+    Supports nodes with arbitrary arity (e.g., 1, 2, 3...).
+
     Parameters
     ----------
-    tree : tuple
+    tree : tuple or terminal
         The root node of the tree.
 
     Returns
@@ -643,19 +627,32 @@ def get_indices_with_levels(tree):
         if not isinstance(sub_tree, tuple):
             indices_by_level[level].append(path)
         else:
-            if path != ():
+            if path != ():  # don't include the root twice
                 indices_by_level[level].append(path)
-            op, left, right = sub_tree
-            traverse(left, path + (1,), level + 1)
-            traverse(right, path + (2,), level + 1)
+            op, *args = sub_tree
+            for i, child in enumerate(args):
+                traverse(child, path + (i + 1,), level + 1)
 
     traverse(tree)
-    indices_by_level[0].append(())
+    indices_by_level[0].append(())  # root
 
     return dict(indices_by_level)
 
 def get_depth(tree):
+    """
+    Returns the depth of the tree. Terminal nodes have depth 1.
+
+    Parameters
+    ----------
+    tree : tuple or terminal
+        The root node of the tree.
+
+    Returns
+    -------
+    int
+        Maximum depth of the tree.
+    """
     if not isinstance(tree, tuple):
         return 1
-    _, left, right = tree
-    return 1 + max(get_depth(left), get_depth(right))
+    _, *args = tree
+    return 1 + max(get_depth(arg) for arg in args)

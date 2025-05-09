@@ -52,7 +52,23 @@ def protected_div(x1, x2):
         1.0
     )
 
+def protected_sqrt(x1):
+    """Implements the square root protected against negative values
 
+    Performs square root between x1. If x1 is (or has) negative(s), the
+    function returns the absolute value(s).
+
+    Parameters
+    ----------
+    x1 : torch.Tensor
+        The input tensor.
+
+    Returns
+    -------
+    torch.Tensor
+        Result of protected square root between x1.
+    """
+    return np.sqrt(np.abs(x1))
 
 def mean_(x1, x2):
     """
@@ -266,6 +282,7 @@ def get_best_max(population, n_elites):
     else:
         elite = population.population[np.argmax(population.fit)]
         return [elite], elite
+    
 
 def get_random_tree(
         max_depth,

@@ -114,7 +114,7 @@ class GP:
         curr_dataset,
         n_iter=20,
         elitism=True,
-        log=0,
+        log_level=0,
         verbose=0,
         test_elite=False,
         log_path=None,
@@ -155,7 +155,7 @@ class GP:
             self.elite.evaluate(ffunction, X=X_test, y=y_test, testing=True)
 
         # Logging initial generation.
-        self.log_generation(0, population, end - start, log, log_path, run_info) if log != 0 else None
+        self.log_generation(0, population, end - start, log_level, log_path, run_info) if log_level != 0 else None
 
         # Initialize the time tracker for mutation and crossover.
         self.time_dict = {'mutation': [], 'xo': []}
@@ -197,7 +197,7 @@ class GP:
                 self.elite.evaluate(ffunction, X=X_test, y=y_test, testing=True)
 
             # Logging the generation and verbose reporting.
-            self.log_generation(it, population, gen_end - gen_start, log, log_path, run_info) if log != 0 else None
+            self.log_generation(it, population, gen_end - gen_start, log_level, log_path, run_info) if log_level != 0 else None
             self.print_results(it, gen_start, gen_end) if verbose != 0 else None
 
             for callback in self.callbacks:
@@ -314,28 +314,26 @@ class GP:
         self.time_dict['mutation'].append(elapsed)
         return offs1
     
-    def log_generation(self, generation, population, elapsed_time, log, log_path, run_info):
+    def log_generation(self, generation, population, elapsed_time, log_level, log_path, run_info):
         """
         Log the results for the current generation including mutation and crossover timings.
         """
         # Prepare additional logging info based on the log level.
-        if log == 2:
+        if log_level == 2:
             add_info = [
                 self.elite.test_fitness,
                 self.elite.nodes_count,
                 float(niche_entropy([ind.repr_ for ind in population.population])),
                 np.std(population.fit),
-                log,
             ]
-        elif log == 3:
+        elif log_level == 3:
             add_info = [
                 self.elite.test_fitness,
                 self.elite.nodes_count,
                 " ".join([str(ind.nodes_count) for ind in population.population]),
                 " ".join([str(f) for f in population.fit]),
-                log,
             ]
-        elif log == 4:
+        elif log_level == 4:
             add_info = [
                 self.elite.test_fitness,
                 self.elite.nodes_count,
@@ -343,10 +341,9 @@ class GP:
                 np.std(population.fit),
                 " ".join([str(ind.nodes_count) for ind in population.population]),
                 " ".join([str(f) for f in population.fit]),
-                log,
             ]
         else:
-            add_info = [self.elite.test_fitness, self.elite.nodes_count, log]
+            add_info = [self.elite.test_fitness, self.elite.nodes_count]
 
         logger(
             log_path,

@@ -77,6 +77,7 @@ class Population:
         self.size = len(pop)
         self.nodes_count = sum(ind.nodes_count for ind in pop)
         self.fit = None
+        self.silhouette = None
 
     def calculate_semantics(self, inputs, testing=False):
         """
@@ -151,37 +152,6 @@ class Population:
         median_case = np.median(self.errors_case, axis=0)
         self.mad = np.median(np.abs(self.errors_case - median_case), axis=0)
 
-
-    # def evaluate(self, target, testing=False):
-    #     """
-    #     Evaluate the population using the errors per case with MSE
-
-    #     Parameters
-    #     ----------
-    #     ffunction : Callable
-    #         Fitness function to evaluate the individuals.
-    #     target : torch.Tensor        
-    #         Expected output (target) values.
-
-    #     Returns
-    #     -------
-    #     None
-    #     """
-    #     if testing and not hasattr(self, "test_semantics"):
-    #         raise ValueError("Testing semantics not calculated.")
-        
-    #     elif not testing and not hasattr(self, "train_semantics"):
-    #         raise ValueError("Training semantics not calculated.")
-
-    #     # Check if errors case is already calculated
-    #     sem = self.test_semantics if testing else self.train_semantics
-    #     errors = sem - np.stack([target] * sem.shape[0])
-    #     fitness = np.sqrt(np.mean(errors**2, axis=1))
-    #     self.fit = fitness
-    #     for i, individual in enumerate(self.population):
-    #         individual.fitness = fitness[i]
-
-
     def evaluate(self, target, testing=False):
         """
         Evaluate the population using the errors per case with MSE
@@ -217,7 +187,6 @@ class Population:
             self.fit = fitness
             for i, individual in enumerate(self.population):
                 individual.fitness = fitness[i]
-
             
     def __len__(self):
         """

@@ -31,7 +31,7 @@ def selector(problem='min',
              pool_size=2, 
              down_sampling=5,
              particularity_pressure=20,
-             epsilon=1e-6
+             epsilon=1e-6, 
              ):
     """
     Returns a selection function based on the specified problem and selection type.
@@ -61,6 +61,11 @@ def selector(problem='min',
     if problem == 'min':
         if type == 'tournament':
             return tournament_selection_min(pool_size)
+        elif type == 'double_tournament':
+            if pool_size <= 2:
+                print("Warning: pool_size should be greater than 2 for double tournament selection. Automatically setting it to 3.")
+                pool_size = 3
+            return double_tournament_min(pool_size)
         elif type == 'e_lexicase':
             return epsilon_lexicase_selection(mode='min', down_sampling=down_sampling)
         elif type == 'manual_e_lexicase':
@@ -195,6 +200,51 @@ def tournament_selection_max(pool_size):
         return pool[np.argmax([ind.fitness for ind in pool])]
 
     return ts
+
+
+def double_tournament_min(pool_size):
+    """
+    Returns a function that performs tournament selection to select an individual with the lowest error and 
+    size from a population.
+
+    Parameters
+    ----------
+    pool_size : int
+        Number of individuals participating in the tournament.
+
+    Returns
+    -------
+    Callable
+        A function ('ts') that elects the individual with the highest fitness from a randomly chosen pool.
+
+        Parameters
+        ----------
+        pop : Population
+            The population from which individuals are drawn.
+
+        Returns
+        -------
+        Individual
+            The individual with the lowest fitness in the pool.
+    Notes
+    -----
+    The returned function performs tournament selection by receiving a population and returning the best of {pool_size}
+    randomly selected individuals.
+    """
+    def ts(pop):
+        """
+        Double tournament selection: minimizes fitness (RMSE) first, then size.
+        """
+        pool = random.choices(pop.population, k=pool_size)
+
+        # Sort by (fitness, total_nodes)
+        # That means: primary objective is fitness, secondary is size
+        best = min(pool, key=lambda x: (x.fitness, x.total_nodes))
+
+        return best
+    
+    return ts 
+
 
 def tournament_selection_min_size(pool_size, pressure_size=1e-4):
     """

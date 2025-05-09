@@ -269,11 +269,6 @@ def mutate_tree_subtree(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c, **kwarg
     return inner_mut
 
 
-
-
-
-
-
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def mutate_tree_subtree_dc(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t):
@@ -355,19 +350,17 @@ def mutate_tree_point(TERMINALS, CONSTANTS, FUNCTIONS, p_c):
         index = random.choice(all_indices)
         subtree = get_subtree(tree1, list(index))
 
-        # Point mutation depends on what kind of node we hit
         if isinstance(subtree, tuple):
-            func, left, right = subtree
-            # Replace with a different function (same arity)
-            possible_funcs = [funcs for funcs, data in FUNCTIONS.items() if data['arity'] == FUNCTIONS[func]['arity']]  
+            func, *args = subtree
+            arity = len(args)
+            possible_funcs = [f for f, data in FUNCTIONS.items() if data['arity'] == arity and f != func]
             if not possible_funcs:
                 return tree1  # No replacement possible
             new_func = random.choice(possible_funcs)
-            new_subtree = (new_func, left, right)
-
+            new_subtree = (new_func, *args)
         else:
-            # Its a terminal or constant 
-            if random.random() < p_c:
+            # Terminal or constant
+            if random.random() < p_c and CONSTANTS:
                 new_subtree = random.choice(list(CONSTANTS.keys()))
             else:
                 new_subtree = random.choice(list(TERMINALS.keys()))

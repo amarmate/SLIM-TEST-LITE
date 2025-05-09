@@ -24,6 +24,7 @@ Tree class implementation for representing tree structures in genetic programmin
 """
 
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import _execute_tree, tree_depth_and_nodes
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.utils.metrics import silhouette_score_ensemble
 
 class Tree:
     """
@@ -91,6 +92,8 @@ class Tree:
         self.depth, self.nodes_count, self.total_nodes = tree_depth_and_nodes(collection, self.SPECIALISTS) 
         self.fitness, self.test_fitness = None, None
         self.train_semantics, self.test_semantics = None, None 
+        self.silhouette_score = None
+
 
     def apply_tree(self, inputs, testing, predict):
         """
@@ -159,7 +162,7 @@ class Tree:
         if testing:
             self.test_fitness = ffunction(y, preds)
         else:
-            self.fitness = ffunction(y, preds)        
+            self.fitness = ffunction(y, preds)      
 
     def predict(self, X):
         """

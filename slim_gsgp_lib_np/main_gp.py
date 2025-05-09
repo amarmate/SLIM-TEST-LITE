@@ -50,7 +50,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        max_depth: int | None = gp_solve_parameters["max_depth"],
        init_depth: int = gp_pi_init["init_depth"],
        log_path: str = None, seed: int = gp_parameters["seed"],
-       log_level: int = gp_solve_parameters["log"],
+       log_level: int = gp_solve_parameters["log_level"],
        verbose: int = gp_solve_parameters["verbose"],
        minimization: bool = True,
        fitness_function: str = gp_solve_parameters["ffunction"],
@@ -273,7 +273,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     #   *************** GP_SOLVE_PARAMETERS ***************
 
     gp_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name] if run_info is None else run_info
-    gp_solve_parameters["log"] = log_level
+    gp_solve_parameters["log_level"] = log_level
     gp_solve_parameters["verbose"] = verbose
     gp_solve_parameters["log_path"] = log_path
     gp_solve_parameters["elitism"] = elitism

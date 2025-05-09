@@ -13,7 +13,7 @@ import time
 from matplotlib import pyplot as plt
 
 # Limit threads  
-for NumPy and other multi-threaded libraries
+# for NumPy and other multi-threaded libraries
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"

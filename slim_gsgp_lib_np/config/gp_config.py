@@ -26,7 +26,7 @@ from slim_gsgp_lib_np.initializers.initializers import rhh, grow, full
 from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_min
 
 from slim_gsgp_lib_np.evaluators.fitness_functions import *
-from slim_gsgp_lib_np.utils.utils import protected_div
+from slim_gsgp_lib_np.utils.utils import protected_div, protected_sqrt
 import numpy as np
 
 # Define functions and constants
@@ -36,7 +36,9 @@ FUNCTIONS = {
     'add': {'function': np.add, 'arity': 2},
     'subtract': {'function': np.subtract, 'arity': 2},
     'multiply': {'function': np.multiply, 'arity': 2},
-    'divide': {'function': protected_div, 'arity': 2}
+    'divide': {'function': protected_div, 'arity': 2},
+    'sqrt' : {'function': protected_sqrt, 'arity': 1},
+    'cond' : {'function': lambda x, y, z: np.where(x > 0, y, z), 'arity': 3},
 }
 
 # CONSTANTS = {
@@ -59,7 +61,7 @@ settings_dict = {"p_test": 0.2}
 
 # GP solve parameters
 gp_solve_parameters = {
-    "log": 1,
+    "log_level": 1,
     "verbose": 1,
     "test_elite": True,
     "run_info": None,

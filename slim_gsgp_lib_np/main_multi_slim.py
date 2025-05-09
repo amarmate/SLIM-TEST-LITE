@@ -68,7 +68,7 @@ def multi_slim(
         tournament_size: int = 2, 
         seed: int = multi_params["seed"],
         verbose: int = multi_solve_params["verbose"],
-        log_level: int = multi_solve_params["log"],
+        log_level: int = multi_solve_params["log_level"],
         minimization: bool = True,
         log_path: str = None,
         selector: str = multi_params["selector"],
@@ -111,7 +111,22 @@ def multi_slim(
         Probability of mutation. Default is 0.1.
     depth_condition : int, optional
         Maximum depth condition for the trees. Default is 5.
-
+    prob_const : float, optional
+        Probability of constant selection. Default is None.
+    prob_terminal : float, optional
+        Probability of terminal selection. Default is None.
+    prob_specialist : float, optional
+        Probability of specialist selection. Default is None.
+    test_elite : bool, optional
+        Whether to test the elite individual. Default is False.
+    n_elites : int, optional
+        Number of elite individuals to keep. Default is 1.
+    fitness_function : str, optional
+        Fitness function to use. Default is "mse".
+    tournament_size : int, optional
+        Size of the tournament for selection. Default is 2.
+    seed : int, optional
+        Seed for random number generation.
 
     """
     
@@ -159,11 +174,6 @@ def multi_slim(
         multi_pi_init['TERMINALS'] = elite.collection[0].TERMINALS
         multi_pi_init['CONSTANTS'] = elite.collection[0].CONSTANTS
     
-    # Order population by fitness 
-    # len_pop = len(population.population)
-    # population.population = population.population[int(len_pop/20):int(len_pop-len_pop/5)]
-    # population.population = population.population[:int(len_pop-len_pop/4)]
-
     multi_pi_init['SPECIALISTS'] = {f'S_{i}' : ind for i, ind in enumerate(population.population)}
 
     multi_pi_init['p_c'] = prob_const
@@ -173,11 +183,7 @@ def multi_slim(
     multi_pi_init['depth_condition'] = depth_condition
     multi_pi_init['max_depth'] = max_depth
 
-    # ------------------- MULTI_SLIM PARAMETERS ----------------------
-    multi_params['selector'] = selection_algorithm(problem='min' if minimization else 'max', 
-                                                type=selector, 
-                                                pool_size=tournament_size)
-    
+    # ------------------- MULTI_SLIM PARAMETERS ----------------------    
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
     multi_params['mutator'] = mutator(FUNCTIONS=multi_pi_init['FUNCTIONS'],
                                       TERMINALS=multi_pi_init['TERMINALS'],
@@ -188,6 +194,7 @@ def multi_slim(
                                       p_c=multi_pi_init['p_c'],
                                       p_t=multi_pi_init['p_t'],
                                       decay_rate=multi_params['decay_rate'])
+    
     multi_params['xo_operator'] = homologus_xo(multi_pi_init['max_depth'])
     multi_params['initializer'] = initializer
     multi_params['p_mut'] = p_mut
@@ -203,12 +210,13 @@ def multi_slim(
                                                 epsilon=epsilon)
     
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
+
     multi_params['elite_tree'] = elite_tree
 
     # ---------------- MULTI_SLIM SOLVE PARAMETERS --------------------
     multi_solve_params['run_info'] = [ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name]
     multi_solve_params['ffunction'] = fitness_function_options[fitness_function]
-    multi_solve_params['log'] = log_level
+    multi_solve_params['log_level'] = log_level
     multi_solve_params['verbose'] = verbose
     multi_solve_params['n_iter'] = n_iter
     multi_solve_params['test_elite'] = test_elite

@@ -85,7 +85,7 @@ class MULTI_SLIM:
         Condition.CONSTANTS = pi_init["CONSTANTS"]
 
     def solve(self, X_train, X_test, y_train, y_test, curr_dataset,
-              run_info, ffunction, log, verbose, n_iter, test_elite,
+              run_info, ffunction, log_level, verbose, n_iter, test_elite,
               log_path, n_elites, elitism, timeout, **kwargs):
         """
         Run the MULTI_SLIM evolutionary algorithm.
@@ -156,7 +156,7 @@ class MULTI_SLIM:
         self.population = population
 
         # setting up log paths and run info
-        self.log_level = log
+        self.log_level = log_level
         self.log_path = log_path
         self.run_info = run_info
         self.dataset = curr_dataset
@@ -186,7 +186,7 @@ class MULTI_SLIM:
         start_time = time.time()
 
         # Main evolutionary loop.
-        for it in range(1, n_iter + 1, 1):
+        for it in range(1, n_iter + 1, 1):            
             self.lex_rounds = [] if self.selector.__name__ in ["els", "mels"] else None
             self.time_dict = {'mutation':[], 'xo':[]}
             self.iteration += 1
@@ -221,9 +221,6 @@ class MULTI_SLIM:
             if len(offs_pop) > population.size:
                 offs_pop = offs_pop[: population.size]
             
-            # print(offs_pop[:5])
-            # print(type(offs_pop[0]))
-
             # Evaluate the offspring population
             offs_pop = Population(offs_pop) 
             offs_pop.calculate_semantics(inputs=X_train, testing=False)

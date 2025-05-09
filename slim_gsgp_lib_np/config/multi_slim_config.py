@@ -111,15 +111,17 @@ class GPParameters:
         tree_constants (List): List of available constant nodes (derived from CONSTANTS, with some parsing).
         callbacks (List): List of callbacks to be executed during the algorithm.
         particularity_pressure (float): Pressure to apply to the particularity of the individuals (dalex).
+        elite_tree (List): List of elite trees to be used in the algorithm.
+        log_level (int): Log level for the algorithm.
     """
 
     pop_size: int = 100
-    n_iter: int = 1000
+    n_iter: int = 2000
     p_xo: float = 0.2
     elitism: bool = True
     n_elites: int = 1
-    selector: str = "e_lexicase"
-    down_sampling: float = 0.5
+    selector: str = "dalex"
+    down_sampling: float = 1
     epsilon: float = 1e-6,
     max_depth: Optional[int] = 15
     init_depth: int = 6
@@ -131,6 +133,7 @@ class GPParameters:
     callbacks: list = None
     particularity_pressure: float = 20
     elite_tree: list = None
+    log_level: int = 0
 
 # ---------------------------- MULTI SLIM SOLVE parameters ----------------------------
 multi_solve_params = {
@@ -139,7 +142,7 @@ multi_solve_params = {
     "n_iter": 1000,
     "elitism": True,
     "n_elites": 1,
-    "log": 0,
+    "log_level": 0,
     "verbose": 1,
     "test_elite": False,
     "timeout": None
