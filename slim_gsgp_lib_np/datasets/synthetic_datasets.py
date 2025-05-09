@@ -341,7 +341,7 @@ def load_synthetic9(n=500, seed=0, noise=0):
     return x, y_noisy, masks, condition_masks
 
 
-def load_synthetic_10(n=600, seed=0, noise=0):
+def load_synthetic10(n=600, seed=0, noise=0):
     """
     Synthetic stress-strain dataset for 3 materials: ABS plastic, Aluminum 6061-T6, Mild steel.
     Balanced elastic/plastic per material → 6 masks.
@@ -431,69 +431,7 @@ def load_synthetic_10(n=600, seed=0, noise=0):
     return x, y_noisy, masks, masks
 
 
-def load_synthetic12(n=500, seed=0, noise=0):
-    """
-    Synthetic dataset simulating vehicle stopping distances under different road and slope conditions.
-    - Features:
-        x[:, 0] = speed (m/s)
-        x[:, 1] = road type (0 = dry, 1 = wet, 2 = snow)
-        x[:, 2] = slope angle (radians)
-        x[:, 3] = driver reaction time (seconds)
-    - Target:
-        Total stopping distance.
-    - 6 segments:
-        Determined by (road type) × (slope direction: uphill or downhill).
-    """
-    import numpy as np
-
-    np.random.seed(seed)
-    g = 9.81  # gravitational acceleration
-    x = np.empty((n, 4))
-    
-    # Feature ranges
-    x[:, 0] = np.random.uniform(10, 30, size=n)  # speed in m/s
-    x[:, 1] = np.random.choice([0, 1, 2], size=n)  # road type
-    x[:, 2] = np.random.uniform(-0.2, 0.2, size=n)  # slope angle in radians (~±11.5°)
-    x[:, 3] = np.random.uniform(0.5, 1.5, size=n)  # reaction time in seconds
-
-    mu_map = {0: 0.8, 1: 0.4, 2: 0.2}
-
-    def f9(xi):
-        v, r, theta, t_r = xi
-        mu = mu_map[int(r)]
-        reaction = v * t_r
-        if theta >= 0:
-            braking = v**2 / (2 * g * (mu + np.tan(theta)))
-            segment = int(r) * 2
-        else:
-            braking = v**2 / (2 * g * (mu - abs(np.tan(theta))))
-            segment = int(r) * 2 + 1
-        return reaction + braking, segment
-
-    y_clean = []
-    segments = []
-    for xi in x:
-        y_val, seg = f9(xi)
-        y_clean.append(y_val)
-        segments.append(seg)
-    
-    y_clean = np.array(y_clean)
-    segments = np.array(segments)
-    
-    std_dev = np.std(y_clean)
-    y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
-
-    # Normalize target
-    y_noisy = (y_noisy - np.min(y_noisy)) / (np.max(y_noisy) - np.min(y_noisy))
-
-    # Create segment masks
-    mask = [(segments == i) for i in range(6)]
-
-    print('Segment distribution:', [np.sum(m) for m in mask])
-    return x, y_noisy, mask, mask
-
-
-def load_synthetic_11(n=600, seed=0, noise=0):
+def load_synthetic11(n=600, seed=0, noise=0):
     """
     Synthetic dataset for 8-bit signed addition with latent overflow label in X, with optional noise on the modulo sum.
     
@@ -537,7 +475,7 @@ def load_synthetic_11(n=600, seed=0, noise=0):
     y = sum_mod
     return X, y
 
-def load_synthetic_12(n=600, seed=0, noise=0, balance=False, verbose=False):
+def load_synthetic12(n=600, seed=0, noise=0, balance=False, verbose=False):
     """
     Synthetic dataset mimicking one simplified SHA-256 step: a 4-input modular addition,
     with optional balancing of overflow_count classes.

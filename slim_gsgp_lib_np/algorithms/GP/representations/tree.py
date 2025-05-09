@@ -68,6 +68,7 @@ class Tree:
 
         self.repr_ = repr_
         self.depth, self.nodes_count = tree_depth_and_nodes(Tree.FUNCTIONS)(repr_)
+        self.total_nodes = self.nodes_count 
         self.fitness = None
         self.test_fitness = None
         self.train_semantics, self.test_semantics = None, None

@@ -786,3 +786,46 @@ def load_bioav(X_y=True):
         )
     else:
         return df
+
+
+def load_bitcoin(X_y=True):
+    """Loads and returns the Bitcoin data set (regression)
+
+    The data set consists in predicting the weekly returns of Bitcoin from
+    october 2018 to may 2025.
+
+    Basic information:
+    - Number of data instances: 339;
+    - Number of input features: 15;
+
+    Parameters
+    ----------
+    X_y : bool, optional
+        Return data as two objects of type torch.Tensor, otherwise as a
+        pandas.DataFrame.
+
+    Returns
+    -------
+    X, y : np.ndarray, np.ndarray
+        The input data (X) and the target of the prediction (y). The
+        latter is extracted from the data set as the last column.
+
+    References
+    ----------
+    BTC data from : https://www.cryptodatadownload.com/data/
+    SP500 data from : https://www.nasdaq.com/market-activity/index/spx/historical
+    Stable coins data (scrapped) from: https://studio.glassnode.com/charts/supply.Current?a=USDC&category=Supply&resolution=24h&zoom=all
+    BTC search trends (“buy bitcoin”): https://trends.google.com/trends/explore?date=all&q=buy%20bitcoin&hl=en-GB
+    """
+
+    df = pd.read_csv(
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), "data", "bitcoin.csv")
+    )
+    if X_y:
+        return (
+            df.values[:, :-1].astype(float),
+            df.values[:, -1].astype(float),
+        )
+    else:
+        return df
+
