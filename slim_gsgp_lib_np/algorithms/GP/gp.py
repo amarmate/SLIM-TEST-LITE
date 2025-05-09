@@ -132,9 +132,19 @@ class GP:
         np.random.seed(self.seed)
         random.seed(self.seed)
 
-        start = time.time()
+        # in-memory evaluation logging
+        if log_level == "evaluate":
+            self.log = {
+                "generation": [],
+                "time": [],
+                "train_rmse": [],
+                "val_rmse": [],
+                "nodes_count": [],
+                "diversity_var": [],
+                "niche_entropy": []
+            }
 
-        # Initialize the population.
+        start = time.time()
         population = Population([Tree(tree) for tree in self.initializer(**self.pi_init)])
         
         if self.elite_tree:
@@ -155,7 +165,8 @@ class GP:
             self.elite.evaluate(ffunction, X=X_test, y=y_test, testing=True)
 
         # Logging initial generation.
-        self.log_generation(0, population, end - start, log_level, log_path, run_info) if log_level != 0 else None
+        if log_level:
+            self.log_generation(0, population, end - start, log_level, log_path, run_info)
 
         # Initialize the time tracker for mutation and crossover.
         self.time_dict = {'mutation': [], 'xo': []}
@@ -197,7 +208,9 @@ class GP:
                 self.elite.evaluate(ffunction, X=X_test, y=y_test, testing=True)
 
             # Logging the generation and verbose reporting.
-            self.log_generation(it, population, gen_end - gen_start, log_level, log_path, run_info) if log_level != 0 else None
+            if log_level:
+                self.log_generation(it, population, gen_end - gen_start, log_level, log_path, run_info) 
+
             self.print_results(it, gen_start, gen_end) if verbose != 0 else None
 
             for callback in self.callbacks:
@@ -258,11 +271,6 @@ class GP:
         p1 = self.selector(population)
         p2 = self.selector(population)
 
-        # SELF XO IS ALLOWED
-        # while p1 == p2:
-        #     p1 = self.selector(population)
-        #     p2 = self.selector(population)
-
         if self.selector.__name__ in ["els", "mels"]:
             p1, i1 = p1
             p2, i2 = p2
@@ -273,15 +281,6 @@ class GP:
             p1,
             p2,
         )
-
-        # # Ensure the offspring do not exceed the maximum allowed depth.
-        # if max_depth is not None:
-        #     while depth_calculator(offs1) > max_depth or depth_calculator(offs2) > max_depth:
-        #         offs1, offs2 = self.crossover(
-        #             p1,
-        #             p2,
-        #         )
-
         elapsed = time.time() - start
         self.time_dict['xo'].append(elapsed)
         return [offs1, offs2]
@@ -318,6 +317,26 @@ class GP:
         """
         Log the results for the current generation including mutation and crossover timings.
         """
+        if not log_path or log_level == 0:
+            return 
+        
+        # special in-memory evaluation log
+        if log_level == "evaluate":
+            train_rmse    = float(self.elite.fitness)
+            val_rmse      = float(self.elite.test_fitness)
+            nodes_count   = int(self.elite.nodes_count)
+            diversity_var = float(np.std(population.fit))
+            niche_ent     = float(niche_entropy([ind.repr_ for ind in population.population]))
+
+            self.log["generation"].append(generation)
+            self.log["time"].append(elapsed_time)
+            self.log["train_rmse"].append(train_rmse)
+            self.log["val_rmse"].append(val_rmse)
+            self.log["nodes_count"].append(nodes_count)
+            self.log["diversity_var"].append(diversity_var)
+            self.log["niche_entropy"].append(niche_ent)
+            return
+
         # Prepare additional logging info based on the log level.
         if log_level == 2:
             add_info = [

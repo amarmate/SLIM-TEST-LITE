@@ -472,7 +472,7 @@ def validate_inputs(*args, **kwargs):
         'prob_const': (float, int),
         'tree_functions': list,
         'tree_constants': list,
-        'log': int,
+        'log': (int, str), 
         'verbose': int,
         'minimization': bool,
         'test_elite': bool,
@@ -505,7 +505,7 @@ def validate_inputs(*args, **kwargs):
         if not all(isinstance(elem, (int, float)) and not isinstance(elem, bool) for elem in tree_constants):
             raise TypeError("tree_constants must be a list containing only integers and floats")
 
-    if 'log' in kwargs and not 0 <= kwargs['log'] <= 4:
+    if 'log' in kwargs and (not 0 <= kwargs['log'] <= 4 and not type(kwargs['log']) == str):
         raise ValueError("log must be between 0 and 4")
 
     if 'verbose' in kwargs and not 0 <= kwargs['verbose'] <= 1:
