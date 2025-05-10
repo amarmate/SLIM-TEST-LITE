@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
-def load_synthetic1(n=500, seed=0, noise=0):
+def load_synthetic1(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with no pieces
     POLYNOMIAL
@@ -18,7 +18,7 @@ def load_synthetic1(n=500, seed=0, noise=0):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic2(n=500, seed=0, noise=0):
+def load_synthetic2(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with a single threshold-based piecewise function and a slight class imbalance
     The functions are simple
@@ -33,7 +33,7 @@ def load_synthetic2(n=500, seed=0, noise=0):
     np.random.seed(seed)
     x = np.random.uniform(-3, 3, size=(n, 2))
     x[:, 1] = x[:, 1] * 0.1
-    print('Class 1 has', np.sum(x[:, 0] < 0.8), 'samples, and class 2 has', np.sum(x[:, 0] >= 0.8), 'samples') 
+    print('Class 1 has', np.sum(x[:, 0] < 0.8), 'samples, and class 2 has', np.sum(x[:, 0] >= 0.8), 'samples') if verbose else None
     y_clean = np.array([f2(xi) for xi in x])
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
@@ -42,7 +42,7 @@ def load_synthetic2(n=500, seed=0, noise=0):
     return x, y_noisy, mask, mask
 
     
-def load_synthetic3(n=500, seed=0, noise=0):
+def load_synthetic3(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with a single threshold-based piecewise function and a slight class imbalance
     The functions are harder
@@ -57,7 +57,7 @@ def load_synthetic3(n=500, seed=0, noise=0):
     np.random.seed(seed)    
     x = np.random.uniform(-3, 3, size=(n, 2))
     x[:, 1] = x[:, 1] * 0.1
-    print('Class 1 has', np.sum(x[:, 0] < -1), 'samples, and class 2 has', np.sum(x[:, 0] >= -1), 'samples')
+    print('Class 1 has', np.sum(x[:, 0] < -1), 'samples, and class 2 has', np.sum(x[:, 0] >= -1), 'samples') if verbose else None
     y_clean = np.array([f3(xi) for xi in x])
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
@@ -66,7 +66,7 @@ def load_synthetic3(n=500, seed=0, noise=0):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic4(n=500, seed=0, noise=0):
+def load_synthetic4(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with a triple threshold-based piecewise function representing tax owed based on income
     Since the values are large, the dataset has to be scaled 
@@ -89,7 +89,7 @@ def load_synthetic4(n=500, seed=0, noise=0):
     np.random.seed(seed)
     x = np.random.uniform(100, 2000, size=(n, 2))
     x[:, 1] = x[:, 1] * 0.1
-    print('Class distribution: ', np.sum(x[:, 0] < 500), np.sum((x[:, 0] >= 500) & (x[:, 0] < 1000)), np.sum((x[:, 0] >= 1000) & (x[:, 0] < 1500)), np.sum(x[:, 0] >= 1500))
+    print('Class distribution: ', np.sum(x[:, 0] < 500), np.sum((x[:, 0] >= 500) & (x[:, 0] < 1000)), np.sum((x[:, 0] >= 1000) & (x[:, 0] < 1500)), np.sum(x[:, 0] >= 1500)) if verbose else None
     y_clean = np.array([f4(xi) for xi in x])
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
@@ -107,7 +107,7 @@ def load_synthetic4(n=500, seed=0, noise=0):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic5(n=500, seed=0, noise=0): 
+def load_synthetic5(n=500, seed=0, noise=0, verbose=False): 
     """
     Synthetic dataset with a double threshold-based piecewise function 
     Harder conditions that do not depend solely on x[0]
@@ -123,7 +123,7 @@ def load_synthetic5(n=500, seed=0, noise=0):
         
     np.random.seed(seed)
     x = np.random.uniform(0, 3, size=(n, 3))
-    print('Class distribution: ', np.sum(2*x[:, 1]**2 - x[:, 2] < 4), np.sum(2*x[:, 1]**2 - x[:, 2] >= 4))
+    print('Class distribution: ', np.sum(2*x[:, 1]**2 - x[:, 2] < 4), np.sum(2*x[:, 1]**2 - x[:, 2] >= 4)) if verbose else None
     y_clean = np.array([f6(xi) for xi in x])
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
@@ -133,7 +133,7 @@ def load_synthetic5(n=500, seed=0, noise=0):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic6(n=500, seed=0, noise=0):
+def load_synthetic6(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating retail sales with different regimes on weekdays versus weekends.
     - x[:,0] represents the day of the week (0 to 6, with <5 considered weekdays, >=5 as weekend).
@@ -164,7 +164,7 @@ def load_synthetic6(n=500, seed=0, noise=0):
     std_dev = np.std(y_clean)
     y_noisy = y_clean + np.random.normal(0, (noise / 100) * std_dev, size=n)
 
-    print('Class distribution: ', np.sum(x[:, 1] > 0.85), np.sum((x[:, 0] < 5) & (x[:, 1] <= 0.85)), np.sum((x[:, 0] >= 5) & (x[:, 1] <= 0.85)))
+    print('Class distribution: ', np.sum(x[:, 1] > 0.85), np.sum((x[:, 0] < 5) & (x[:, 1] <= 0.85)), np.sum((x[:, 0] >= 5) & (x[:, 1] <= 0.85))) if verbose else None
     
     # Create masks for weekdays and weekends
     mask_weekday = (x[:, 0] < 5) & (x[:, 1] <= 0.85)
@@ -175,7 +175,7 @@ def load_synthetic6(n=500, seed=0, noise=0):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic7(n=500, seed=0, noise=0):
+def load_synthetic7(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating housing prices based on geographic location.
     - x contains two features: normalized latitude and longitude.
@@ -215,14 +215,14 @@ def load_synthetic7(n=500, seed=0, noise=0):
     mask_suburban = np.logical_not(mask_urban)
     mask = [mask_urban, mask_suburban]
 
-    print('Class distribution: ', np.sum(mask_urban), np.sum(mask_suburban))
+    print('Class distribution: ', np.sum(mask_urban), np.sum(mask_suburban)) if verbose else None
 
     # Scale the y values to be between 0 and 1 for better interpretability.
     y_noisy = (y_noisy - np.min(y_noisy)) / (np.max(y_noisy) - np.min(y_noisy))    
     return x, y_noisy, mask, mask 
 
 
-def load_synthetic8(n=500, seed=0, noise=0):
+def load_synthetic8(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating an insurance risk score in a smooth, real-world fashion.
     
@@ -280,12 +280,12 @@ def load_synthetic8(n=500, seed=0, noise=0):
     mask4 = age >= 55
     mask = [mask1, mask2, mask3, mask4]
 
-    print('Class distribution: ', np.sum(mask1), np.sum(mask2), np.sum(mask3), np.sum(mask4))
+    print('Class distribution: ', np.sum(mask1), np.sum(mask2), np.sum(mask3), np.sum(mask4)) if verbose else None
     
     return x, y_noisy, mask, mask
 
 
-def load_synthetic9(n=500, seed=0, noise=0):
+def load_synthetic9(n=500, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating bug risk estimation for software modules.
 
@@ -335,13 +335,13 @@ def load_synthetic9(n=500, seed=0, noise=0):
     masks = [mask1, mask2, mask3]
     condition_masks = [c1, c2, c3, c4]
 
-    print("Segment counts:", [m.sum() for m in masks])        # sums to 500
-    print("Condition counts:", [c.sum() for c in condition_masks])  # sums to 500
+    print("Segment counts:", [m.sum() for m in masks]) if verbose else None              # sums to 500 
+    print("Condition counts:", [c.sum() for c in condition_masks]) if verbose else None  # sums to 500
 
     return x, y_noisy, masks, condition_masks
 
 
-def load_synthetic10(n=600, seed=0, noise=0):
+def load_synthetic10(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic stress-strain dataset for 3 materials: ABS plastic, Aluminum 6061-T6, Mild steel.
     Balanced elastic/plastic per material → 6 masks.
@@ -425,13 +425,13 @@ def load_synthetic10(n=600, seed=0, noise=0):
         masks.append((mats == m) & elastic)
         masks.append((mats == m) & ~elastic)
     
-    print("Mask counts (ABS-elastic, ABS-plastic, Al-elastic, Al-plastic, Steel-elastic, Steel-plastic):")
-    print([mask.sum() for mask in masks])
+    print("Mask counts (ABS-elastic, ABS-plastic, Al-elastic, Al-plastic, Steel-elastic, Steel-plastic):") if verbose else None 
+    print([mask.sum() for mask in masks]) if verbose else None 
     
     return x, y_noisy, masks, masks
 
 
-def load_synthetic11(n=600, seed=0, noise=0):
+def load_synthetic11(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset for 8-bit signed addition with latent overflow label in X, with optional noise on the modulo sum.
     
@@ -473,7 +473,16 @@ def load_synthetic11(n=600, seed=0, noise=0):
     # assemble feature matrix X and target y
     X = np.column_stack([a, b, overflow])
     y = sum_mod
-    return X, y
+
+    # masks 
+    mask_no_overflow = overflow == 0
+    mask_overflow = overflow == 1
+    masks = [mask_no_overflow, mask_overflow]
+
+    print("Mask counts (no overflow, overflow):") if verbose else None
+    print([mask.sum() for mask in masks]) if verbose else None
+
+    return X, y, masks, masks
 
 def load_synthetic12(n=600, seed=0, noise=0, balance=False, verbose=False):
     """
@@ -551,4 +560,7 @@ def load_synthetic12(n=600, seed=0, noise=0, balance=False, verbose=False):
         for u, c in zip(unique, counts):
             print(f" wraps={u}: {c} samples")
 
-    return X, y
+    # masks 
+    masks = [overflow_count == i for i in np.unique(overflow_count)]
+
+    return X, y, masks, masks 

@@ -141,7 +141,6 @@ class GP:
                 "val_rmse": [],
                 "nodes_count": [],
                 "diversity_var": [],
-                "niche_entropy": []
             }
 
         start = time.time()
@@ -326,15 +325,13 @@ class GP:
             val_rmse      = float(self.elite.test_fitness)
             nodes_count   = int(self.elite.nodes_count)
             diversity_var = float(np.std(population.fit))
-            niche_ent     = float(niche_entropy([ind.repr_ for ind in population.population]))
 
             self.log["generation"].append(generation)
-            self.log["time"].append(elapsed_time)
+            self.log["time"].append(elapsed_time + self.log["time"][-1] if self.log["time"] else elapsed_time)
             self.log["train_rmse"].append(train_rmse)
             self.log["val_rmse"].append(val_rmse)
             self.log["nodes_count"].append(nodes_count)
             self.log["diversity_var"].append(diversity_var)
-            self.log["niche_entropy"].append(niche_ent)
             return
 
         # Prepare additional logging info based on the log level.

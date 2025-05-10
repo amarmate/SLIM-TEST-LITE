@@ -104,7 +104,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     seed : int, optional
         Seed for the randomness
     log_level : int, optional
-        Level of detail to utilize in logging.
+        Level of detail to utilize in logging. If set to 'evaluate', the algorithm will return the log together with the elite.
     verbose : int, optional
        Level of detail to include in console output.
     minimization : bool, optional
@@ -195,6 +195,10 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     assert initializer.lower() in initializer_options.keys(), \
         "initializer must be " + f"{', '.join(valid_initializers[:-1])} or {valid_initializers[-1]}" \
             if len(valid_initializers) > 1 else valid_initializers[0]
+    
+    if log_level == 'evaluate' and not test_elite:
+        warnings.warn("If log_level is set to 'evaluate', test_elite must be set to True. Setting log_level to 0")
+        log_level = 0
 
     # ================================
     #       Parameter Definition
@@ -308,6 +312,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     )
 
     if full_return: 
+        if log_level == 'evaluate':
+            return optimizer.elite, optimizer.population, optimizer.log
         return optimizer.elite, optimizer.population
     return optimizer.elite
 
