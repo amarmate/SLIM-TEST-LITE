@@ -165,7 +165,7 @@ def test_algo(params, data_split, name, split_id, bcv_rmse):
         res = gp(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, test_elite=True, dataset_name=name,
                     pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=SELECTOR, seed=SEED+test_n,
                     full_return=True, n_jobs=1, verbose=False, log_level='evaluate', **params,
-                    tree_functions=FUNCTIONS,
+                    tree_functions=FUNCTIONS, it_tolerance=np.inf, 
         )
         elapsed = time.time() - talg
         elite, population, log = res
