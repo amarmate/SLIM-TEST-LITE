@@ -4,3 +4,5 @@
 /images
 /mlruns
 /test_results
+/experiment_results
+/.venv 

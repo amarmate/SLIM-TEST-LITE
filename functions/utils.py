@@ -7,6 +7,7 @@ import psutil
 import sympy as sp
 import matplotlib.pyplot as plt
 import mlflow
+import re
 
 def pf_rmse_comp(points):
     pareto = []
@@ -408,7 +409,7 @@ def register_mlflow_charts(name, log_results, pfs, prefix='GP', suffix=None):
     log_rmsegen(df_gen, name, filename=f'{prefix}_rmse_gen_val_{suffix}.png', plot_train=False, plot_val=True) 
 
 
-def log_latex_as_image(latex_str, name, split_id):
+def log_latex_as_image(latex_str, name, split_id, prefix='GP', suffix=None):
     """
     Renders a LaTeX string to an image and logs it to MLflow.
     
@@ -416,12 +417,14 @@ def log_latex_as_image(latex_str, name, split_id):
         latex_str (str): The LaTeX representation of the expression
         filename (str): File name to log in MLflow
     """
+    latex_clean = re.sub(r"\\begin\{.*?\}", "", latex_str)
+    latex_clean = re.sub(r"\\end\{.*?\}", "", latex_clean).strip()
     fig, ax = plt.subplots()
-    ax.text(0.5, 0.5, f"${latex_str}$", fontsize=20, ha='center', va='center')
+    ax.text(0.5, 0.5, f"${latex_clean}$", fontsize=20, ha='center', va='center')
     ax.axis('off')
     fig.tight_layout()
 
-    path = os.path.join('images', name, f'latex_{split_id}.png')
+    path = os.path.join('images', name, f'{prefix}_{split_id}_{suffix}.png')
     os.makedirs(os.path.dirname(path), exist_ok=True)
     plt.savefig(path, bbox_inches='tight')
     mlflow.log_artifact(path)

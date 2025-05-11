@@ -210,8 +210,7 @@ def test_algo(params, data_split, name, split_id, bcv_rmse):
     save_test_results(name, split_id, main_test, prefix=PREFIX_SAVE, suffix=SUFFIX_SAVE)
 
     best_example = main_test.loc[main_test['rmse_test'].idxmin()]['latex_repr']
-    log_latex_as_image(best_example, name, split_id)
-    
+    log_latex_as_image(best_example, name, split_id, prefix=PREFIX_SAVE, suffix=SUFFIX_SAVE)
 
     pf = pf_rmse_comp_time(all_fold_pf)
     mlflow.set_tag("testing_step", 'complete')

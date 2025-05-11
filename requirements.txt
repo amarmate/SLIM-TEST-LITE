@@ -12,3 +12,4 @@ tqdm
 pickle
 matplotlib
 scikit-optimize
+mlflow
