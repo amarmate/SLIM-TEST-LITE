@@ -32,7 +32,7 @@ SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'
 EXPERIMENT_NAME = 'GP_Experiment'
 FUNCTIONS = ['add', 'multiply', 'divide', 'sqrt']
-STOP_THRESHOLD = 500
+STOP_THRESHOLD = 400
 
 np.random.seed(SEED)
 
