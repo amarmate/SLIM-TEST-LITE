@@ -88,6 +88,7 @@ gp_pi_init = {
     'CONSTANTS': CONSTANTS,
     "p_c": 0.2,
     "p_t": 0.7,
+    "p_cond" : 0, 
     "init_depth": 6
 }
 

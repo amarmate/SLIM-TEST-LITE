@@ -54,6 +54,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        n_jobs: int = gp_solve_parameters["n_jobs"],
        prob_const: float = gp_pi_init["p_c"],
        prob_terminal: float = gp_pi_init["p_t"],
+       prob_cond: float = gp_pi_init["p_cond"],
        tree_functions: list = list(FUNCTIONS.keys()),
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
@@ -117,6 +118,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         The probability of a constant being chosen rather than a terminal in trees creation (default: 0.2).
     prob_terminal : float, optional
         The probability of a terminal being chosen rather than a function in trees creation (default: 0.7).
+    prob_cond : float, optional
+        The probability of a conditional function being chosen rather than a function in trees creation (default: 0.0).
     tree_functions : list, optional
         List of allowed functions that can appear in the trees. Check documentation for the available functions.
     tree_constants : list, optional
@@ -198,6 +201,10 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         warnings.warn("If log_level is set to 'evaluate', test_elite must be set to True. Setting log_level to 0")
         log_level = 0
 
+    if 'cond' in tree_functions and prob_cond > 0: 
+        warnings.warn("p_cond can't be larger than 0 if 'cond' not in FUNCTIONS. Setting p_cond to 0")
+        prob_cond = 0
+
     # ================================
     #       Parameter Definition
     # ================================
@@ -231,6 +238,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
 
     gp_pi_init["p_c"] = prob_const
     gp_pi_init["p_t"] = prob_terminal
+    gp_pi_init["p_cond"] = prob_cond
     gp_pi_init["init_pop_size"] = pop_size # TODO: why init pop_size != than rest?
     gp_pi_init["init_depth"] = init_depth
 
@@ -245,6 +253,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         max_depth=max_depth,
         p_c=gp_pi_init['p_c'],
         p_t=gp_pi_init['p_t'],
+        p_cond=gp_pi_init['p_cond'],
     )
 
     gp_parameters["crossover"] = crossover_trees(FUNCTIONS=FUNCTIONS, max_depth=max_depth)

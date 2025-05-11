@@ -292,6 +292,7 @@ def get_random_tree(
         inputs=None,
         p_c=0.3,
         p_t=0.5,
+        p_cond=0,
         logistic=True,
 ):
     """
@@ -313,6 +314,8 @@ def get_random_tree(
         Probability of choosing a constant.
     p_t : float, default=0.5
         Probability of choosing a terminal.
+    p_cond : float, default=0
+        Probability of using the conditional operator.
     grow_probability : float, default=1
         Probability of using the grow method.
     logistic : bool, default=True
@@ -324,7 +327,7 @@ def get_random_tree(
         The generated random tree.
     """
     tree_structure = create_grow_random_tree(
-        max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c, p_t=p_t
+        max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c, p_t=p_t, p_cond=p_cond
     )
 
     tree = Tree(

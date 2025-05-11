@@ -76,6 +76,7 @@ def create_grow_random_tree(depth,
                             CONSTANTS, 
                             p_c=0.3,
                             p_t=0.5, 
+                            p_cond=0, 
                             first_call=True):
     """
     Generates a random tree representation using the Grow method with a maximum specified depth.
@@ -100,6 +101,8 @@ def create_grow_random_tree(depth,
         Probability of choosing a constant node. Default is 0.3.
     p_t : float, optional
         Probability of choosing a terminal node. Default is 0.5.
+    p_cond : float, optional
+        Probability of choosing a conditional node. Default is 0.
     first_call : bool, optional
         Variable that controls whether the function is being called for the first time. Default is True.
 
@@ -115,57 +118,75 @@ def create_grow_random_tree(depth,
         else:
             return random.choice(list(CONSTANTS.keys()))
 
-    node = random.choice(list(FUNCTIONS.keys()))
-    arity = FUNCTIONS[node]["arity"]
-    children = [
-        create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_t, False)
-        for _ in range(arity)
-    ]
+    if p_cond > 0 and random.random() < p_cond:
+        node = 'cond'
+        predicate = create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_t, 0, False)
+        then_else = [create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_t, p_cond, False) for _ in range(2)]
+        children = [predicate] + then_else
+
+    else: 
+        node = random.choice([f for f in FUNCTIONS if f != 'cond'])
+        arity = FUNCTIONS[node]["arity"]
+        children = [create_grow_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_t, 0, False)
+                    for _ in range(arity)]
+        
     return (node, *children)    
 
-def create_full_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
-    """
-    Generates a full random tree representation with a specified depth.
 
-    Utilizes recursion to call itself on progressively smaller depths to form the whole tree, until the leaf nodes.
+def create_full_random_tree(depth,
+                            FUNCTIONS,
+                            TERMINALS,
+                            CONSTANTS,
+                            p_c=0.3,
+                            p_cond=0.0):
+    """
+    Full (complete) tree generator with controlled conditional usage.
 
     Parameters
     ----------
     depth : int
-        Maximum depth of the tree to be created.
+        Maximum depth of the tree.
     FUNCTIONS : dict
-        Dictionary of functions allowed in the tree.
+        Map name -> {"arity": int, ...}
     TERMINALS : dict
-        Dictionary of terminal symbols allowed in the tree.
+        Map name -> ...
     CONSTANTS : dict
-        Dictionary of constant values allowed in the tree.
-    p_c : float, optional
-        Probability of choosing a constant node. Default is 0.3.
-    list_form : bool, optional
-        Variable that controls whether the tree is returned in list form. Default is False.
+        Map name -> ...
+    p_c : float
+        Leaf constant vs terminal probability.
+    p_cond : float
+        Probability of inserting a 'cond' node at any internal node.
+        Once a non-'cond' node is picked, p_cond becomes 0 below it.
 
     Returns
     -------
-    tuple
-        The generated tree representation according to the specified parameters.
-    str
-        The terminal or constant node selected, depending on depth and random probabilities.
+    tuple or str
+        A tree represented as nested tuples, or a terminal/constant name.
     """
-    if depth <= 1:
-        if random.random() > p_c:
-            return random.choice(list(TERMINALS.keys()))
-        else:
-            return random.choice(list(CONSTANTS.keys()))
 
-    node = random.choice(list(FUNCTIONS.keys()))
-    arity = FUNCTIONS[node]["arity"]
-    children = [
-        create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
-        for _ in range(arity)
-    ]
+    if depth <= 1:
+        return (random.choice(list(TERMINALS.keys()))
+                if random.random() > p_c
+                else random.choice(list(CONSTANTS.keys())))
+
+    # Decide whether to insert a conditional
+    if p_cond > 0 and 'cond' in FUNCTIONS and random.random() < p_cond:
+        node = 'cond'
+        predicate = create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, 0)
+        then_else = [create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_cond) for _ in range(2)]
+        children = [predicate] + then_else
+
+    else:
+        non_cond_funcs = [f for f in FUNCTIONS if f != 'cond']
+        node = random.choice(non_cond_funcs)
+        arity = FUNCTIONS[node]["arity"]
+        children = [create_full_random_tree(depth - 1, FUNCTIONS, TERMINALS, CONSTANTS, p_c, p_cond=0)
+                for _ in range(arity)]
+
     return (node, *children)
 
-def create_neutral_tree(operator, FUNCTIONS, CONSTANTS):
+
+def create_neutral_tree(operator, CONSTANTS, **kwargs):
     """
     Generates a tree with semantics all 0 if operator is 'sum' or 1 if operator is 'product'.
     
@@ -173,8 +194,6 @@ def create_neutral_tree(operator, FUNCTIONS, CONSTANTS):
     ----------
     operator : str
         The operator to be used in the tree.    
-    FUNCTIONS : dict
-        Dictionary of functions allowed in the tree.
     CONSTANTS : dict
         Dictionary of constant values allowed in the tree.
 
