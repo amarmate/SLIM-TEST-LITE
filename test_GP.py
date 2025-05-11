@@ -16,27 +16,28 @@ from skopt import gp_minimize
 from skopt.space import Integer, Real
 
 # ------------------------------------------------   SETTINGS   --------------------------------------------------------------
-N_SPLITS = 2
-N_CV = 2
-N_SEARCHES_HYPER = 10
-N_RANDOM_STARTS = 8
+N_SPLITS = 4
+N_CV = 4
+N_SEARCHES_HYPER = 20
+N_RANDOM_STARTS = 10
 NOISE_SKOPT = 1e-3
 N_TESTS = 10
 P_TEST = 0.2 
 SEED = 20
-POP_SIZE = 20
-N_GENERATIONS = 100
+POP_SIZE = 100
+N_GENERATIONS = 2000
 SELECTOR = 'dalex'
 N_TIME_BINS = 300
-SUFFIX_SAVE = ''
+SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'
 EXPERIMENT_NAME = 'GP_Experiment'
+FUNCTIONS = ['add', 'multiply', 'divide', 'sqrt']
 
 np.random.seed(SEED)
 
 SPACE_PARAMETERS = [
         Integer(2, 4, name='init_depth'),
-        Integer(4, 8, name='max_depth'),                   
+        Integer(4, 9, name='max_depth'),                   
         Real(0.6, 0.9, name='p_xo'),                                          
         Real(0.1, 0.25, name='prob_const'),                                       
         Real(0.6, 0.9, name='prob_terminal'),                                      
@@ -87,7 +88,7 @@ def tuning(data_split, name, split_id):
                         max_depth=int(md), init_depth=int(id), p_xo=px, prob_const=pc, 
                         prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
                         full_return=True, n_jobs=1, verbose=False, log_level=0,
-                        tree_functions=['add', 'multiply', 'divide', 'sqrt'], 
+                        tree_functions=FUNCTIONS, 
             )
             elite, population = res
             rmses.append(rmse(elite.predict(X_val), y_val))
@@ -163,7 +164,7 @@ def test_algo(params, data_split, name, split_id, bcv_rmse):
         res = gp(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, test_elite=True, dataset_name=name,
                     pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=SELECTOR, seed=SEED+test_n,
                     full_return=True, n_jobs=1, verbose=False, log_level='evaluate', **params,
-                    tree_functions=['add', 'multiply', 'divide', 'sqrt'], 
+                    tree_functions=FUNCTIONS,
         )
         elapsed = time.time() - talg
         elite, population, log = res
