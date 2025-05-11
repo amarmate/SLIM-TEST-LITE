@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
-def load_synthetic1(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic1(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with no pieces
     POLYNOMIAL
@@ -18,7 +18,7 @@ def load_synthetic1(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic2(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic2(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with a single threshold-based piecewise function and a slight class imbalance
     The functions are simple
@@ -42,7 +42,7 @@ def load_synthetic2(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
     
-def load_synthetic3(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic3(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with a single threshold-based piecewise function and a slight class imbalance
     The functions are harder
@@ -66,7 +66,7 @@ def load_synthetic3(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic4(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic4(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset with a triple threshold-based piecewise function representing tax owed based on income
     Since the values are large, the dataset has to be scaled 
@@ -107,7 +107,7 @@ def load_synthetic4(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic5(n=500, seed=0, noise=0, verbose=False): 
+def load_synthetic5(n=600, seed=0, noise=0, verbose=False): 
     """
     Synthetic dataset with a double threshold-based piecewise function 
     Harder conditions that do not depend solely on x[0]
@@ -133,7 +133,7 @@ def load_synthetic5(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic6(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic6(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating retail sales with different regimes on weekdays versus weekends.
     - x[:,0] represents the day of the week (0 to 6, with <5 considered weekdays, >=5 as weekend).
@@ -175,7 +175,7 @@ def load_synthetic6(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic7(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic7(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating housing prices based on geographic location.
     - x contains two features: normalized latitude and longitude.
@@ -222,7 +222,7 @@ def load_synthetic7(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask 
 
 
-def load_synthetic8(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic8(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating an insurance risk score in a smooth, real-world fashion.
     
@@ -285,7 +285,7 @@ def load_synthetic8(n=500, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic9(n=500, seed=0, noise=0, verbose=False):
+def load_synthetic9(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating bug risk estimation for software modules.
 

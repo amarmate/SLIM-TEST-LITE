@@ -500,8 +500,6 @@ def mutator(FUNCTIONS, TERMINALS, CONSTANTS,
 
     def mutation(tree, num_of_nodes):
         r = random.random()
-        # if r < 0.3:
-        #     return subtree_mut_original(tree, num_of_nodes)
         if r < 0.45:
             return subtree_mut(tree)
         elif r < 0.65:

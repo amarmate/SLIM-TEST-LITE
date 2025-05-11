@@ -21,17 +21,17 @@ N_CV = 4
 N_SEARCHES_HYPER = 20
 N_RANDOM_STARTS = 10
 NOISE_SKOPT = 1e-3
-N_TESTS = 15
+N_TESTS = 10
 P_TEST = 0.2 
 SEED = 20
 POP_SIZE = 100
-N_GENERATIONS = 3000
+N_GENERATIONS = 2000
 SELECTOR = 'dalex'
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
-PREFIX_SAVE = 'GP'
-EXPERIMENT_NAME = 'GP_Experiment'
-FUNCTIONS = ['add', 'multiply', 'divide', 'sqrt']
+PREFIX_SAVE = 'COND'
+EXPERIMENT_NAME = 'COND_Experiment'
+FUNCTIONS = ['add', 'multiply', 'divide', 'sqrt', 'cond']
 
 np.random.seed(SEED)
 

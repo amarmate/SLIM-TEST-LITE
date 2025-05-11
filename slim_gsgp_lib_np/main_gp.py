@@ -36,9 +36,6 @@ from slim_gsgp_lib_np.utils.logger import log_settings
 from slim_gsgp_lib_np.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
 import numpy as np 
 
-
-# todo: would not be better to first log the settings and then perform the algorithm?
-
 def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_test: np.ndarray = None,
        dataset_name: str = None,
        pop_size: int = gp_parameters["pop_size"],

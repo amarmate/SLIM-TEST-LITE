@@ -10,7 +10,7 @@ tqdm
 matplotlib
 scikit-optimize
 mlflow
-
+sympy
 
 
 # slim-gsgp
