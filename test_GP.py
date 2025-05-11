@@ -18,7 +18,7 @@ from skopt.space import Integer, Real
 # ------------------------------------------------   SETTINGS   --------------------------------------------------------------
 N_SPLITS = 4
 N_CV = 4
-N_SEARCHES_HYPER = 20
+N_SEARCHES_HYPER = 25
 N_RANDOM_STARTS = 10
 NOISE_SKOPT = 1e-3
 N_TESTS = 15
@@ -32,6 +32,7 @@ SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'
 EXPERIMENT_NAME = 'GP_Experiment'
 FUNCTIONS = ['add', 'multiply', 'divide', 'sqrt']
+STOP_THRESHOLD = 500
 
 np.random.seed(SEED)
 
@@ -88,7 +89,7 @@ def tuning(data_split, name, split_id):
                         max_depth=int(md), init_depth=int(id), p_xo=px, prob_const=pc, 
                         prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
                         full_return=True, n_jobs=1, verbose=False, log_level=0,
-                        tree_functions=FUNCTIONS, 
+                        tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD, 
             )
             elite, population = res
             rmses.append(rmse(elite.predict(X_val), y_val))

@@ -65,6 +65,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        callbacks: list = None,
        full_return: bool = False,
        elite_tree: list = None,
+       it_tolerance: int = 500, 
        ):
 
     """
@@ -284,6 +285,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     gp_solve_parameters["ffunction"] = fitness_function_options[fitness_function]
     gp_solve_parameters["n_jobs"] = n_jobs
     gp_solve_parameters["test_elite"] = test_elite
+    gp_solve_parameters['it_tolerance'] = it_tolerance
 
     # ================================
     #       Running the Algorithm

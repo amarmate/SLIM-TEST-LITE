@@ -123,7 +123,8 @@ class GP:
         ffunction=None,
         n_elites=1,
         depth_calculator=None,
-        n_jobs=1
+        n_jobs=1,
+        it_tolerance=500, 
     ):
         """
         Execute the Genetic Programming algorithm.
@@ -179,7 +180,9 @@ class GP:
             callback.on_train_start(self)
 
         # ------------------------- EVOLUTIONARY PROCESS -------------------------
+        count_tolerance, best_fitness = 0, self.elite.fitness
         for it in range(1, n_iter + 1):
+            count_tolerance += 1
             self.lex_rounds = [] if self.selector.__name__ in ["els", "mels"] else None
 
             # Reset the timing dictionary for the new generation.
@@ -214,6 +217,13 @@ class GP:
 
             for callback in self.callbacks:
                 callback.on_generation_end(self, it, gen_start, gen_end)
+            
+            if self.elite.fitness < best_fitness:
+                best_fitness = self.elite.fitness
+                count_tolerance = 0     
+
+            if count_tolerance >= it_tolerance:
+                break           
         
         for callback in self.callbacks:
             callback.on_train_end(self)
