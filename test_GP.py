@@ -25,13 +25,13 @@ N_TESTS = 15
 P_TEST = 0.2 
 SEED = 20
 POP_SIZE = 100
-N_GENERATIONS = 3000
+N_GENERATIONS = 2500
 SELECTOR = 'dalex'
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'
 EXPERIMENT_NAME = 'GP_Experiment'
-FUNCTIONS = ['add', 'multiply', 'divide', 'sqrt']
+FUNCTIONS = ['add', 'multiply', 'divide', 'subtract']
 STOP_THRESHOLD = 400
 
 np.random.seed(SEED)

@@ -83,51 +83,84 @@ def multi_slim(
         
 ):
     """
-    Main function to execute the MULTI_SLIM GSGP algorithm on specified datasets.
+    Executes the MULTI_SLIM Genetic Programming algorithm for piecewise symbolic regression 
+    with condition-based specialists.
 
     Parameters
     ----------
     X_train : np.ndarray
-        Training data features.
+        Training feature data.
     y_train : np.ndarray
-        Training data labels.
+        Training target values.
     X_test : np.ndarray, optional
-        Test data features. Default is None.
+        Test feature data. Default is None.
     y_test : np.ndarray, optional
-        Test data labels. Default is None.
+        Test target values. Default is None.
     dataset_name : str, optional
-        Name of the dataset. Default is None.
+        Optional name for the dataset, used in logging or result tracking.
     params_gp : dict, optional
-        Parameters for the GP algorithm. Default is None.   
-    gp_version : str, optional  
-        Version of the GP algorithm to use. Default is "SLIM+SIG2". 
+        Dictionary of custom parameters to configure the GP algorithm.
+    gp_version : str, optional
+        GP variant to use (e.g., "SLIM", "SLIM+SIG", "SLIM+SIG2"). Default is "SLIM+SIG2".
     population : Population, optional
-        Predefined population for the algorithm. Default is None.
+        Predefined initial population. If None, a new population is initialized.
     pop_size : int, optional
-        Size of the population. Default is 100.
+        Size of the population. Default is taken from `multi_pi_init["pop_size"]`.
     n_iter : int, optional
-        Number of iterations for the algorithm. Default is 100.
+        Number of generations to run the evolution. Default from `multi_solve_params["n_iter"]`.
     p_mut : float, optional
-        Probability of mutation. Default is 0.1.
+        Probability of mutation. Default from `multi_params["p_mut"]`.
     depth_condition : int, optional
-        Maximum depth condition for the trees. Default is 5.
+        Maximum depth for predicates in conditional trees.
+    max_depth : int, optional
+        Maximum allowed depth of any tree (entire individual).
     prob_const : float, optional
-        Probability of constant selection. Default is None.
+        Probability of choosing a constant when growing terminals.
     prob_terminal : float, optional
-        Probability of terminal selection. Default is None.
+        Probability of choosing a terminal variable (vs. function).
     prob_specialist : float, optional
-        Probability of specialist selection. Default is None.
+        Probability that a node represents a specialist (i.e., conditional form).
     test_elite : bool, optional
-        Whether to test the elite individual. Default is False.
+        If True, the best individual will be evaluated on the test set.
     n_elites : int, optional
-        Number of elite individuals to keep. Default is 1.
+        Number of elite individuals preserved across generations.
     fitness_function : str, optional
-        Fitness function to use. Default is "mse".
+        Fitness function to optimize (e.g., "mse", "rmse").
     tournament_size : int, optional
-        Size of the tournament for selection. Default is 2.
+        Number of individuals in tournament selection. Default is 2.
     seed : int, optional
-        Seed for random number generation.
+        Random seed for reproducibility.
+    verbose : int, optional
+        Verbosity level (0: silent, 1: minimal, 2: detailed).
+    log_level : int, optional
+        Logging granularity level for tracking and callbacks.
+    minimization : bool, optional
+        If True, fitness is minimized (e.g., for MSE). If False, it's maximized.
+    log_path : str, optional
+        File path to save logs or outputs. Default is None.
+    selector : str, optional
+        Type of selection strategy (e.g., "tournament", "e_lexicase", "dalex", etc.).
+        Default is "tournament".
+    down_sampling : float, optional
+        Fraction of data sampled per individual in lexicase-based selectors.
+    particularity_pressure : float, optional
+        Controls weight sampling in DALex selection.
+    epsilon : float, optional
+        Epsilon tolerance for epsilon-lexicase selection.
+    decay_rate : float, optional
+        Decay applied to mutation strength or error weights, depending on implementation.
+    callbacks : list, optional
+        List of callback objects to monitor or interfere with the optimization process.
+    timeout : int, optional
+        Maximum time allowed (in seconds) for the optimization to run.
+    full_return : bool, optional
+        If True, return all internal state (e.g., full population, logs); otherwise only final solution.
+    elite_tree : Tree, optional
+        Predefined tree to start as the elite individual. Default is None.
 
+    Returns
+    -------
+    Best individual or (best individual, multi-slim population, specialists population) if `full_return` is True.
     """
     
     # Validate the inputs given  TODO 

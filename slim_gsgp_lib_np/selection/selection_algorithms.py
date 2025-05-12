@@ -58,49 +58,39 @@ def selector(problem='min',
         A selection function that selects an individual from a population based on the specified problem and selection type.
     """
 
-    if problem == 'min':
-        if type == 'tournament':
-            return tournament_selection_min(pool_size)
-        elif type == 'double_tournament':
-            if pool_size <= 2:
-                print("Warning: pool_size should be greater than 2 for double tournament selection. Automatically setting it to 3.")
-                pool_size = 3
-            return double_tournament_min(pool_size)
-        elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(mode='min', down_sampling=down_sampling)
-        elif type == 'manual_e_lexicase':
-            return manual_epsilon_lexicase_selection(mode='min', down_sampling=down_sampling, epsilon=epsilon)
-        elif type == 'lexicase':
-            return lexicase_selection(mode='min', down_sampling=down_sampling)
-        elif type == 'dalex':
-            return dalex_selection(mode='min', down_sampling=down_sampling, particularity_pressure=particularity_pressure)
-        elif type == 'rank_based':
-            return rank_based(mode='min', pool_size=pool_size)
-        elif type == 'roulette':
-            return roulette_wheel_selection
-        elif type == 'tournament_size':
-            return tournament_selection_min_size(pool_size, pressure_size=0.5)
-        else:
-            raise ValueError(f"Invalid selection type: {type}")
-    elif problem == 'max':
-        if type == 'tournament':
-            return tournament_selection_max(pool_size)
-        elif type == 'e_lexicase':
-            return epsilon_lexicase_selection(mode='max', down_sampling=down_sampling)
-        elif type == 'manual_e_lexicase':
-            return manual_epsilon_lexicase_selection(mode='max', down_sampling=down_sampling, epsilon=epsilon)
-        elif type == 'lexicase':
-            return lexicase_selection(mode='max', down_sampling=down_sampling)
-        elif type == 'dalex':
-            return dalex_selection(mode='max', down_sampling=down_sampling, particularity_pressure=particularity_pressure)
-        elif type == 'rank_based':
-            return rank_based(mode='max', pool_size=pool_size)
-        elif type == 'roulette':
-            return roulette_wheel_selection
-        else:
-            raise ValueError(f"Invalid selection type: {type}")
-    else:
+    if problem not in ('min', 'max'):
         raise ValueError(f"Invalid problem type: {problem}")
+    mode = problem
+
+    if type == 'double_tournament' and pool_size <= 2:
+        print("Warning: pool_size must be >2 for double tournament. Setting to 3.")
+        pool_size = 3
+
+    MODED = {
+        'tournament':        lambda: tournament_selection_min(pool_size) if mode=='min'
+                                    else tournament_selection_max(pool_size),
+        'double_tournament': lambda: double_tournament_min(pool_size) if mode=='min'
+                                    else None, # No max version of double tournament
+        'e_lexicase':        lambda: epsilon_lexicase_selection(mode=mode, down_sampling=down_sampling),
+        'manual_e_lexicase': lambda: manual_epsilon_lexicase_selection(mode=mode, down_sampling=down_sampling, epsilon=epsilon),
+        'lexicase':          lambda: lexicase_selection(mode=mode, down_sampling=down_sampling),
+        'dalex':             lambda: dalex_selection(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure),
+        'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
+        'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size),
+    }
+
+    SIMPLE = {
+        'roulette':          lambda: roulette_wheel_selection,
+        'tournament_size':   lambda: tournament_selection_min_size(pool_size, pressure_size=0.5)
+                                if mode=='min'
+                                else None # No max version of tournament_size
+    }
+
+    FACTORIES = {**MODED, **SIMPLE}
+    if type not in FACTORIES:
+        raise ValueError(f"Invalid selection type: {type}")
+
+    return FACTORIES[type]()
 
 
 def tournament_selection_min(pool_size):
@@ -680,6 +670,69 @@ def dalex_selection(mode='min', down_sampling=0.5, particularity_pressure=20):
             best_index = np.argmin(F)
         elif mode == 'max':
             best_index = np.argmax(F)
+        else:
+            raise ValueError("Invalid mode. Use 'min' or 'max'.")
+        
+        # Return the selected individual and the number of cases used (n_cases)
+        return pop.population[best_index]
+
+    return ds
+
+
+def dalex_selection_size(mode='min', 
+                         down_sampling=0.5, 
+                         particularity_pressure=20,
+                         tournament_size=2):
+    """
+    Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
+    to select an individual based on a weighted aggregation of test-case errors and then on a size tournament.
+
+    Parameters
+    ----------
+    mode : str, optional
+        'min' for minimization problems, 'max' for maximization problems. Defaults to 'min'.
+    down_sampling : float, optional
+        Proportion of test cases to sample. Defaults to 0.5.
+    particularity_pressure : float, optional
+        Standard deviation for the normal distribution used to sample importance scores.
+        Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
+    tournament_size : int, optional
+        Number of individuals participating in the size tournament. Defaults to 2.
+
+    Returns
+    -------
+    Callable
+        A function that takes a population object and returns a tuple (selected individual, n_cases used).
+    """
+
+    def ds(pop):
+        # Get the error matrix (assumed shape: (n_individuals, n_total_cases))
+        errors = pop.errors_case 
+        num_total_cases = errors.shape[1]
+
+        if down_sampling == 1:
+            n_cases = num_total_cases
+            subset_errors = errors
+
+        else: 
+            n_cases = int(num_total_cases * down_sampling)
+            case_order = random.sample(range(num_total_cases), n_cases)
+            subset_errors = errors[:, case_order]
+        
+        # Sample importance scores from N(0, particularity_pressure)
+        I = np.random.normal(0, particularity_pressure, size=n_cases)
+        exp_I = np.exp(I - np.max(I))
+        weights = exp_I / np.sum(exp_I)
+        F = np.dot(subset_errors, weights)
+
+        if mode == 'min':
+            sorted = np.argsort(F)
+            best_index = sorted[0:tournament_size]
+            best_index = min(best_index, key=lambda idx: pop.population[idx].total_nodes)
+        elif mode == 'max':
+            sorted = np.argsort(F)[::-1]
+            best_index = sorted[0:tournament_size]
+            best_index = max(best_index, key=lambda idx: pop.population[idx].total_nodes)
         else:
             raise ValueError("Invalid mode. Use 'min' or 'max'.")
         

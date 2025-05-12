@@ -55,6 +55,8 @@ FUNCTIONS = {
 constants = [round(i*0.05, 2) for i in range(2, 21)] + [round(-i*0.05, 2) for i in range(2, 21)]
 CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in constants}
 
+functions = ['add', 'subtract', 'multiply', 'divide', 'sqrt']
+
 
 # Set parameters
 settings_dict = {"p_test": 0.2}

@@ -55,7 +55,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        prob_const: float = gp_pi_init["p_c"],
        prob_terminal: float = gp_pi_init["p_t"],
        prob_cond: float = gp_pi_init["p_cond"],
-       tree_functions: list = list(FUNCTIONS.keys()),
+       tree_functions: list = functions,
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
        down_sampling: float = 1, 
@@ -92,6 +92,9 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         The probability of crossover in the genetic programming algorithm. Must be a number between 0 and 1 (default is 0.8).
     elitism : bool, optional
         Indicate the presence or absence of elitism.
+    selector : str, optional
+        The selection algorithm to use. Options include "tournament", "lexicase", "e_lexicase", 
+        "manual_e_lexicase", "dalex", "dalex_size", "rank_based", "double_tournament"
     n_elites : int, optional
         The number of elites.
     max_depth : int, optional
