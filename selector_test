@@ -72,10 +72,7 @@ def collect_logs_experiment(loader, dataset_name, *, n_iter, pop_size, selector,
         delayed(_single_run)(X, y, mask, n_iter, pop_size, selector, pp, dataset_name, seed)
         for seed in seeds
     )
-    return Parallel(n_jobs=n_jobs)(
-        tasks, total=runs,
-        desc=f"{dataset_name}:{selector} it={n_iter} pop={pop_size} pp={pp}"
-    )
+    return Parallel(n_jobs=n_jobs)(tasks)
 
 def aggregate_logs(logs): 
     aggregated = {
