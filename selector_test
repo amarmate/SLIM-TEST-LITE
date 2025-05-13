@@ -123,7 +123,6 @@ if __name__ == "__main__":
     os.makedirs(out_dir, exist_ok=True)
 
     for loader, name in tqdm(datasets):
-        # pp-driven selectors
         for sel in selectors:
             for it, pop in iter_size:
                 for pp in pp_values:
@@ -139,10 +138,8 @@ if __name__ == "__main__":
                     with open(fname, 'wb') as f:
                         pickle.dump(logs, f)
 
-        print('FINISHED PP-DRIVEN SELECTORS')
-
-        for it, pop in tqdm(iter_size):
-            for sel in ['tournament', 'e_lexicase']: 
+        for sel in ['tournament']: 
+            for it, pop in tqdm(iter_size):
                 logs = collect_logs_experiment(
                     loader, name,
                     n_iter=it, pop_size=pop,
