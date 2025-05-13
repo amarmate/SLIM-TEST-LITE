@@ -1,0 +1,161 @@
+from joblib import Parallel, delayed
+from tqdm.auto import tqdm
+import multiprocessing
+import time
+import pickle
+import os
+import numpy as np
+
+from slim_gsgp_lib_np.utils.callbacks import LogSpecialist
+from slim_gsgp_lib_np.main_gp import gp
+from slim_gsgp_lib_np.datasets.synthetic_datasets import (
+    load_synthetic2, load_synthetic3, load_synthetic4,
+    load_synthetic5, load_synthetic6, load_synthetic7,
+    load_synthetic8, load_synthetic9, load_synthetic10,
+)
+
+# Limit BLAS threads to avoid conflicts with Joblib
+os.environ.update({k: '1' for k in [
+    "OMP_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"
+]})
+
+
+def _single_run(X, y, mask, n_iter, pop_size, selector, pp, dataset_name, seed):
+    t0 = time.time()
+    cb = LogSpecialist(X, y, mask)
+    # Use pp only for selectors that support particularity pressure
+    pp_val = pp if selector != 'tournament' else None
+    gp(
+        X_train=X,
+        y_train=y,
+        test_elite=False,
+        callbacks=[cb],
+        full_return=True,
+        n_iter=n_iter,
+        pop_size=pop_size,
+        seed=seed,
+        max_depth=7,
+        init_depth=3,
+        selector=selector,
+        tournament_size=2,
+        particularity_pressure=pp_val,
+        verbose=0,
+        dataset_name=dataset_name,
+    )
+    runtime = time.time() - t0
+    result_rmse = cb.log_rmse[-1]
+    result_size = cb.log_size[-1]
+    return {
+        'dataset': dataset_name,
+        'selector': selector,
+        'n_iter': n_iter,
+        'pop_size': pop_size,
+        'pp': pp_val,
+        'seed': seed,
+        'result': result_rmse,
+        'size': result_size,
+        'duration': runtime,
+    }
+
+
+def collect_logs_experiment(loader, dataset_name, *, n_iter, pop_size, selector,
+                            pp=None, runs=30, base_seed=5, n_jobs=-1):
+    """
+    Load the dataset via `loader`, then run `runs` GP experiments in parallel.
+    Returns list of dicts with logs + metadata.
+    """
+    X, y, _, mask = loader()
+    print(f"Running {dataset_name} | {selector} | it={n_iter}, pop={pop_size}, pp={pp}, runs={runs}")
+    seeds = [base_seed + i for i in range(runs)]
+    tasks = (
+        delayed(_single_run)(X, y, mask, n_iter, pop_size, selector, pp, dataset_name, seed)
+        for seed in seeds
+    )
+    return Parallel(n_jobs=n_jobs)(
+        tasks, total=runs,
+        desc=f"{dataset_name}:{selector} it={n_iter} pop={pop_size} pp={pp}"
+    )
+
+def aggregate_logs(logs): 
+    aggregated = {
+    'dataset': logs[0]['dataset'],
+    'selector': logs[0]['selector'],
+    'n_iter': logs[0]['n_iter'],
+    'pop_size': logs[0]['pop_size'],
+    'pp': logs[0]['pp'],
+    'result': [],
+    'size': [],
+    'duration': [],
+    }
+
+    for i in range(len(logs)): 
+        aggregated['result'].append(logs[i]['result'])
+        aggregated['size'].append(logs[i]['size'])
+        aggregated['duration'].append(logs[i]['duration'])
+        
+    aggregated['result'] = np.array(aggregated['result'])
+    aggregated['size'] = np.array(aggregated['size'])
+    aggregated['duration'] = np.array(aggregated['duration'])
+
+    return aggregated
+
+
+if __name__ == "__main__":
+    # Experiment parameter grids
+    datasets = [
+        (load_synthetic2, 'synthetic2'),
+        (load_synthetic3, 'synthetic3'),
+        (load_synthetic4, 'synthetic4'),
+        (load_synthetic5, 'synthetic5'),
+        (load_synthetic6, 'synthetic6'),
+        (load_synthetic7, 'synthetic7'),
+        (load_synthetic8, 'synthetic8'),
+        (load_synthetic9, 'synthetic9'),
+        (load_synthetic10,'synthetic10'),
+    ]
+    iter_size = [(2000, 50), (1000, 100), (400, 200), (100, 500)]
+    pp_values = [10, 20, 50, 100]
+    selectors = ['dalex_size', 'dalex']
+    # 'tournament' selector runs without pp
+
+    n_cores = multiprocessing.cpu_count() - 2 
+
+    # Create output directory
+    out_dir = 'logs_experiment'
+    os.makedirs(out_dir, exist_ok=True)
+
+    for loader, name in tqdm(datasets):
+        # pp-driven selectors
+        for sel in selectors:
+            for it, pop in iter_size:
+                for pp in pp_values:
+                    logs = collect_logs_experiment(
+                        loader, name,
+                        n_iter=it, pop_size=pop,
+                        selector=sel, pp=pp,
+                        runs=30, base_seed=5, n_jobs=n_cores
+                    )
+                    logs = aggregate_logs(logs)
+                    ident = f"{name}_{it}_{pop}_{pp}_{sel}"
+                    fname = os.path.join(out_dir, ident + ".pkl")
+                    with open(fname, 'wb') as f:
+                        pickle.dump(logs, f)
+
+        print('FINISHED PP-DRIVEN SELECTORS')
+        
+        for it, pop in tqdm(iter_size):
+            for sel in ['tournament', 'e_lexicase']: 
+                logs = collect_logs_experiment(
+                    loader, name,
+                    n_iter=it, pop_size=pop,
+                    selector=sel, pp=10,
+                    runs=30, base_seed=5, n_jobs=n_cores
+                )
+                logs = aggregate_logs(logs)
+                ident = f"{name}_{it}_{pop}_None_{sel}"
+                fname = os.path.join(out_dir, ident + ".pkl")
+                with open(fname, 'wb') as f:
+                    pickle.dump(logs, f)
+
+    print(f"Saved experiments results to '{out_dir}' Total files: {len(os.listdir(out_dir))}")
