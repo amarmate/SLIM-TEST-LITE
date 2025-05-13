@@ -116,7 +116,7 @@ if __name__ == "__main__":
     ]
     iter_size = [(2000, 50), (1000, 100), (400, 200), (100, 500)]
     pp_values = [10, 20, 50, 100]
-    selectors = ['dalex_size', 'dalex']
+    selectors = ['dalex_size', 'dalex_size_2', 'dalex']
     # 'tournament' selector runs without pp
 
     n_cores = multiprocessing.cpu_count() - 2 
@@ -143,7 +143,7 @@ if __name__ == "__main__":
                         pickle.dump(logs, f)
 
         print('FINISHED PP-DRIVEN SELECTORS')
-        
+
         for it, pop in tqdm(iter_size):
             for sel in ['tournament', 'e_lexicase']: 
                 logs = collect_logs_experiment(

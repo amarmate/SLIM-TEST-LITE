@@ -77,6 +77,7 @@ def selector(problem='min',
         'dalex':             lambda: dalex_selection(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure),
         'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
         'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size),
+        'dalex_size_2':      lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size, p_best=0.5),
     }
 
     SIMPLE = {
@@ -682,7 +683,8 @@ def dalex_selection(mode='min', down_sampling=0.5, particularity_pressure=20):
 def dalex_selection_size(mode='min', 
                          down_sampling=0.5, 
                          particularity_pressure=20,
-                         tournament_size=2):
+                         tournament_size=2,
+                         p_best=0):
     """
     Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
     to select an individual based on a weighted aggregation of test-case errors and then on a size tournament.
@@ -698,6 +700,8 @@ def dalex_selection_size(mode='min',
         Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
     tournament_size : int, optional
         Number of individuals participating in the size tournament. Defaults to 2.
+    p_best : float, optional
+            Probability of selecting the individual with the best fitness in the tournament. Defaults to 0.5.
 
     Returns
     -------
@@ -726,13 +730,19 @@ def dalex_selection_size(mode='min',
         F = np.dot(subset_errors, weights)
 
         if mode == 'min':
-            sorted = np.argsort(F)
-            best_index = sorted[0:tournament_size]
-            best_index = min(best_index, key=lambda idx: pop.population[idx].total_nodes)
+            if random.random() < p_best:
+                best_index = np.argmin(F)
+            else:
+                sorted = np.argsort(F)
+                best_index = sorted[0:tournament_size]
+                best_index = min(best_index, key=lambda idx: pop.population[idx].total_nodes)
         elif mode == 'max':
-            sorted = np.argsort(F)[::-1]
-            best_index = sorted[0:tournament_size]
-            best_index = max(best_index, key=lambda idx: pop.population[idx].total_nodes)
+            if random.random() < p_best:
+                best_index = np.argmax(F)
+            else:
+                sorted = np.argsort(F)[::-1]
+                best_index = sorted[0:tournament_size]
+                best_index = max(best_index, key=lambda idx: pop.population[idx].total_nodes)
         else:
             raise ValueError("Invalid mode. Use 'min' or 'max'.")
         
