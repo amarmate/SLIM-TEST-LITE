@@ -62,9 +62,7 @@ from slim_gsgp_lib_np.datasets.data_loader import (
     load_istanbul, load_ld50, load_bioav, load_parkinson_updrs, load_ppb, load_resid_build_sale_price,
 )
 
-datasets = {
-    name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)
-}
+datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
 
 # ----------------------------------------------------- MAIN FUNCTIONS -------------------------------------------------------------
 def tuning(data_split, name, split_id): 

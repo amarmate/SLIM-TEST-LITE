@@ -5,3 +5,6 @@
 /test_results
 /experiment_results
 /.venv 
+/selector_experiments
+/data
+

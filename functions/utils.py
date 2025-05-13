@@ -5,9 +5,12 @@ import pandas as pd
 import platform
 import psutil
 import sympy as sp
+import matplotlib 
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 import mlflow
 import re
+from pathlib import Path
 
 def pf_rmse_comp(points):
     pareto = []
@@ -275,7 +278,7 @@ def aggregate_by_generation(logs):
         data[f'p75_{m}']    = np.percentile(arr, 75, axis=0)
 
     return pd.DataFrame(data)
-
+    
 def save_experiment_results(name, pfs, logs, n_bins=10, prefix='GP', suffix=None):
     """
     Record and save aggregated experiment data and Pareto front.
@@ -429,3 +432,58 @@ def log_latex_as_image(latex_str, name, split_id, prefix='GP', suffix=None):
     plt.savefig(path, bbox_inches='tight')
     mlflow.log_artifact(path)
     plt.close(fig)
+
+
+# ------------------------------------------------------------------- OTHER GP2 -------------------------------------------------------------------------------------------
+def save_experiment_results_v2(dataset_name: str,
+                                 tuning_df: pd.DataFrame,
+                                 best_hyperparams_map: dict,
+                                 test_df: pd.DataFrame,
+                                 pareto_fronts_data: list,
+                                 logs_data: list,
+                                 n_time_bins: int,
+                                 prefix: str,
+                                 suffix: str, 
+                                 hp_base_dir: str = 'hp_results',
+                                 test_base_dir: str = 'test_results',
+                                 exp_base_dir: str = 'exp_results' 
+                                 ):
+    """
+    Saves all aggregated experiment artifacts for a given dataset.
+    This function only writes data.
+    """
+    file_suffix_str = f"{suffix}" if suffix else ""
+
+    current_hp_dir = Path(hp_base_dir) / dataset_name
+    current_hp_dir.mkdir(parents=True, exist_ok=True)
+    current_test_dir = Path(test_base_dir) / dataset_name
+    current_test_dir.mkdir(parents=True, exist_ok=True)
+
+
+    tuning_df_filename = current_hp_dir / f'{prefix}_tuning_results{file_suffix_str}.parquet'
+    hyperparams_filename = current_hp_dir / f'{prefix}_best_hyperparams{file_suffix_str}.pkl'
+    test_df_filename = current_test_dir / f'{prefix}_test_results{file_suffix_str}.parquet'
+
+    filenames = [tuning_df_filename, hyperparams_filename, test_df_filename]
+    for filename in filenames:
+        if filename.exists():
+            print(f"File {filename} already exists. Overwriting...")
+
+    tuning_df.to_parquet(tuning_df_filename, index=False)
+    test_df.to_parquet(test_df_filename, index=False)
+
+    with open(hyperparams_filename, 'wb') as f:
+        pickle.dump(best_hyperparams_map, f)
+
+    log_results_summary = None
+    if pareto_fronts_data or logs_data: 
+         log_results_summary = save_experiment_results(
+             dataset_name,
+             pareto_fronts_data,
+             logs_data,
+             n_bins=n_time_bins,
+             prefix=prefix,
+             suffix=suffix,
+         )
+    
+    return log_results_summary
