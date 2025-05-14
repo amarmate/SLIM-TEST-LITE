@@ -1,5 +1,7 @@
 
 
+
+# ------------------------------------------------ PF FUNCTIONS ---------------------------------------------------
 def pf_rmse_comp_extended(points):
     """
     Identifies the Pareto front from a list of points.
@@ -32,4 +34,33 @@ def pf_rmse_comp_extended(points):
         if not dominated:
             pareto.append(point1) 
     pareto.sort(key=lambda x: x[0])
+    return pareto
+
+def pf_rmse_comp_time(points): 
+    """
+    Generate a Pareto front considering RMSE, complexity, and time.
+
+    Parameters
+    ----------
+    points : list of tuples (rmse, comp, time)
+        A list of individuals from the Pareto front. Each individual is represented as 
+        (RMSE, complexity, time)
+
+    Returns
+    -------
+    list
+        A Pareto front containing the selected individuals based on the criteria.
+    """
+
+    pareto = []
+    for i, (rmse1, comp1, time1) in enumerate(points):
+        dominated = False
+        for j, (rmse2, comp2, time2) in enumerate(points):
+            if j != i and (rmse2 <= rmse1 and comp2 <= comp1 and time2 <= time1) and (rmse2 < rmse1 or comp2 < comp1 or time2 < time1):
+                dominated = True
+                break
+        if not dominated:
+            pareto.append((rmse1, comp1, time1))
+
+    pareto.sort(key=lambda x: (x[0], x[1], x[2]))
     return pareto
