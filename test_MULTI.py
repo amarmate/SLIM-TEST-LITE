@@ -299,7 +299,8 @@ def process_split(split_id, dataset, name, selector, experiment_id, flag_syn):
         mlflow.set_tag("selector", selector)
         train, test = split_data(dataset, flag_syn, P_TEST, SEED, split_id)
 
-        # CONTINUE HERE OR FROM TUNNING FIRST 
+        # CONTINUE HERE OR FROM TUNNING FIRST -> dataset as now split into (X_train, y_train, masks)
+        # MASKS OF THIS TYPE [[T,F,F,T, ...],[F,T,T,F, ...], ...]
 
 
         path = os.path.join('hp_results', name, f'{selector}_best_hyperparams{SUFFIX_SAVE}.pkl')
