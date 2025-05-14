@@ -32,6 +32,7 @@ def selector(problem='min',
              down_sampling=5,
              particularity_pressure=20,
              epsilon=1e-6, 
+             dalex_size_prob=0.5,
              ):
     """
     Returns a selection function based on the specified problem and selection type.
@@ -51,6 +52,8 @@ def selector(problem='min',
         Standard deviation used in DALex for sampling importance scores. Defaults to 20.
     epsilon : float, optional
         Epsilon value used in epsilon lexicase selection. Defaults to 1e-6.
+    dalex_size_prob : float, optional
+        Probability of selecting the individual with the best fitness in the tournament. Defaults to 0.5.
 
     Returns
     -------
@@ -76,8 +79,7 @@ def selector(problem='min',
         'lexicase':          lambda: lexicase_selection(mode=mode, down_sampling=down_sampling),
         'dalex':             lambda: dalex_selection(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure),
         'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
-        'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size),
-        'dalex_size_2':      lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size, p_best=0.5),
+        'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size, p_best=dalex_size_prob),
     }
 
     SIMPLE = {
@@ -702,6 +704,7 @@ def dalex_selection_size(mode='min',
         Number of individuals participating in the size tournament. Defaults to 2.
     p_best : float, optional
             Probability of selecting the individual with the best fitness in the tournament. Defaults to 0.5.
+            If p set to 0, then it is the dalex_selection_size vanilla version.
 
     Returns
     -------

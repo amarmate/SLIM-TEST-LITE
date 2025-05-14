@@ -21,42 +21,71 @@ from sklearn.model_selection import KFold
 from skopt import gp_minimize
 from skopt.space import Integer, Real
 
-# ------------------------------------------------   SETTINGS   --------------------------------------------------------------
-N_SPLITS = 4
-N_CV = 4
-N_SEARCHES_HYPER = 25
-N_RANDOM_STARTS = 10
-NOISE_SKOPT = 1e-3
-N_TESTS = 15
-P_TEST = 0.2 
-SEED = 20
-POP_SIZE_MULTI = 100 
-N_GENERATIONS_MULTI = 2500
-SELECTORS = ['dalex', 'dalex_size_2']
-N_TIME_BINS = 300
-SUFFIX_SAVE = '1'
-PREFIX_SAVE = 'MULTI'
-EXPERIMENT_NAME = 'MULTI_Experiment'
-FUNCTIONS = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
-STOP_THRESHOLD_TUNNING = 400
-
-np.random.seed(SEED)
-
-SPACE_PARAMETERS = [
-        Integer(2, 4, name='init_depth'),
-        Integer(4, 9, name='max_depth'),                   
-        Real(0.6, 0.9, name='p_xo'),                                          
-        Real(0.1, 0.25, name='prob_const'),                                       
-        Real(0.6, 0.9, name='prob_terminal'),                                      
-        Real(10, 100, name='particularity_pressure', prior='log-uniform'),
-]
-
 # ------------------------------------------- LIMIT THREADS FOR NUMPY --------------------------------------------------------
 os.environ.update({
     k: '1' for k in [
         "OMP_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
         "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"
     ]})
+
+# ------------------------------------------------   SETTINGS   --------------------------------------------------------------
+# --- General Settings ---
+N_SPLITS = 4 
+N_CV = 4   
+SEED = 20
+P_TEST = 0.2 
+N_TESTS = 15
+N_TIME_BINS = 300 
+SUFFIX_SAVE = 'MULTI' 
+PREFIX_SAVE = 'MULTI_SLIM'
+EXPERIMENT_NAME_BASE = 'MULTI_SLIM_Experiment'
+
+# --- Hyperparameter Optimization Settings ---
+N_SEARCHES_HYPER_S1 = 25
+N_RANDOM_STARTS_S1 = 10 
+N_SEARCHES_HYPER_S2 = 20 
+N_RANDOM_STARTS_S2 = 8  
+NOISE_SKOPT = 1e-3
+
+# --- Stage 1 (Specialist GP) Settings ---
+SELECTORS_S1 = ['dalex', 'dalex_size'] 
+FUNCTIONS_S1 = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
+
+SPACE_PARAMETERS_S1 = [
+    Integer(1, 3, name='pop_iter_settings_s1')   # [(1000, 100), (400, 200), (100, 500), (40, 1000)]
+    Integer(2, 4, name='init_depth_s1'),
+    Integer(4, 8, name='max_depth_s1'),
+    Real(0.5, 0.95, name='p_xo_s1'),
+    Real(0.01, 0.25, name='prob_const_s1'),
+    Real(0.6, 0.8, name='prob_terminal_s1'),
+    Real(5, 100, name='particularity_pressure_s1', prior='log-uniform'),
+    Real(0.3, 0.7, name='dalex_size_prob_s1'),  # P selec best fit in dalex_size selector from the pool. p=1 -> dalex selector
+]
+
+# --- Stage 2 (Ensemble GP) Settings ---
+POP_SIZE_S2 = 100
+N_GENERATIONS_S2 = 2500
+FUNCTIONS_S1 = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
+SELECTOR_S2 = 'tournament'
+
+
+DEFAULT_S2_PARAMS = {
+    'pop_size_ensemble': POP_SIZE_S2,
+    'n_generations_ensemble': N_GENERATIONS_S2,
+    'max_depth_ensemble': 4,
+    'max_depth_conditions' : 6, 
+    'p_xo_ensemble': 0.6,
+    'condition_functions': FUNCTIONS_S1,
+    'selector_ensemble': SELECTOR_S2,
+}
+
+SPACE_PARAMETERS_S2 = [
+    Integer(3, 7, name='max_depth_conditions'),
+    Integer(3, 5, name='max_depth_ensemble'), 
+    Real(0.6, 0.9, name='p_xo_ensemble'),
+]
+
+
 
 # ----------------------------------------------------- DATASETS --------------------------------------------------------------
 from slim_gsgp_lib_np.datasets.synthetic_datasets import (

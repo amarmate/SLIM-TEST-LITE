@@ -56,6 +56,7 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
          p_struct_xo: float = slim_gsgp_parameters["p_struct_xo"],
          mut_xo_operator: str = slim_gsgp_parameters["mut_xo_operator"],
          selector: str = slim_gsgp_parameters["selector"],
+         dalex_size_prob: float = 0.5, 
          down_sampling: float = 0.5, 
          particularity_pressure: float = 20,
          epsilon: float = 1e-7,
@@ -124,6 +125,8 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
     selector : str, optional
         The selection algorithm to use for selecting individuals for the next generation.
         Default is tournament selection, options are: 'tournament', 'lexicase', 'e_lexicase', 'rank_based', 'roulette', 'tournament_size'.
+    dalex_size_prob : float, optional   
+        Probability of selecting the best fit individual from the pool in dalex_size selection.
     down_sampling : float, optional
         The fraction of the population to use in down-sampling. Default is 0.5.
     particularity_pressure : float, optional
@@ -310,7 +313,9 @@ def slim(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_
                                                 pool_size=tournament_size,
                                                 down_sampling=down_sampling,
                                                 particularity_pressure=particularity_pressure,
-                                                epsilon=epsilon)
+                                                epsilon=epsilon,
+                                                dalex_size_prob=dalex_size_prob,
+    )
     
     slim_gsgp_parameters['find_elit_func'] = get_best_min if minimization else get_best_max
     slim_gsgp_parameters['timeout'] = timeout

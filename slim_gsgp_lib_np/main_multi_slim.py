@@ -56,7 +56,7 @@ def multi_slim(
         params_gp: dict = None, gp_version: str = "SLIM+SIG2", population: Population = None,
         pop_size : int = multi_pi_init["pop_size"], 
         n_iter : int = multi_solve_params["n_iter"],
-        p_mut: float = multi_params["p_mut"],
+        p_xo: float = multi_params["p_xo"],
         depth_condition: int = multi_pi_init["depth_condition"],
         max_depth: int = multi_pi_init["max_depth"],
         prob_const: float = multi_pi_init["p_c"],
@@ -76,6 +76,8 @@ def multi_slim(
         particularity_pressure: float = 20,
         epsilon: float = 1e-6,
         decay_rate: float = multi_params["decay_rate"],
+        ensemble_functions : list = None,
+        ensemble_constants : list = None,   
         callbacks: list = None, 
         timeout: int = 100,
         full_return: bool = False,
@@ -108,8 +110,8 @@ def multi_slim(
         Size of the population. Default is taken from `multi_pi_init["pop_size"]`.
     n_iter : int, optional
         Number of generations to run the evolution. Default from `multi_solve_params["n_iter"]`.
-    p_mut : float, optional
-        Probability of mutation. Default from `multi_params["p_mut"]`.
+    p_xo : float, optional
+        Probability of crossover. Default from `multi_params["p_xo"]`.
     depth_condition : int, optional
         Maximum depth for predicates in conditional trees.
     max_depth : int, optional
@@ -149,6 +151,10 @@ def multi_slim(
         Epsilon tolerance for epsilon-lexicase selection.
     decay_rate : float, optional
         Decay applied to mutation strength or error weights, depending on implementation.
+    ensemble_functions : list, optional
+        Functions to use for the conditional trees. Default is None, which uses the specialists functions functions.
+    ensemble_constants : list, optional
+        Constants to use for the conditional trees. Default is None, which uses the specialists constants.
     callbacks : list, optional
         List of callback objects to monitor or interfere with the optimization process.
     timeout : int, optional
@@ -209,6 +215,11 @@ def multi_slim(
     
     multi_pi_init['SPECIALISTS'] = {f'S_{i}' : ind for i, ind in enumerate(population.population)}
 
+    if ensemble_functions is not None:
+        multi_pi_init['FUNCTIONS'] = FUNCTIONS[ensemble_functions]
+    if ensemble_constants is not None:
+        multi_pi_init['CONSTANTS'] = CONSTANTS[ensemble_constants]
+
     multi_pi_init['p_c'] = prob_const
     multi_pi_init['p_t'] = prob_terminal
     multi_pi_init['p_s'] = prob_specialist
@@ -230,8 +241,8 @@ def multi_slim(
     
     multi_params['xo_operator'] = homologus_xo(multi_pi_init['max_depth'])
     multi_params['initializer'] = initializer
-    multi_params['p_mut'] = p_mut
-    multi_params['p_xo'] = 1 - p_mut
+    multi_params['p_mut'] = 1 - p_xo
+    multi_params['p_xo'] = p_xo
     multi_params['seed'] = seed
     multi_params['callbacks'] = callbacks
     multi_params['decay_rate'] = decay_rate

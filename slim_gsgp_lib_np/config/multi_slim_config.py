@@ -8,7 +8,7 @@ from slim_gsgp_lib_np.algorithms.GSGP.operators.crossover_operators import geome
 from slim_gsgp_lib_np.algorithms.SLIM_GSGP.operators.crossovers import *
 from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_min
 from slim_gsgp_lib_np.evaluators.fitness_functions import *
-from slim_gsgp_lib_np.utils.utils import (get_best_min, protected_div)
+from slim_gsgp_lib_np.utils.utils import (get_best_min, protected_div, protected_sqrt)
 from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree as GPTree
 
 # MULTI SLIM
@@ -16,8 +16,19 @@ from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import in
 from slim_gsgp_lib_np.evaluators.fitness_functions import *
 
 # --------------------------- FUNCTIONS AND CONSTANTS ---------------------------
-FUNCTIONS = ['add','subtract','multiply','divide']
-CONSTANTS = [round(-1 + (2 * i) / (100 - 1), 2) for i in range(100) if np.abs(i) > 0.1]
+FUNCTIONS = {
+    'add': {'function': np.add, 'arity': 2},
+    'subtract': {'function': np.subtract, 'arity': 2},
+    'multiply': {'function': np.multiply, 'arity': 2},
+    'divide': {'function': protected_div, 'arity': 2},
+    'sqrt' : {'function': protected_sqrt, 'arity': 1},
+    'cond' : {'function': lambda x, y, z: np.where(x > 0, y, z), 'arity': 3},
+    'sq': {'function': lambda x: x**2, 'arity': 1},
+}
+functions = ['add', 'subtract', 'multiply', 'divide', 'sqrt', 'sq']
+
+constants = [round(-1 + (2 * i) / (100 - 1), 2) for i in range(100) if np.abs(i) > 0.1]
+CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in constants}
 
 # ---------------------------- SLIM GSGP parameters ----------------------------
 @dataclass
@@ -73,8 +84,8 @@ class SlimParameters:
     callbacks: Optional[list] = None
     
     # SLIM_GSGP_PI_INIT parameters
-    tree_functions: list = field(default_factory=lambda: FUNCTIONS)
-    tree_constants: list = field(default_factory=lambda: CONSTANTS)
+    tree_functions: list = constants
+    tree_constants: list = functions
     prob_const: float = 0.2
     prob_terminal: float = 0.7
     init_depth: int = 6
@@ -128,8 +139,8 @@ class GPParameters:
     initializer: str = "rhh"
     prob_const: float = 0.2
     prob_terminal: float = 0.7
-    tree_functions: list = field(default_factory=lambda: FUNCTIONS)
-    tree_constants: list = field(default_factory=lambda: CONSTANTS)
+    tree_functions: list = functions
+    tree_constants: list = constants
     callbacks: list = None
     particularity_pressure: float = 20
     elite_tree: list = None
@@ -153,7 +164,7 @@ multi_params = {
     "selector": 'tournament',
     "mutator": None,
     "xo_operator": None,
-    "p_mut": 0.2,
+    "p_xo": 0.8,
     "find_elit_func": get_best_min,
     "seed": 74,
     "decay_rate": 0.1,
@@ -161,8 +172,8 @@ multi_params = {
 
 # ---------------------------- MULTI SLIM PI_INIT parameters ----------------------------
 multi_pi_init = {
-    'FUNCTIONS': FUNCTIONS,
-    'CONSTANTS': CONSTANTS,
+    'FUNCTIONS': functions,
+    'CONSTANTS': constants,
     "depth_condition": 3,
     "max_depth": 3,
     "p_c": 0.2,

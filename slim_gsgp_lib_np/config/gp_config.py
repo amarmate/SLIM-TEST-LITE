@@ -39,6 +39,7 @@ FUNCTIONS = {
     'divide': {'function': protected_div, 'arity': 2},
     'sqrt' : {'function': protected_sqrt, 'arity': 1},
     'cond' : {'function': lambda x, y, z: np.where(x > 0, y, z), 'arity': 3},
+    'sq' : {'function': lambda x: x**2, 'arity': 1},
 }
 
 # CONSTANTS = {
@@ -55,7 +56,7 @@ FUNCTIONS = {
 constants = [round(i*0.05, 2) for i in range(2, 21)] + [round(-i*0.05, 2) for i in range(2, 21)]
 CONSTANTS = {f'constant_{i}': lambda _: np.array(i) for i in constants}
 
-functions = ['add', 'subtract', 'multiply', 'divide', 'sqrt']
+functions = ['add', 'subtract', 'multiply', 'divide', 'sqrt', 'sq']
 
 
 # Set parameters
