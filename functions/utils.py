@@ -446,7 +446,8 @@ def save_experiment_results_v2(dataset_name: str,
                                  suffix: str, 
                                  hp_base_dir: str = 'hp_results',
                                  test_base_dir: str = 'test_results',
-                                 exp_base_dir: str = 'exp_results' 
+                                 exp_base_dir: str = 'exp_results', 
+                                 flag_exists: bool = False,
                                  ):
     """
     Saves all aggregated experiment artifacts for a given dataset.
@@ -459,21 +460,23 @@ def save_experiment_results_v2(dataset_name: str,
     current_test_dir = Path(test_base_dir) / dataset_name
     current_test_dir.mkdir(parents=True, exist_ok=True)
 
-
-    tuning_df_filename = current_hp_dir / f'{prefix}_tuning_results{file_suffix_str}.parquet'
-    hyperparams_filename = current_hp_dir / f'{prefix}_best_hyperparams{file_suffix_str}.pkl'
     test_df_filename = current_test_dir / f'{prefix}_test_results{file_suffix_str}.parquet'
 
-    filenames = [tuning_df_filename, hyperparams_filename, test_df_filename]
-    for filename in filenames:
-        if filename.exists():
-            print(f"File {filename} already exists. Overwriting...")
+    if not flag_exists:
+        tuning_df_filename = current_hp_dir / f'{prefix}_tuning_results{file_suffix_str}.parquet'
+        hyperparams_filename = current_hp_dir / f'{prefix}_best_hyperparams{file_suffix_str}.pkl'
 
-    tuning_df.to_parquet(tuning_df_filename, index=False)
+        filenames = [tuning_df_filename, hyperparams_filename, test_df_filename]
+        for filename in filenames:
+            if filename.exists():
+                print(f"File {filename} already exists. Overwriting...")
+
+        tuning_df.to_parquet(tuning_df_filename, index=False)
+
+        with open(hyperparams_filename, 'wb') as f:
+            pickle.dump(best_hyperparams_map, f)
+
     test_df.to_parquet(test_df_filename, index=False)
-
-    with open(hyperparams_filename, 'wb') as f:
-        pickle.dump(best_hyperparams_map, f)
 
     log_results_summary = None
     if pareto_fronts_data or logs_data: 

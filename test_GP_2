@@ -226,6 +226,7 @@ def parse_args():
     return args
 
 def process_split(split_id, dataset, name, selector, experiment_id):
+    flag_exists = False
     with mlflow.start_run(run_name=f'Split {split_id+1}', nested=True,
                           experiment_id=experiment_id):
         mlflow.set_tag("dataset_name", name)
@@ -233,22 +234,34 @@ def process_split(split_id, dataset, name, selector, experiment_id):
 
         data_split = train_test_split(dataset()[0], dataset()[1], p_test=P_TEST, seed=SEED + split_id)
 
-        tun_res = tuning(data_split, name, split_id, selector)
-        df_tr_split, params, bcv_rmse = tun_res
-
+        path = os.path.join('hp_results', name, f'{selector}_best_hyperparams{SUFFIX_SAVE}.pkl')
+        if os.path.exists(path):
+            print(f"Best hyperparameters for {name} - {selector} already computed. Skipping tuning...")
+            params = pd.read_pickle(path)[split_id]
+            df_tr_split, bcv_rmse = None, None 
+            flag_exists = True
+        else:
+            print(f"Tuning hyperparameters for {name} - {selector}...")
+            tun_res = tuning(data_split, name, split_id, selector)
+            df_tr_split, params, bcv_rmse = tun_res
+            
         test_res = test_algo(params, data_split, name, split_id, bcv_rmse, selector)
         main_test_df, pf, logs = test_res
 
-    return (df_tr_split, params, main_test_df, pf, logs)
+    return (df_tr_split, params, main_test_df, pf, logs, flag_exists)
 
 def run_experiment(dataset, name, selector): 
+    path = os.path.join('experiment_results', name, f'{selector}_metadata{SUFFIX_SAVE}.pkl')
+    if os.path.exists(path):
+        print(f"Experiment for {name} - {selector} already completed. Skipping...")
+        return
+
     print(f"Starting experiment for {name} - {selector}...")
 
     all_split_tuning_dfs = []
     all_split_best_hyperparams = {}
-    all_split_test_dfs = []
-    collected_pfs = []
-    collected_logs = []
+    all_split_test_dfs, collected_pfs, collected_logs = [], [], []
+    flag_exists = False
 
     current_experiment = mlflow.set_experiment(name + '_' + selector)
     experiment_id = current_experiment.experiment_id
@@ -259,14 +272,20 @@ def run_experiment(dataset, name, selector):
         )
 
     for i, result_tuple in enumerate(split_results):
-        df_tr, best_params, test_df, pf_s, log_s = result_tuple
+        df_tr, best_params, test_df, pf_s, log_s, flag_exists = result_tuple
+
         all_split_tuning_dfs.append(df_tr)
         all_split_best_hyperparams[i] = best_params
+
         all_split_test_dfs.append(test_df)
         collected_pfs.extend(pf_s)
         collected_logs.extend(log_s)
 
-    final_tuning_df = pd.concat(all_split_tuning_dfs, ignore_index=True) if all_split_tuning_dfs else pd.DataFrame()
+    if not flag_exists:
+        final_tuning_df = pd.concat(all_split_tuning_dfs, ignore_index=True) if all_split_tuning_dfs else pd.DataFrame()
+    else: 
+        final_tuning_df = pd.DataFrame()
+
     final_test_df = pd.concat(all_split_test_dfs, ignore_index=True) if all_split_test_dfs else pd.DataFrame()
 
     log_results_summary = save_experiment_results_v2(
@@ -279,6 +298,7 @@ def run_experiment(dataset, name, selector):
         n_time_bins=N_TIME_BINS,
         prefix=selector,
         suffix=SUFFIX_SAVE,
+        flag_exists=flag_exists,
     )
 
     with mlflow.start_run(run_name='Final Results', nested=True):
@@ -287,6 +307,8 @@ def run_experiment(dataset, name, selector):
         if log_results_summary is not None:
             register_mlflow_charts(name, log_results_summary, pfs=collected_pfs,
                                    prefix=selector, suffix=SUFFIX_SAVE)
+            
+    print(f"Experiment for {name} - {selector} completed. Results saved.")
 
 
 if __name__ == '__main__':
