@@ -19,7 +19,7 @@ from slim_gsgp_lib_np.utils.utils import train_test_split
 from functions.metrics_test import *
 from sklearn.model_selection import KFold
 from skopt import gp_minimize
-from skopt.space import Integer, Real
+from skopt.space import Integer, Real, Categorical
 
 # ------------------------------------------- LIMIT THREADS FOR NUMPY --------------------------------------------------------
 os.environ.update({
@@ -43,18 +43,20 @@ EXPERIMENT_NAME_BASE = 'MULTI_SLIM_Experiment'
 # --- Hyperparameter Optimization Settings ---
 N_SEARCHES_HYPER_S1 = 25
 N_RANDOM_STARTS_S1 = 10 
+TOLERANCE = 0.2
 N_SEARCHES_HYPER_S2 = 20 
 N_RANDOM_STARTS_S2 = 8  
 NOISE_SKOPT = 1e-3
 
 # --- Stage 1 (Specialist GP) Settings ---
 SELECTORS_S1 = ['dalex', 'dalex_size'] 
-FUNCTIONS_S1 = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
+FUNCTIONS_S1 = ['add', 'multiply', 'divide', 'subtract', 'sqrt', 'sq']
+PI_S1 = [(1000, 100), (400, 200), (100, 500), (40, 1000)]   # n_generations, pop_size
 
 SPACE_PARAMETERS_S1 = [
-    Integer(1, 3, name='pop_iter_settings_s1')   # [(1000, 100), (400, 200), (100, 500), (40, 1000)]
+    Integer(0, 3, name='pop_iter_settings_s1'),   # [(1000, 100), (400, 200), (100, 500), (40, 1000)]
     Integer(2, 4, name='init_depth_s1'),
-    Integer(4, 8, name='max_depth_s1'),
+    Integer(4, 7, name='max_depth_s1'),
     Real(0.5, 0.95, name='p_xo_s1'),
     Real(0.01, 0.25, name='prob_const_s1'),
     Real(0.6, 0.8, name='prob_terminal_s1'),
@@ -63,30 +65,27 @@ SPACE_PARAMETERS_S1 = [
 ]
 
 # --- Stage 2 (Ensemble GP) Settings ---
+FUNCTIONS_S2 = ['add', 'multiply', 'divide', 'subtract', 'sqrt', 'sq']
+PI_S2 = [(2500, 100), (1200, 200), (250, 500), (100, 1000)] # n_generations_ensemble, pop_size_ensemble
+
+SELECTOR_S2 = 'dalex'
 POP_SIZE_S2 = 100
 N_GENERATIONS_S2 = 2500
-FUNCTIONS_S1 = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
-SELECTOR_S2 = 'tournament'
-
-
-DEFAULT_S2_PARAMS = {
-    'pop_size_ensemble': POP_SIZE_S2,
-    'n_generations_ensemble': N_GENERATIONS_S2,
-    'max_depth_ensemble': 4,
-    'max_depth_conditions' : 6, 
-    'p_xo_ensemble': 0.6,
-    'condition_functions': FUNCTIONS_S1,
-    'selector_ensemble': SELECTOR_S2,
-}
+MD_ENSEMBLE = 4
+MD_COND_ENSEMBLE = 6
+XO_ENSEMBLE = 0.6
 
 SPACE_PARAMETERS_S2 = [
-    Integer(3, 7, name='max_depth_conditions'),
-    Integer(3, 5, name='max_depth_ensemble'), 
+    Integer(0, 3, name='pop_iter_settings_ensemble'),   # [(2500, 100), (1200, 200), (250, 500)]
+    Integer(4, 7, name='max_depth_conditions'),
+    Integer(3, 6, name='max_depth_ensemble'), 
     Real(0.6, 0.9, name='p_xo_ensemble'),
+    Real(0.1, 0.3, name='prob_specialist_ensemble'),    # Controls the growth of the ensemble population.
+    Categorical(['tournament', 'dalex', 'dalex_size'], name='selector_ensemble'),
+    Real(0.4, 0.8, name='dalex_size_prob_ensemble'),
 ]
 
-
-
+np.random.seed(SEED)
 # ----------------------------------------------------- DATASETS --------------------------------------------------------------
 from slim_gsgp_lib_np.datasets.synthetic_datasets import (
     load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5,
@@ -98,15 +97,26 @@ from slim_gsgp_lib_np.datasets.data_loader import (
 )
 
 datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
+datasets_syn = {name : loader if name.startswith('synthetic') else None for name, loader in datasets.items()}
+datasets_real = {name : loader if not name.startswith('synthetic') else None for name, loader in datasets.items()}
+
 
 # ----------------------------------------------------- MAIN FUNCTIONS -------------------------------------------------------------
-def tuning(data_split, name, split_id, selector): 
+
+
+
+
+
+
+
+def tuning_first(data_split, name, split_id, selector): 
     trial_results, calls_count = [], 0
     X, _, y, _ = data_split
 
     def objective(params): 
         nonlocal calls_count
-        id, md, px, pc, pt, pp = params
+        ch, id, md, px, pc, pt, pp = params
+        pi = PI_S1[ch]
         t0 = time.time()
 
         kf = KFold(n_splits=N_CV, shuffle=True, random_state=SEED)
@@ -118,13 +128,22 @@ def tuning(data_split, name, split_id, selector):
 
             talg = time.time()
             res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
-                        pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=selector,
+                        pop_size=pi[1], n_iter=pi[0], selector=selector,
                         max_depth=int(md), init_depth=int(id), p_xo=px, prob_const=pc, 
                         prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
-                        full_return=True, n_jobs=1, verbose=False, log_level=0,
-                        tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD_TUNNING, 
+                        full_return=True, verbose=False, log_level=0,
+                        tree_functions=FUNCTIONS_S1, it_tolerance=pi[0]*TOLERANCE, 
             )
-            elite, population = res
+            elite, spec_population = res
+
+            res_multi = multi_slim(
+                X_train=X_train, y_train=y_train, test_elite=False,
+                dataset_name=name, pop_size=POP_SIZE_S2, n_iter=N_GENERATIONS_S2, selector=SELECTOR_S2,
+                seed=SEED+i, full_return=True, verbose=False, log_level='evaluate',
+                condition_functions=FUNCTIONS_S2, depth_condition=int(MD_COND_ENSEMBLE),
+                tree_functions=FUNCTIONS_S2, it_tolerance=N_GENERATIONS_S2*TOLERANCE,
+            )
+
             rmses.append(rmse(elite.predict(X_val), y_val))
             nodes.append(elite.total_nodes)
             times.append(time.time() - talg)
@@ -168,10 +187,10 @@ def tuning(data_split, name, split_id, selector):
     # OPTIMIZATION
     gp_minimize(
         func=lambda params: objective(params),
-        dimensions=SPACE_PARAMETERS,
-        n_calls=N_SEARCHES_HYPER,
+        dimensions=SPACE_PARAMETERS_S1,
+        n_calls=N_SEARCHES_HYPER_S1,
         noise=NOISE_SKOPT,
-        n_initial_points=N_RANDOM_STARTS,
+        n_initial_points=N_RANDOM_STARTS_S1,
         verbose=False,
         random_state=SEED,
     )
@@ -185,6 +204,19 @@ def tuning(data_split, name, split_id, selector):
     mlflow.set_tag("tuning_step", 'complete')
 
     return df_tr, best_hyperparams, best_cv_rmse # Return the data
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def test_algo(params, data_split, name, split_id, bcv_rmse, selector): 
     X_train, X_test, y_train, y_test = data_split

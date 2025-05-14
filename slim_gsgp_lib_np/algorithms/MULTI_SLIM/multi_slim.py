@@ -86,7 +86,7 @@ class MULTI_SLIM:
 
     def solve(self, X_train, X_test, y_train, y_test, curr_dataset,
               run_info, ffunction, log_level, verbose, n_iter, test_elite,
-              log_path, n_elites, elitism, timeout, **kwargs):
+              log_path, n_elites, elitism, timeout, it_tollerance, **kwargs):
         """
         Run the MULTI_SLIM evolutionary algorithm.
 
@@ -184,9 +184,12 @@ class MULTI_SLIM:
             callback.on_train_start(self)
 
         start_time = time.time()
+        count_tolerance, best_fitness = 0, self.elite.fitness   
 
         # Main evolutionary loop.
-        for it in range(1, n_iter + 1, 1):            
+        for it in range(1, n_iter + 1, 1):  
+            count_tolerance += 1
+    
             self.lex_rounds = [] if self.selector.__name__ in ["els", "mels"] else None
             self.time_dict = {'mutation':[], 'xo':[]}
             self.iteration += 1
@@ -251,6 +254,13 @@ class MULTI_SLIM:
 
             if self.stop_training:
                 print(f"{it} iterations completed. Training stopped by callback.") if verbose > 0 else None
+                break
+
+            if self.elite.fitness < best_fitness:
+                best_fitness = self.elite.fitness
+                count_tolerance = 0
+            
+            if count_tolerance >= it_tollerance:
                 break
 
         # Run callbacks
