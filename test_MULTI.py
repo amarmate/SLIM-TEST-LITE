@@ -1,14 +1,19 @@
+import matplotlib
+matplotlib.use('Agg')
+
 import os
 import argparse
-import time 
+import time
 import pandas as pd
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, parallel_config
 import mlflow
+import warnings
 
 from slim_gsgp_lib_np.main_gp import gp
+from slim_gsgp_lib_np.main_multi_slim import multi_slim
 from functions.utils_test import (pf_rmse_comp, pf_rmse_comp_time, 
-                             save_tuning_results, save_test_results, save_experiment_results,
-                             simplify_tuple_expression, register_mlflow_charts, log_latex_as_image)
+                             simplify_tuple_expression, register_mlflow_charts, log_latex_as_image,
+                             save_experiment_results_v2)
 from slim_gsgp_lib_np.utils.utils import train_test_split
 
 from functions.metrics_test import *
@@ -25,15 +30,15 @@ NOISE_SKOPT = 1e-3
 N_TESTS = 15
 P_TEST = 0.2 
 SEED = 20
-POP_SIZE = 100
-N_GENERATIONS = 2500
-SELECTOR = 'dalex'
+POP_SIZE_MULTI = 100 
+N_GENERATIONS_MULTI = 2500
+SELECTORS = ['dalex', 'dalex_size_2']
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
-PREFIX_SAVE = 'GP'
-EXPERIMENT_NAME = 'GP_Experiment'
-FUNCTIONS = ['add', 'multiply', 'divide', 'subtract']
-STOP_THRESHOLD = 400
+PREFIX_SAVE = 'MULTI'
+EXPERIMENT_NAME = 'MULTI_Experiment'
+FUNCTIONS = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
+STOP_THRESHOLD_TUNNING = 400
 
 np.random.seed(SEED)
 
@@ -66,7 +71,7 @@ from slim_gsgp_lib_np.datasets.data_loader import (
 datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
 
 # ----------------------------------------------------- MAIN FUNCTIONS -------------------------------------------------------------
-def tuning(data_split, name, split_id): 
+def tuning(data_split, name, split_id, selector): 
     trial_results, calls_count = [], 0
     X, _, y, _ = data_split
 
@@ -84,11 +89,11 @@ def tuning(data_split, name, split_id):
 
             talg = time.time()
             res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
-                        pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=SELECTOR,
+                        pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=selector,
                         max_depth=int(md), init_depth=int(id), p_xo=px, prob_const=pc, 
                         prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
                         full_return=True, n_jobs=1, verbose=False, log_level=0,
-                        tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD, 
+                        tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD_TUNNING, 
             )
             elite, population = res
             rmses.append(rmse(elite.predict(X_val), y_val))
@@ -147,14 +152,12 @@ def tuning(data_split, name, split_id):
     best_hyperparams = best_trial[['init_depth','max_depth','p_xo','prob_const',
                                    'prob_terminal','particularity_pressure']].to_dict()
     best_cv_rmse = best_trial['mean_cv_rmse']
-    mlflow.log_params(best_hyperparams)
+    mlflow.log_params(best_hyperparams) 
     mlflow.set_tag("tuning_step", 'complete')
 
-    save_tuning_results(name, split_id, df_tr, best_hyperparams, prefix=PREFIX_SAVE, suffix=SUFFIX_SAVE)
-    return best_hyperparams, best_cv_rmse
+    return df_tr, best_hyperparams, best_cv_rmse # Return the data
 
-
-def test_algo(params, data_split, name, split_id, bcv_rmse): 
+def test_algo(params, data_split, name, split_id, bcv_rmse, selector): 
     X_train, X_test, y_train, y_test = data_split
     all_fold_pf, logs, records = [], [], []
     
@@ -162,7 +165,7 @@ def test_algo(params, data_split, name, split_id, bcv_rmse):
     for test_n in range(N_TESTS): 
         talg = time.time()
         res = gp(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, test_elite=True, dataset_name=name,
-                    pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=SELECTOR, seed=SEED+test_n,
+                    pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=selector, seed=SEED+test_n,
                     full_return=True, n_jobs=1, verbose=False, log_level='evaluate', **params,
                     tree_functions=FUNCTIONS, it_tolerance=np.inf, 
         )
@@ -206,16 +209,14 @@ def test_algo(params, data_split, name, split_id, bcv_rmse):
         mlflow.log_metric("testing_nodes", elite.total_nodes, step=test_n+1)
         mlflow.log_metric("testing_time", elapsed, step=test_n+1)
 
-    # SAVING 
-    main_test = pd.DataFrame(records)
-    save_test_results(name, split_id, main_test, prefix=PREFIX_SAVE, suffix=SUFFIX_SAVE)
-
-    best_example = main_test.loc[main_test['rmse_test'].idxmin()]['latex_repr']
-    log_latex_as_image(best_example, name, split_id, prefix=PREFIX_SAVE, suffix=SUFFIX_SAVE)
-
+    #
+    main_test_df = pd.DataFrame(records)
+    best_example_latex = main_test_df.loc[main_test_df['rmse_test'].idxmin()]['latex_repr']
+    log_latex_as_image(best_example_latex, name, split_id, prefix=selector, suffix='')
     pf = pf_rmse_comp_time(all_fold_pf)
     mlflow.set_tag("testing_step", 'complete')
-    return pf, logs
+
+    return main_test_df, pf, logs
 
 def parse_args(): 
     parser = argparse.ArgumentParser(description='Run GP experiments')
@@ -225,33 +226,111 @@ def parse_args():
         raise ValueError(f"workers cannot be greater than available CPU cores ({os.cpu_count()})")
     return args
 
-def run_experiment(dataset, name): 
-    print(f"Starting experiment for {name}...")
-    pfs, logs = [], []
-    mlflow.set_experiment(name)
-    for i in range(N_SPLITS): 
-        with mlflow.start_run(run_name=f'Split {i+1}', nested=True):
-            mlflow.set_tag("dataset_name", name)
-            data_split = train_test_split(dataset()[0], dataset()[1], p_test=P_TEST, seed=SEED + i)
-            params, bcv_rmse = tuning(data_split, name, i)
-            pf, log = test_algo(params, data_split, name, i, bcv_rmse)
+def process_split(split_id, dataset, name, selector, experiment_id):
+    flag_exists = False
+    with mlflow.start_run(run_name=f'Split {split_id+1}', nested=True,
+                          experiment_id=experiment_id):
+        mlflow.set_tag("dataset_name", name)
+        mlflow.set_tag("selector", selector)
 
-        pfs.extend(pf)
-        logs.extend(log)
+        data_split = train_test_split(dataset()[0], dataset()[1], p_test=P_TEST, seed=SEED + split_id)
 
-    log_results = save_experiment_results(name, pfs, logs, n_bins=N_TIME_BINS, 
-                            prefix=PREFIX_SAVE, suffix=SUFFIX_SAVE)
+        path = os.path.join('hp_results', name, f'{selector}_best_hyperparams{SUFFIX_SAVE}.pkl')
+        if os.path.exists(path):
+            print(f"Best hyperparameters for {name} - {selector} already computed. Skipping tuning...")
+            params = pd.read_pickle(path)[split_id]
+            df_tr_split, bcv_rmse = None, None 
+            flag_exists = True
+        else:
+            print(f"Tuning hyperparameters for {name} - {selector}...")
+            tun_res = tuning(data_split, name, split_id, selector)
+            df_tr_split, params, bcv_rmse = tun_res
+            
+        test_res = test_algo(params, data_split, name, split_id, bcv_rmse, selector)
+        main_test_df, pf, logs = test_res
+
+    return (df_tr_split, params, main_test_df, pf, logs, flag_exists)
+
+def run_experiment(dataset, name, selector): 
+    path = os.path.join('experiment_results', name, f'{selector}_metadata{SUFFIX_SAVE}.pkl')
+    if os.path.exists(path):
+        print(f"Experiment for {name} - {selector} already completed. Skipping...")
+        return
+
+    print(f"Starting experiment for {name} - {selector}...")
+
+    all_split_tuning_dfs = []
+    all_split_best_hyperparams = {}
+    all_split_test_dfs, collected_pfs, collected_logs = [], [], []
+    flag_exists = False
+
+    current_experiment = mlflow.set_experiment(name + '_' + selector)
+    experiment_id = current_experiment.experiment_id
     
+    with parallel_config(backend='loky', inner_max_num_threads=1):
+        split_results = Parallel(n_jobs=N_SPLITS)(
+            delayed(process_split)(i, dataset, name, selector, experiment_id) for i in range(N_SPLITS)
+        )
+
+    for i, result_tuple in enumerate(split_results):
+        df_tr, best_params, test_df, pf_s, log_s, flag_exists = result_tuple
+
+        all_split_tuning_dfs.append(df_tr)
+        all_split_best_hyperparams[i] = best_params
+
+        all_split_test_dfs.append(test_df)
+        collected_pfs.extend(pf_s)
+        collected_logs.extend(log_s)
+
+    if not flag_exists:
+        final_tuning_df = pd.concat(all_split_tuning_dfs, ignore_index=True) if all_split_tuning_dfs else pd.DataFrame()
+    else: 
+        final_tuning_df = pd.DataFrame()
+
+    final_test_df = pd.concat(all_split_test_dfs, ignore_index=True) if all_split_test_dfs else pd.DataFrame()
+
+    log_results_summary = save_experiment_results_v2(
+        dataset_name=name,
+        tuning_df=final_tuning_df,
+        best_hyperparams_map=all_split_best_hyperparams,
+        test_df=final_test_df,
+        pareto_fronts_data=collected_pfs,
+        logs_data=collected_logs,
+        n_time_bins=N_TIME_BINS,
+        prefix=selector,
+        suffix=SUFFIX_SAVE,
+        flag_exists=flag_exists,
+    )
+
     with mlflow.start_run(run_name='Final Results', nested=True):
-        register_mlflow_charts(name, log_results, pfs=pfs, prefix=PREFIX_SAVE, suffix=SUFFIX_SAVE)
-        
+        mlflow.log_dict(all_split_best_hyperparams, "all_splits_best_hyperparameters.json")
+                    
+        if log_results_summary is not None:
+            register_mlflow_charts(name, log_results_summary, pfs=collected_pfs,
+                                   prefix=selector, suffix=SUFFIX_SAVE)
+            
+    print(f"Experiment for {name} - {selector} completed. Results saved.")
 
-if __name__ == '__main__': 
+
+if __name__ == '__main__':
     args = parse_args()
-    parallel_jobs = args.workers if args.workers > 0 else os.cpu_count()
-    print(f"Running trials with {parallel_jobs} parallel jobs...")
+    total_workers = args.workers or os.cpu_count()
 
-    # Execute trials in parallel
-    Parallel(n_jobs=parallel_jobs)(
-        delayed(run_experiment)(dataset, name) for name, dataset in datasets.items()
+    parallel_jobs = max(1, total_workers // N_SPLITS)
+    inner_threads = total_workers if parallel_jobs == 1 else total_workers // parallel_jobs
+
+    if parallel_jobs == 1:
+        warnings.warn(
+            f"Number of workers set to {total_workers}, but N_SPLITS = {N_SPLITS}, "
+            f"so parallel_jobs was capped to 1. Each job will use {inner_threads} threads."
+        )
+
+    print(f"Running trials with {parallel_jobs} jobs using {inner_threads} threads each "
+          f"({parallel_jobs * inner_threads} total threads)")
+    
+    tasks = [(dataset, name, selector) for selector in SELECTORS for name, dataset in datasets.items()]
+
+    with parallel_config(backend='loky', inner_max_num_threads=inner_threads):
+        Parallel(n_jobs=parallel_jobs)(
+            delayed(run_experiment)(dataset, name, selector) for dataset, name, selector in tasks
         )

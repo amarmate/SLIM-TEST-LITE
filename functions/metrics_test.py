@@ -7,7 +7,7 @@ def mape(y_true, y_pred):
 def nrmse(y_true, y_pred):
     """Normalized RMSE."""
     range_y = y_true.max() - y_true.min()
-    return (np.sqrt(np.mean(np.array((y_true - y_pred) ** 2))) / range_y).item()
+    return (np.sqrt(np.mean(np.array((y_true - y_pred) ** 2))) / range_y)
 
 def r_squared(y_true, y_pred):
     """R-squared."""
@@ -26,3 +26,7 @@ def standardized_rmse(y_true, y_pred):
     """Standardized RMSE."""
     std_y = np.std(np.array(y_true))
     return np.sqrt(np.mean(np.array((y_true - y_pred) ** 2))) / std_y
+
+def rmse(y_true, y_pred):
+    """Root Mean Squared Error."""
+    return np.sqrt(np.mean(np.array((y_true - y_pred) ** 2)))

@@ -111,7 +111,7 @@ if __name__ == "__main__":
         (load_synthetic9, 'synthetic9'),
         (load_synthetic10,'synthetic10'),
     ]
-    iter_size = [(2000, 50), (1000, 100), (400, 200), (100, 500)]
+    iter_size = [(1000, 100), (400, 200), (100, 500)]
     pp_values = [10, 20, 50, 100]
     selectors = ['dalex_size', 'dalex_size_2', 'dalex']
     # 'tournament' selector runs without pp

@@ -10,12 +10,14 @@ import mlflow
 import warnings
 
 from slim_gsgp_lib_np.main_gp import gp
-from functions.utils import (pf_rmse_comp, pf_rmse_comp_time, 
-                             save_tuning_results, save_test_results, save_experiment_results,
+from functions.utils_test import (pf_rmse_comp, pf_rmse_comp_time, 
                              simplify_tuple_expression, register_mlflow_charts, log_latex_as_image,
                              save_experiment_results_v2)
 
-from functions.test_algorithms import *
+from slim_gsgp_lib_np.utils.utils import train_test_split
+
+
+from functions.metrics_test import *
 from sklearn.model_selection import KFold
 from skopt import gp_minimize
 from skopt.space import Integer, Real

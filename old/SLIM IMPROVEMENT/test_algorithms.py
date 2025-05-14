@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 import time
 import os
 from tqdm import tqdm
-from functions.test_funcs import mape, nrmse, r_squared, mae, standardized_rmse
+from functions.metrics_test import mape, nrmse, r_squared, mae, standardized_rmse
 
 
 # ----------------------------------- SLIM ----------------------------------- #
