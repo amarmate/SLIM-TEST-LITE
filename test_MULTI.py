@@ -13,7 +13,7 @@ from slim_gsgp_lib_np.main_gp import gp
 from slim_gsgp_lib_np.main_multi_slim import multi_slim
 from functions.utils_test import (pf_rmse_comp, pf_rmse_comp_time, 
                              simplify_tuple_expression, register_mlflow_charts, log_latex_as_image,
-                             save_experiment_results_v2)
+                             save_experiment_results_v2, split_data)
 from slim_gsgp_lib_np.utils.utils import train_test_split
 
 from functions.metrics_test import *
@@ -74,6 +74,7 @@ N_GENERATIONS_S2 = 2500
 MD_ENSEMBLE = 4
 MD_COND_ENSEMBLE = 6
 XO_ENSEMBLE = 0.6
+PROB_SPECIALIST_ENSEMBLE = 0.2
 
 SPACE_PARAMETERS_S2 = [
     Integer(0, 3, name='pop_iter_settings_ensemble'),   # [(2500, 100), (1200, 200), (250, 500)]
@@ -105,18 +106,14 @@ datasets_real = {name : loader if not name.startswith('synthetic') else None for
 
 
 
-
-
-
-
 def tuning_first(data_split, name, split_id, selector): 
     trial_results, calls_count = [], 0
     X, _, y, _ = data_split
 
     def objective(params): 
         nonlocal calls_count
-        ch, id, md, px, pc, pt, pp = params
-        pi = PI_S1[ch]
+        pis, id, md, px, pc, pt, pp, dls = params
+        pi = PI_S1[pis]
         t0 = time.time()
 
         kf = KFold(n_splits=N_CV, shuffle=True, random_state=SEED)
@@ -127,27 +124,32 @@ def tuning_first(data_split, name, split_id, selector):
             y_train, y_val = y[train_index], y[test_index]
 
             talg = time.time()
-            res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
-                        pop_size=pi[1], n_iter=pi[0], selector=selector,
-                        max_depth=int(md), init_depth=int(id), p_xo=px, prob_const=pc, 
-                        prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
-                        full_return=True, verbose=False, log_level=0,
+            res_gp = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
+                        pop_size=pi[1], n_iter=pi[0], selector=selector, p_xo=px, 
+                        max_depth=int(md), init_depth=int(id), prob_const=pc, 
+                        prob_terminal=pt, particularity_pressure=pp, dalex_size_prob=dls, 
+                        full_return=True, verbose=False, log_level=0, seed=SEED+i,
                         tree_functions=FUNCTIONS_S1, it_tolerance=pi[0]*TOLERANCE, 
             )
-            elite, spec_population = res
+
+            elite, spec_pop = res_gp
 
             res_multi = multi_slim(
                 X_train=X_train, y_train=y_train, test_elite=False,
                 dataset_name=name, pop_size=POP_SIZE_S2, n_iter=N_GENERATIONS_S2, selector=SELECTOR_S2,
-                seed=SEED+i, full_return=True, verbose=False, log_level='evaluate',
-                condition_functions=FUNCTIONS_S2, depth_condition=int(MD_COND_ENSEMBLE),
-                tree_functions=FUNCTIONS_S2, it_tolerance=N_GENERATIONS_S2*TOLERANCE,
+                seed=SEED+i, full_return=True, verbose=False, population=spec_pop, 
+                depth_condition=int(MD_COND_ENSEMBLE), ensemble_functions=FUNCTIONS_S2, it_tolerance=N_GENERATIONS_S2*TOLERANCE,
+                max_depth=int(MD_ENSEMBLE), p_xo=XO_ENSEMBLE, prob_specialist=PROB_SPECIALIST_ENSEMBLE,
             )
+
+            elite, population, _ = res_multi
+
+            # STOPPED HERE. I HAVE TO KNOW WHAT TO SAVE 
 
             rmses.append(rmse(elite.predict(X_val), y_val))
             nodes.append(elite.total_nodes)
             times.append(time.time() - talg)
-            pop_stats = [(rmse(ind.predict(X_val), y_val), ind.total_nodes) for ind in population]
+            pop_stats = [(rmse(ind.predict(X_sval), y_val), ind.total_nodes) for ind in population]
             all_fold_pf.extend(pop_stats)
         
         mean_rmse    = float(np.mean(rmses))
@@ -287,14 +289,18 @@ def parse_args():
         raise ValueError(f"workers cannot be greater than available CPU cores ({os.cpu_count()})")
     return args
 
-def process_split(split_id, dataset, name, selector, experiment_id):
+def process_split(split_id, dataset, name, selector, experiment_id, flag_syn):
     flag_exists = False
+
     with mlflow.start_run(run_name=f'Split {split_id+1}', nested=True,
                           experiment_id=experiment_id):
+        
         mlflow.set_tag("dataset_name", name)
         mlflow.set_tag("selector", selector)
+        train, test = split_data(dataset, flag_syn, P_TEST, SEED, split_id)
 
-        data_split = train_test_split(dataset()[0], dataset()[1], p_test=P_TEST, seed=SEED + split_id)
+        # CONTINUE HERE OR FROM TUNNING FIRST 
+
 
         path = os.path.join('hp_results', name, f'{selector}_best_hyperparams{SUFFIX_SAVE}.pkl')
         if os.path.exists(path):

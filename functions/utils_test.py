@@ -11,6 +11,11 @@ import matplotlib.pyplot as plt
 import mlflow
 import re
 from pathlib import Path
+from slim_gsgp_lib_np.utils.utils import train_test_split
+
+
+
+
 
 def pf_rmse_comp(points):
     pareto = []
@@ -55,6 +60,26 @@ def pf_rmse_comp_time(points):
     pareto.sort(key=lambda x: (x[0], x[1], x[2]))
     return pareto
 
+def split_data(data_loader, flag, p_test=0.2, seed=42, split_id=0):
+    """
+    Outputs ( (train data), (test_data) ) for a given split_id.
+    """
+    if flag: 
+        X, y, _, cond_mask = data_loader()
+    else:
+        X, y = data_loader()
+
+    idx = train_test_split(X, y, p_test=p_test, seed=seed + split_id, indices_only=True)
+    train_idx, test_idx = idx
+    X_train, X_test = X[train_idx], X[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
+
+    if not flag:
+        return (X_train, y_train), (X_test, y_test)
+
+    cmask_train = [submask[train_idx] for submask in cond_mask]
+    cmask_test  = [submask[test_idx] for submask in cond_mask]
+    return (X_train, y_train, cmask_train), (X_test, y_test, cmask_test)
 
 # -------------------------------------------------------------------- HYPERPARAMETER TUNING -------------------------------------------------------------------------------------------
 def save_tuning_results(name: str,
