@@ -84,8 +84,8 @@ class SlimParameters:
     callbacks: Optional[list] = None
     
     # SLIM_GSGP_PI_INIT parameters
-    tree_functions: list = constants
-    tree_constants: list = functions
+    tree_functions: list = field(default_factory=lambda: functions)
+    tree_constants: list = field(default_factory=lambda: constants)
     prob_const: float = 0.2
     prob_terminal: float = 0.7
     init_depth: int = 6
@@ -139,10 +139,11 @@ class GPParameters:
     initializer: str = "rhh"
     prob_const: float = 0.2
     prob_terminal: float = 0.7
-    tree_functions: list = functions
-    tree_constants: list = constants
+    tree_functions: list = field(default_factory=lambda: functions)
+    tree_constants: list = field(default_factory=lambda: constants)
     callbacks: list = None
     particularity_pressure: float = 20
+    dalex_size_prob: float = 0.5,
     elite_tree: list = None
     log_level: int = 0
 

@@ -1,1 +1,9 @@
 CODE:
+- finish implementing test_MULTI 
+
+
+test_MULTI:
+- Support for domain segmentation visualization -> meaning, we need to save the best ensemble to get the conditions and make the plot 
+- include in the pf from multi_slim the number of conditions / segments used
+- examine cohesion of the segments (e.g.: lets say x.shape=(1, 100), c1 = [0, 3, 9, 30] and c2 = [1, 2, 7, 25, 50] (no cohesion)), that is when 
+we know there is overfitting 

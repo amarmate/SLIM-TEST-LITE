@@ -5,6 +5,7 @@ import time
 import pickle
 import os
 import numpy as np
+import math # For ceiling division if needed, though floor is used here.
 
 from slim_gsgp_lib_np.utils.callbacks import LogSpecialist
 from slim_gsgp_lib_np.main_gp import gp
@@ -14,142 +15,240 @@ from slim_gsgp_lib_np.datasets.synthetic_datasets import (
     load_synthetic8, load_synthetic9, load_synthetic10,
 )
 
-# Limit BLAS threads to avoid conflicts with Joblib
 os.environ.update({k: '1' for k in [
     "OMP_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
     "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"
 ]})
 
-
-def _single_run(X, y, mask, n_iter, pop_size, selector, pp, dataset_name, seed):
+def _single_run(X, y, mask, n_iter, pop_size, selector, pp_config, dataset_name, seed, dp_value):
     t0 = time.time()
-    cb = LogSpecialist(X, y, mask)
-    # Use pp only for selectors that support particularity pressure
-    pp_val = pp if selector != 'tournament' else None
+    log_callback = LogSpecialist(X, y, mask)
+    current_pp = pp_config if selector != 'tournament' else None
+    
     gp(
-        X_train=X,
-        y_train=y,
-        test_elite=False,
-        callbacks=[cb],
-        full_return=True,
-        n_iter=n_iter,
-        pop_size=pop_size,
-        seed=seed,
-        max_depth=7,
-        init_depth=3,
-        selector=selector,
-        tournament_size=2,
-        particularity_pressure=pp_val,
-        verbose=0,
-        dataset_name=dataset_name,
+        X_train=X, y_train=y, test_elite=False, callbacks=[log_callback], full_return=True,
+        n_iter=n_iter, pop_size=pop_size, seed=seed, max_depth=7, init_depth=2,
+        selector=selector, tournament_size=2, particularity_pressure=current_pp,
+        verbose=0, dataset_name=dataset_name, dalex_size_prob=dp_value
     )
+    
     runtime = time.time() - t0
-    result_rmse = cb.log_rmse[-1]
-    result_size = cb.log_size[-1]
+    final_rmse = log_callback.log_rmse[-1]
+    final_size = log_callback.log_size[-1]
+    final_rmse_out = log_callback.log_rmse_out[-1]
+
+    all_rmses = np.array(log_callback.log_rmse)
+    min_rmse_indices = np.argmin(all_rmses, axis=0)
+    min_rmses_per_col, max_rmses_per_col = np.min(all_rmses, axis=0), np.max(all_rmses, axis=0)
+    convergence_thresholds = 0.95 * min_rmses_per_col + 0.05 * max_rmses_per_col + 1e-9
+
+    convergence_iterations = []
+    for i in range(all_rmses.shape[1]):
+        indices = np.where(all_rmses[:, i] < convergence_thresholds[i])[0]
+        convergence_iterations.append(indices if indices.size > 0 else np.array([n_iter]))
+
     return {
-        'dataset': dataset_name,
-        'selector': selector,
-        'n_iter': n_iter,
-        'pop_size': pop_size,
-        'pp': pp_val,
-        'seed': seed,
-        'result': result_rmse,
-        'size': result_size,
-        'duration': runtime,
+        'dataset': dataset_name, 'selector': selector, 'n_iter': n_iter, 'pop_size': pop_size,
+        'pp_used': current_pp, 'dp_value': dp_value, 'seed': seed, 'final_rmse': final_rmse,
+        'final_rmse_out': final_rmse_out, 'min_rmse_indices': min_rmse_indices,
+        'convergence_iters': convergence_iterations, 'final_size': final_size, 'duration': runtime,
     }
 
+def run_multiple_gp_instances(data_loader, dataset_name, n_iter, pop_size, selector,
+                               pp_config, num_runs_total, base_seed, n_jobs_for_runs, dp_value):
+    X, y, _, mask = data_loader()
+    # Reduced verbosity here as it can be overwhelming with many parallel outer tasks
+    # print(f"Dataset: {dataset_name} | Iter: {n_iter} | Pop: {pop_size} | PP: {pp_config} | DP: {dp_value} | Runs: {num_runs_total} | Inner Jobs: {n_jobs_for_runs}")
+    
+    seeds_for_runs = [base_seed + i for i in range(num_runs_total)]
+    
+    gp_tasks = [
+        delayed(_single_run)(X, y, mask, n_iter, pop_size, selector, pp_config, dataset_name, seed, dp_value)
+        for seed in seeds_for_runs
+    ]
+    return Parallel(n_jobs=n_jobs_for_runs)(gp_tasks)
 
-def collect_logs_experiment(loader, dataset_name, *, n_iter, pop_size, selector,
-                            pp=None, runs=30, base_seed=5, n_jobs=-1):
-    """
-    Load the dataset via `loader`, then run `runs` GP experiments in parallel.
-    Returns list of dicts with logs + metadata.
-    """
-    X, y, _, mask = loader()
-    print(f"Running {dataset_name} | {selector} | it={n_iter}, pop={pop_size}, pp={pp}, runs={runs}")
-    seeds = [base_seed + i for i in range(runs)]
-    tasks = (
-        delayed(_single_run)(X, y, mask, n_iter, pop_size, selector, pp, dataset_name, seed)
-        for seed in seeds
-    )
-    return Parallel(n_jobs=n_jobs)(tasks)
-
-def aggregate_logs(logs): 
-    aggregated = {
-    'dataset': logs[0]['dataset'],
-    'selector': logs[0]['selector'],
-    'n_iter': logs[0]['n_iter'],
-    'pop_size': logs[0]['pop_size'],
-    'pp': logs[0]['pp'],
-    'result': [],
-    'size': [],
-    'duration': [],
+def aggregate_run_logs(list_of_run_logs):
+    if not list_of_run_logs: return {}
+    first_log = list_of_run_logs[0]
+    aggregated_summary = {
+        'dataset': first_log['dataset'], 'selector': first_log['selector'],
+        'n_iter': first_log['n_iter'], 'pop_size': first_log['pop_size'],
+        'pp_configured': first_log['pp_used'], 'size_prob_dp': first_log['dp_value'],
+        'all_final_rmses': [], 'all_final_rmses_out': [], 'all_min_rmse_indices': [],
+        'all_convergence_iters': [], 'all_final_sizes': [], 'all_durations': [],
     }
+    for log_item in list_of_run_logs:
+        aggregated_summary['all_final_rmses'].append(log_item['final_rmse'])
+        aggregated_summary['all_final_rmses_out'].append(log_item['final_rmse_out'])
+        aggregated_summary['all_min_rmse_indices'].append(log_item['min_rmse_indices'])
+        aggregated_summary['all_convergence_iters'].append(log_item['convergence_iters'])
+        aggregated_summary['all_final_sizes'].append(log_item['final_size'])
+        aggregated_summary['all_durations'].append(log_item['duration'])
+    for key in ['all_final_rmses', 'all_final_rmses_out', 'all_min_rmse_indices', 'all_final_sizes', 'all_durations']:
+        aggregated_summary[key] = np.array(aggregated_summary[key])
+    return aggregated_summary
 
-    for i in range(len(logs)): 
-        aggregated['result'].append(logs[i]['result'])
-        aggregated['size'].append(logs[i]['size'])
-        aggregated['duration'].append(logs[i]['duration'])
-        
-    aggregated['result'] = np.array(aggregated['result'])
-    aggregated['size'] = np.array(aggregated['size'])
-    aggregated['duration'] = np.array(aggregated['duration'])
-
-    return aggregated
-
+def execute_and_save_experiment_config(data_loader_func, dataset_id_str, n_iter_val, pop_size_val, 
+                                       selector_str, pp_val, dp_val, num_gp_runs_setting, base_seed_val, 
+                                       n_inner_jobs_alloc, output_path):
+    # Print statement moved to the main loop for better control over output frequency
+    # print(f"Starting: {dataset_id_str} it={n_iter_val} pop={pop_size_val} pp={pp_val} dp={dp_val} inner_jobs={n_inner_jobs_alloc}")
+    try:
+        run_logs = run_multiple_gp_instances(
+            data_loader_func, dataset_id_str,
+            n_iter=n_iter_val, pop_size=pop_size_val, selector=selector_str, 
+            pp_config=pp_val, dp_value=dp_val, num_runs_total=num_gp_runs_setting, 
+            base_seed=base_seed_val, n_jobs_for_runs=n_inner_jobs_alloc,
+        )
+        if not run_logs:
+            print(f"No logs for {dataset_id_str} it={n_iter_val} pop={pop_size_val} pp={pp_val} dp={dp_val}. Skip.")
+            return None
+        aggregated_results = aggregate_run_logs(run_logs)
+        experiment_identifier = f"{dataset_id_str}_{n_iter_val}_{pop_size_val}_{pp_val}_{dp_val}_1605"
+        output_filename = os.path.join(output_path, experiment_identifier + ".pkl")
+        with open(output_filename, 'wb') as f_out: pickle.dump(aggregated_results, f_out)
+        # Success print handled by tqdm or final summary
+        return output_filename
+    except Exception as e:
+        print(f"Error processing: {dataset_id_str} it={n_iter_val} pop={pop_size_val} pp={pp_val} dp={dp_val} (inner_jobs={n_inner_jobs_alloc}): {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 if __name__ == "__main__":
-    # Experiment parameter grids
-    datasets = [
-        (load_synthetic2, 'synthetic2'),
-        (load_synthetic3, 'synthetic3'),
-        (load_synthetic4, 'synthetic4'),
-        (load_synthetic5, 'synthetic5'),
-        (load_synthetic6, 'synthetic6'),
-        (load_synthetic7, 'synthetic7'),
-        (load_synthetic8, 'synthetic8'),
-        (load_synthetic9, 'synthetic9'),
+    datasets_to_process = [
+        (load_synthetic2, 'synthetic2'), (load_synthetic3, 'synthetic3'),
+        (load_synthetic4, 'synthetic4'), (load_synthetic5, 'synthetic5'),
+        (load_synthetic6, 'synthetic6'), (load_synthetic7, 'synthetic7'),
+        (load_synthetic8, 'synthetic8'), (load_synthetic9, 'synthetic9'),
         (load_synthetic10,'synthetic10'),
     ]
-    iter_size = [(1000, 100), (400, 200), (100, 500)]
-    pp_values = [10, 20, 50, 100]
-    selectors = ['dalex_size', 'dalex_size_2', 'dalex']
-    # 'tournament' selector runs without pp
+    iteration_population_configs = [(400, 200), (100, 500), (40, 1000)]
+    particularity_pressure_options = [2, 5, 10, 15, 20, 50]
+    gp_selector_type = 'dalex_size'
+    dalex_size_probability_options = [0.25, 0.5, 0.75, 1]
+    
+    NUM_GP_RUNS_PER_CONFIG = 30 
+    BASE_SEED_FOR_RUNS = 5
 
-    n_cores = multiprocessing.cpu_count() - 2 
+    # --- Generate all experiment parameter sets first ---
+    experiment_params_list = []
+    for loader, dataset_name in datasets_to_process:
+        for n_iter_cfg, pop_cfg in iteration_population_configs:
+            for pp_cfg in particularity_pressure_options:
+                for dp_cfg in dalex_size_probability_options:
+                    experiment_params_list.append({
+                        'loader_func': loader, 'dataset_id_str': dataset_name,
+                        'n_iter_val': n_iter_cfg, 'pop_size_val': pop_cfg,
+                        'selector_str': gp_selector_type, 'pp_val': pp_cfg, 'dp_val': dp_cfg,
+                        'num_gp_runs_setting': NUM_GP_RUNS_PER_CONFIG, 
+                        'base_seed_val': BASE_SEED_FOR_RUNS
+                    })
+    
+    M_total_tasks = len(experiment_params_list)
+    if M_total_tasks == 0:
+        print("No experiments to run.")
+        exit()
 
-    # Create output directory
-    out_dir = 'logs_experiment'
-    os.makedirs(out_dir, exist_ok=True)
+    # --- Automatic Parallelism Configuration based on user rule ---
+    total_system_cpus = multiprocessing.cpu_count()
+    target_cores_to_use = max(1, total_system_cpus - 2)
 
-    for loader, name in tqdm(datasets):
-        for sel in selectors:
-            for it, pop in iter_size:
-                for pp in pp_values:
-                    logs = collect_logs_experiment(
-                        loader, name,
-                        n_iter=it, pop_size=pop,
-                        selector=sel, pp=pp,
-                        runs=30, base_seed=5, n_jobs=n_cores
-                    )
-                    logs = aggregate_logs(logs)
-                    ident = f"{name}_{it}_{pop}_{pp}_{sel}"
-                    fname = os.path.join(out_dir, ident + ".pkl")
-                    with open(fname, 'wb') as f:
-                        pickle.dump(logs, f)
+    # 1. Assign initial inner job counts for each of the M_total_tasks
+    #    Default to 1 inner job per task, these are cores used by the inner Parallel loops.
+    inner_jobs_alloc_list = [1] * M_total_tasks
+    
+    # 2. Calculate cores committed by this base allocation
+    cores_committed_for_base = M_total_tasks # Since each gets 1 core
 
-        for sel in ['tournament']: 
-            for it, pop in tqdm(iter_size):
-                logs = collect_logs_experiment(
-                    loader, name,
-                    n_iter=it, pop_size=pop,
-                    selector=sel, pp=10,
-                    runs=30, base_seed=5, n_jobs=n_cores
-                )
-                logs = aggregate_logs(logs)
-                ident = f"{name}_{it}_{pop}_None_{sel}"
-                fname = os.path.join(out_dir, ident + ".pkl")
-                with open(fname, 'wb') as f:
-                    pickle.dump(logs, f)
+    # 3. Calculate "bonus" cores available from the budget
+    bonus_cores_to_distribute = target_cores_to_use - cores_committed_for_base
 
-    print(f"Saved experiments results to '{out_dir}' Total files: {len(os.listdir(out_dir))}")
+    # 4. Distribute bonus_cores (if any)
+    if bonus_cores_to_distribute > 0:
+        current_task_idx = 0
+        for _ in range(bonus_cores_to_distribute):
+            # Find the next task that can accept an additional core (round-robin)
+            # and hasn't reached its max inner parallelism (NUM_GP_RUNS_PER_CONFIG)
+            search_รอบ = 0
+            while search_รอบ < M_total_tasks:
+                actual_idx = current_task_idx % M_total_tasks
+                if inner_jobs_alloc_list[actual_idx] < NUM_GP_RUNS_PER_CONFIG:
+                    inner_jobs_alloc_list[actual_idx] += 1
+                    current_task_idx += 1 # Move to next task for next bonus core
+                    break 
+                current_task_idx += 1 # This task is maxed, try next
+                search_รอบ += 1
+            if search_รอบ == M_total_tasks:
+                # All tasks are maxed out, no more bonus cores can be distributed
+                break
+    
+    # Ensure all tasks have at least 1 inner job, even if target_cores_to_use was < M_total_tasks
+    # (Our logic above starts with 1, so this is mainly for tasks that might have been set to 0 by other logic)
+    # For safety, though current logic maintains >= 1 if M_total_tasks > 0:
+    for i in range(M_total_tasks):
+        inner_jobs_alloc_list[i] = max(1, inner_jobs_alloc_list[i])
+
+
+    # 5. Determine num_outer_parallel_jobs
+    #    This is the n_jobs for the main joblib.Parallel call.
+    #    It should allow concurrent execution such that the sum of inner_jobs of running tasks
+    #    ideally matches target_cores_to_use.
+    if M_total_tasks == 0:
+        num_outer_parallel_jobs = 1
+    else:
+        # Calculate average inner jobs allocated per task
+        avg_inner_jobs_across_all_tasks = sum(inner_jobs_alloc_list) / M_total_tasks
+        if avg_inner_jobs_across_all_tasks == 0: # Should not happen if min 1 is enforced
+            num_outer_parallel_jobs = M_total_tasks # Fallback
+        else:
+            num_outer_parallel_jobs = math.floor(target_cores_to_use / avg_inner_jobs_across_all_tasks)
+        
+        num_outer_parallel_jobs = max(1, num_outer_parallel_jobs) # Must be at least 1
+        num_outer_parallel_jobs = min(num_outer_parallel_jobs, M_total_tasks) # Cannot be more than total tasks
+        num_outer_parallel_jobs = min(num_outer_parallel_jobs, target_cores_to_use) # Also, cannot be more than total available cores if each task uses at least 1.
+
+    print(f"--- Automatic Parallelism Configuration (User Rule) ---")
+    print(f"Total System CPUs: {total_system_cpus}")
+    print(f"Target Cores to Use (CPUs - 2): {target_cores_to_use}")
+    print(f"Total Experiment Configurations (M_total_tasks): {M_total_tasks}")
+    # For brevity, not printing the entire inner_jobs_alloc_list if it's very long
+    # Example: print(f"Inner jobs allocation for first few tasks: {inner_jobs_alloc_list[:5]}")
+    print(f"Calculated Outer Parallel Jobs (Concurrent Experiments): {num_outer_parallel_jobs}")
+    # The sum of inner jobs for the 'num_outer_parallel_jobs' concurrently running tasks
+    # will stochastically be around 'target_cores_to_use'.
+    print(f"--- Initiating Experiments ---")
+
+    main_output_directory = 'logs_experiment_user_rule_parallel'
+    os.makedirs(main_output_directory, exist_ok=True)
+
+    # Create delayed tasks with their specific inner job allocations
+    all_delayed_tasks = []
+    for i in range(M_total_tasks):
+        params = experiment_params_list[i]
+        task = delayed(execute_and_save_experiment_config)(
+            params['loader_func'], params['dataset_id_str'],
+            params['n_iter_val'], params['pop_size_val'],
+            params['selector_str'], params['pp_val'], params['dp_val'],
+            params['num_gp_runs_setting'], params['base_seed_val'],
+            n_inner_jobs_alloc=inner_jobs_alloc_list[i], # Specific inner job count for this task
+            output_path=main_output_directory
+        )
+        all_delayed_tasks.append(task)
+        if i < 5 or i > M_total_tasks - 5 : # Print for a few tasks to show variance
+             print(f"Task {i}: Dataset={params['dataset_id_str']}, PP={params['pp_val']}, DP={params['dp_val']} -> Inner Jobs Assigned: {inner_jobs_alloc_list[i]}")
+
+
+    print(f"Total experiment configurations to process: {len(all_delayed_tasks)}")
+
+    completed_experiment_paths = Parallel(n_jobs=num_outer_parallel_jobs, backend="loky")(
+        tqdm(all_delayed_tasks, desc="Overall Experiment Progress")
+    )
+
+    successful_experiment_runs = sum(1 for path in completed_experiment_paths if path is not None)
+    print(f"--- Experiment Series Complete ---")
+    print(f"Results stored in: '{main_output_directory}'")
+    print(f"Total configurations scheduled: {len(all_delayed_tasks)}")
+    print(f"Successfully completed configurations: {successful_experiment_runs}")
+    print(f"Files in output directory: {len(os.listdir(main_output_directory))}")

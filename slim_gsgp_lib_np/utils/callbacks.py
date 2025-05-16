@@ -263,32 +263,31 @@ class LogSpecialist(SLIM_GSGP_Callback):
         self.y_train = y_train
         self.masks = masks
 
-        self.log_rmse = []               # per-gen RMSE of best specialist on each mask
-        self.log_size = []               # per-gen size of best specialist on each mask
-        self.count_specialists = [] # per-gen count of individuals per mask
+        self.log_rmse, self.log_size, self.log_rmse_out = [], [], []       
+        self.count_specialists = [] 
 
     def on_generation_start(self, optimizer, generation):
-        # Prepare per-mask minima and counts
-        n_masks = len(self.masks)
-        # min_errs = [np.inf] * n_masks
-        # best_inds = [None] * n_masks
-        min_errs, best_inds, sizes = [], [], []
+        min_errs, best_inds, sizes, errs_out = [], [], [], []
 
         for mask in self.masks: 
             errors_mask = optimizer.population.errors_case[:, mask]
             errors_ind = np.sqrt(np.mean(errors_mask**2, axis=1))
             best_ind = np.argmin(errors_ind)
             min_err = errors_ind[best_ind]
+            errors_out = optimizer.population.errors_case[best_ind, ~mask]
+            min_err_out = np.sqrt(np.mean(errors_out**2))
+
             min_errs.append(min_err)
             best_inds.append(optimizer.population.population[best_ind])
             sizes.append(optimizer.population.population[best_ind].total_nodes)
+            errs_out.append(min_err_out)
 
         self.log_rmse.append(min_errs)
         self.log_size.append(sizes)
 
     def plot_specialist_fitnesses(self):
         fig, ax = plt.subplots()
-        data = np.array(self.log_rmse)  # shape (n_generations, n_masks)
+        data = np.array(self.log_rmse) 
         for i in range(data.shape[1]):
             ax.plot(data[:, i], label=f"Specialist {i+1} ({data[-1, i]:.2f})")
         ax.set_title('Specialist RMSE over Generations')

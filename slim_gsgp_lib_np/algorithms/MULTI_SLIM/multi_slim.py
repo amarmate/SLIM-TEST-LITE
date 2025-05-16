@@ -86,7 +86,7 @@ class MULTI_SLIM:
 
     def solve(self, X_train, X_test, y_train, y_test, curr_dataset,
               run_info, ffunction, log_level, verbose, n_iter, test_elite,
-              log_path, n_elites, elitism, timeout, it_tollerance, **kwargs):
+              log_path, n_elites, elitism, timeout, it_tolerance, **kwargs):
         """
         Run the MULTI_SLIM evolutionary algorithm.
 
@@ -260,7 +260,7 @@ class MULTI_SLIM:
                 best_fitness = self.elite.fitness
                 count_tolerance = 0
             
-            if count_tolerance >= it_tollerance:
+            if count_tolerance >= it_tolerance:
                 break
 
         # Run callbacks

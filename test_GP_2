@@ -44,10 +44,10 @@ STOP_THRESHOLD = 400
 np.random.seed(SEED)
 
 SPACE_PARAMETERS = [
-        Integer(2, 4, name='init_depth'),
-        Integer(4, 9, name='max_depth'),                   
+        # Integer(2, 4, name='init_depth'),
+        Integer(6, 9, name='max_depth'),                   
         Real(0.6, 0.9, name='p_xo'),                                          
-        Real(0.1, 0.25, name='prob_const'),                                       
+        Real(0.10, 0.25, name='prob_const'),                                       
         Real(0.6, 0.9, name='prob_terminal'),                                      
         Real(10, 100, name='particularity_pressure', prior='log-uniform'),
 ]
@@ -78,7 +78,7 @@ def tuning(data_split, name, split_id, selector):
 
     def objective(params): 
         nonlocal calls_count
-        id, md, px, pc, pt, pp = params
+        md, px, pc, pt, pp = params
         t0 = time.time()
 
         kf = KFold(n_splits=N_CV, shuffle=True, random_state=SEED)
@@ -91,7 +91,7 @@ def tuning(data_split, name, split_id, selector):
             talg = time.time()
             res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
                         pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=selector,
-                        max_depth=int(md), init_depth=int(id), p_xo=px, prob_const=pc, 
+                        max_depth=int(md), init_depth=2, p_xo=px, prob_const=pc, 
                         prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
                         full_return=True, n_jobs=1, verbose=False, log_level=0,
                         tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD, 
@@ -121,7 +121,7 @@ def tuning(data_split, name, split_id, selector):
             'split_id':                split_id,
             'trial_id':                calls_count,
             'seed':                    SEED,
-            'init_depth':              int(id),
+            'init_depth':              2,
             'max_depth':               int(md),
             'p_xo':                    px,
             'prob_const':              pc,

@@ -737,14 +737,14 @@ def dalex_selection_size(mode='min',
                 best_index = np.argmin(F)
             else:
                 sorted = np.argsort(F)
-                best_index = sorted[0:tournament_size]
+                best_index = sorted[:tournament_size]
                 best_index = min(best_index, key=lambda idx: pop.population[idx].total_nodes)
         elif mode == 'max':
             if random.random() < p_best:
                 best_index = np.argmax(F)
             else:
-                sorted = np.argsort(F)[::-1]
-                best_index = sorted[0:tournament_size]
+                sorted = np.argsort(F)[::-1]  
+                best_index = sorted[:tournament_size]
                 best_index = max(best_index, key=lambda idx: pop.population[idx].total_nodes)
         else:
             raise ValueError("Invalid mode. Use 'min' or 'max'.")
