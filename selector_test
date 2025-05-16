@@ -60,20 +60,20 @@ def _single_run(
     )
 
     runtime_seconds = time.time() - start_time
-    final_rmse = callback_logger.log_rmse[-1]
-    final_size = callback_logger.log_size[-1]
-    final_rmse_out_of_sample = callback_logger.log_rmse_out[-1]
+    # final_rmse = callback_logger.log_rmse[-1]
+    # final_size = callback_logger.log_size[-1]
+    # final_rmse_out_of_sample = callback_logger.log_rmse_out[-1]
 
-    rmse_evolution = np.array(callback_logger.log_rmse)
-    min_rmse_indices = np.argmin(rmse_evolution, axis=0)
-    min_rmse_values = np.min(rmse_evolution, axis=0)
-    max_rmse_values = np.max(rmse_evolution, axis=0)
-    convergence_threshold = 0.95 * min_rmse_values + 0.05 * max_rmse_values
+    # rmse_evolution = np.array(callback_logger.log_rmse)
+    # min_rmse_indices = np.argmin(rmse_evolution, axis=0)
+    # min_rmse_values = np.min(rmse_evolution, axis=0)
+    # max_rmse_values = np.max(rmse_evolution, axis=0)
+    # convergence_threshold = 0.95 * min_rmse_values + 0.05 * max_rmse_values
 
-    convergence_iterations = []
-    for i in range(rmse_evolution.shape[1]):
-        iterations_below_threshold = np.where(rmse_evolution[:, i] < convergence_threshold[i])[0]
-        convergence_iterations.append(iterations_below_threshold)
+    # convergence_iterations = []
+    # for i in range(rmse_evolution.shape[1]):
+    #     iterations_below_threshold = np.where(rmse_evolution[:, i] < convergence_threshold[i])[0]
+    #     convergence_iterations.append(iterations_below_threshold)
 
     return {
         'dataset': dataset_name_str,
@@ -83,11 +83,14 @@ def _single_run(
         'dp': dalex_size_probability,
         'seed': run_seed,
         'selector_method_used': selector_method,
-        'result': final_rmse,
-        'result_out': final_rmse_out_of_sample,
-        'min_idx': min_rmse_indices,
-        'results_conv': convergence_iterations,
-        'size': final_size,
+        # 'result': final_rmse,
+        # 'result_out': final_rmse_out_of_sample,
+        # 'min_idx': min_rmse_indices,
+        # 'results_conv': convergence_iterations,
+        # 'size': final_size,
+        'results_rmse' : callback_logger.log_rmse,
+        'results_out' : callback_logger.log_rmse_out,
+        'results_size' : callback_logger.log_size,
         'duration': runtime_seconds,
     }
 
@@ -138,27 +141,21 @@ def aggregate_run_logs(individual_run_logs: list, current_selector_method: str) 
         'dp': individual_run_logs[0]['dp'],
         'result_rmse': [],
         'result_out': [],
-        'min_idx': [],
-        'results_conv': [],
-        'size': [],
+        'result_size': [],
         'duration': [],
     }
 
     for run_log in individual_run_logs:
-        aggregated_results['result_rmse'].append(run_log['result'])
-        aggregated_results['result_out'].append(run_log['result_out'])
-        aggregated_results['min_idx'].append(run_log['min_idx'])
-        aggregated_results['results_conv'].append(run_log['results_conv'])
-        aggregated_results['size'].append(run_log['size'])
+        aggregated_results['result_rmse'].append(run_log['results_rmse'])
+        aggregated_results['result_out'].append(run_log['results_out'])
+        aggregated_results['result_size'].append(run_log['results_size'])
         aggregated_results['duration'].append(run_log['duration'])
 
     aggregated_results['result_rmse'] = np.array(aggregated_results['result_rmse'])
-    aggregated_results['size'] = np.array(aggregated_results['size'])
-    aggregated_results['duration'] = np.array(aggregated_results['duration'])
     aggregated_results['result_out'] = np.array(aggregated_results['result_out'])
-    aggregated_results['min_idx'] = np.array(aggregated_results['min_idx'])
-    aggregated_results['results_conv'] = aggregated_results['results_conv']
-
+    aggregated_results['result_size'] = np.array(aggregated_results['result_size'])
+    aggregated_results['duration'] = np.array(aggregated_results['duration'])
+    
     return aggregated_results
 
 
