@@ -6,6 +6,7 @@ import pickle
 import os
 import numpy as np
 import itertools
+import argparse
 
 from slim_gsgp_lib_np.utils.callbacks import LogSpecialist
 from slim_gsgp_lib_np.main_gp import gp
@@ -153,6 +154,13 @@ def aggregate_run_logs(individual_run_logs: list, current_selector_method: str) 
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run experiments with different configurations.")
+    parser.add_argument(
+        '--workers', type=int, default=1,
+        help="Number of parallel workers to use for the experiments."
+    )
+    args = parser.parse_args()
+
     datasets_to_process = [
         (load_synthetic2, 'synthetic2'), (load_synthetic3, 'synthetic3'),
         (load_synthetic4, 'synthetic4'), (load_synthetic5, 'synthetic5'),
@@ -167,6 +175,8 @@ if __name__ == "__main__":
 
     num_available_cores = multiprocessing.cpu_count()
     cores_for_parallelism = max(1, num_available_cores - 1)
+    cores_to_use = min(cores_for_parallelism, args.workers)
+    print(f"Using {cores_to_use} cores for parallel processing.")
 
     output_directory = 'logs_experiment_dalex_size_single_loop'
     os.makedirs(output_directory, exist_ok=True)
@@ -191,7 +201,7 @@ if __name__ == "__main__":
             dalex_size_prob_param=dp_config,
             num_runs=30,
             base_random_seed=5,
-            num_parallel_jobs=cores_for_parallelism
+            num_parallel_jobs=cores_to_use
         )
 
         if all_run_logs:
