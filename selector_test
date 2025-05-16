@@ -152,6 +152,9 @@ def aggregate_run_logs(individual_run_logs: list, current_selector_method: str) 
     aggregated_results['result_rmse'] = np.array(aggregated_results['result_rmse'])
     aggregated_results['size'] = np.array(aggregated_results['size'])
     aggregated_results['duration'] = np.array(aggregated_results['duration'])
+    aggregated_results['result_out'] = np.array(aggregated_results['result_out'])
+    aggregated_results['min_idx'] = np.array(aggregated_results['min_idx'])
+    aggregated_results['results_conv'] = np.array(aggregated_results['results_conv'])
 
     return aggregated_results
 
@@ -171,10 +174,10 @@ if __name__ == "__main__":
         (load_synthetic8, 'synthetic8'), (load_synthetic9, 'synthetic9'),
         (load_synthetic10, 'synthetic10'),
     ]
-    iteration_population_configs = [(400, 200), (100, 500), (40, 1000)]
-    particularity_pressure_configs = [2, 5, 10, 15, 20, 50]
+    iteration_population_configs = [(400, 200), (100, 500), (40, 1000), (20, 2000)]
+    particularity_pressure_configs = [3, 4, 5, 7, 10, 12, 15, 17, 20, 25]
     gp_selector_method = 'dalex_size'
-    dalex_size_probability_configs = [0.25, 0.5, 0.75, 1.0]
+    dalex_size_probability_configs = [0.4, 0.6, 0.8, 1.0]
 
     num_available_cores = multiprocessing.cpu_count()
     cores_for_parallelism = max(1, num_available_cores - 1)
