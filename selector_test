@@ -5,6 +5,7 @@ import time
 import pickle
 import os
 import numpy as np
+import itertools
 
 from slim_gsgp_lib_np.utils.callbacks import LogSpecialist
 from slim_gsgp_lib_np.main_gp import gp
@@ -14,144 +15,142 @@ from slim_gsgp_lib_np.datasets.synthetic_datasets import (
     load_synthetic8, load_synthetic9, load_synthetic10,
 )
 
-os.environ.update({k: '1' for k in [
+BLAS_THREAD_ENV_VARS = [
     "OMP_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
     "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"
-]})
+]
+for env_var in BLAS_THREAD_ENV_VARS:
+    os.environ[env_var] = '1'
 
-def _single_run(X, y, mask, n_iter, pop_size, selector, pp_config, dataset_name, seed, dp_value):
-    t0 = time.time()
-    log_callback = LogSpecialist(X, y, mask)
-    
-    current_pp = pp_config if selector != 'tournament' else None
-    
+
+def _single_run(
+        features: np.ndarray,
+        target: np.ndarray,
+        mask: np.ndarray,
+        num_iterations: int,
+        population_size: int,
+        selector_method: str,
+        particularity_pressure_param: float,
+        dataset_name_str: str,
+        run_seed: int,
+        dalex_size_probability: float
+    ) -> dict:
+    start_time = time.time()
+    callback_logger = LogSpecialist(features, target, mask)
+    pp_value_for_gp = particularity_pressure_param if selector_method != 'tournament' else None
+
     gp(
-        X_train=X,
-        y_train=y,
+        X_train=features,
+        y_train=target,
         test_elite=False,
-        callbacks=[log_callback],
+        callbacks=[callback_logger],
         full_return=True,
-        n_iter=n_iter,
-        pop_size=pop_size,
-        seed=seed,
+        n_iter=num_iterations,
+        pop_size=population_size,
+        seed=run_seed,
         max_depth=7,
         init_depth=2,
-        selector=selector,
+        selector=selector_method,
         tournament_size=2,
-        particularity_pressure=current_pp,
+        particularity_pressure=pp_value_for_gp,
         verbose=0,
-        dataset_name=dataset_name,
-        dalex_size_prob=dp_value
+        dataset_name=dataset_name_str,
+        dalex_size_prob=dalex_size_probability
     )
-    
-    runtime = time.time() - t0
-    final_rmse = log_callback.log_rmse[-1]
-    final_size = log_callback.log_size[-1]
-    final_rmse_out = log_callback.log_rmse_out[-1]
 
-    all_rmses = np.array(log_callback.log_rmse)
-    min_rmse_indices = np.argmin(all_rmses, axis=0)
-    min_rmses_per_col, max_rmses_per_col = np.min(all_rmses, axis=0), np.max(all_rmses, axis=0)
-    convergence_thresholds = 0.95 * min_rmses_per_col + 0.05 * max_rmses_per_col + 1e-9
+    runtime_seconds = time.time() - start_time
+    final_rmse = callback_logger.log_rmse[-1]
+    final_size = callback_logger.log_size[-1]
+    final_rmse_out_of_sample = callback_logger.log_rmse_out[-1]
+
+    rmse_evolution = np.array(callback_logger.log_rmse)
+    min_rmse_indices = np.argmin(rmse_evolution, axis=0)
+    min_rmse_values = np.min(rmse_evolution, axis=0)
+    max_rmse_values = np.max(rmse_evolution, axis=0)
+    convergence_threshold = 0.95 * min_rmse_values + 0.05 * max_rmse_values
 
     convergence_iterations = []
-    for i in range(all_rmses.shape[1]):
-        indices = np.where(all_rmses[:, i] < convergence_thresholds[i])[0]
-        convergence_iterations.append(indices if indices.size > 0 else np.array([n_iter]))
+    for i in range(rmse_evolution.shape[1]):
+        iterations_below_threshold = np.where(rmse_evolution[:, i] < convergence_threshold[i])[0]
+        convergence_iterations.append(iterations_below_threshold)
 
     return {
-        'dataset': dataset_name,
-        'selector': selector,
-        'n_iter': n_iter,
-        'pop_size': pop_size,
-        'pp_used': current_pp,
-        'dp_value': dp_value,
-        'seed': seed,
-        'final_rmse': final_rmse,
-        'final_rmse_out': final_rmse_out,
-        'min_rmse_indices': min_rmse_indices,
-        'convergence_iters': convergence_iterations,
-        'final_size': final_size,
-        'duration': runtime,
+        'dataset': dataset_name_str,
+        'n_iter': num_iterations,
+        'pop_size': population_size,
+        'pp': pp_value_for_gp,
+        'dp': dalex_size_probability,
+        'seed': run_seed,
+        'selector_method_used': selector_method,
+        'result': final_rmse,
+        'result_out': final_rmse_out_of_sample,
+        'min_idx': min_rmse_indices,
+        'results_conv': convergence_iterations,
+        'size': final_size,
+        'duration': runtime_seconds,
     }
 
-def run_multiple_gp_instances(data_loader, dataset_name, n_iter, pop_size, selector,
-                               pp_config, num_runs, base_seed, n_jobs_for_runs, dp_value):
-    X, y, _, mask = data_loader()
-    print(f"Dataset: {dataset_name} | Iter: {n_iter} | Pop: {pop_size} | PP: {pp_config} | DP: {dp_value} | Runs: {num_runs} | Inner Jobs: {n_jobs_for_runs}")
-    
-    seeds_for_runs = [base_seed + i for i in range(num_runs)]
-    
-    gp_tasks = [
-        delayed(_single_run)(X, y, mask, n_iter, pop_size, selector, pp_config, dataset_name, seed, dp_value)
-        for seed in seeds_for_runs
-    ]
-    
-    return Parallel(n_jobs=n_jobs_for_runs)(gp_tasks)
 
-def aggregate_run_logs(list_of_run_logs):
-    if not list_of_run_logs:
+def collect_logs_experiment(
+        dataset_loader_func,
+        dataset_name: str,
+        *,
+        num_iterations: int,
+        population_size: int,
+        selector_method: str,
+        particularity_pressure_param: float = None,
+        num_runs: int = 30,
+        base_random_seed: int = 5,
+        num_parallel_jobs: int = -1,
+        dalex_size_prob_param: float = 0.5
+    ) -> list:
+    features, target, _, mask = dataset_loader_func()
+
+    print(
+        f"Starting experiment group: {dataset_name} | Selector={selector_method} | Iter={num_iterations} | "
+        f"Pop={population_size} | PP={particularity_pressure_param} | "
+        f"DP={dalex_size_prob_param} | Runs={num_runs}"
+    )
+
+    run_seeds = [base_random_seed + i for i in range(num_runs)]
+    tasks = (
+        delayed(_single_run)(
+            features, target, mask, num_iterations, population_size,
+            selector_method, particularity_pressure_param, dataset_name, seed, dalex_size_prob_param
+        )
+        for seed in run_seeds
+    )
+    experiment_results = Parallel(n_jobs=num_parallel_jobs)(tasks)
+    return experiment_results
+
+
+def aggregate_run_logs(individual_run_logs: list, current_selector_method: str) -> dict:
+    if not individual_run_logs:
         return {}
 
-    first_log = list_of_run_logs[0]
-    aggregated_summary = {
-        'dataset': first_log['dataset'],
-        'selector': first_log['selector'],
-        'n_iter': first_log['n_iter'],
-        'pop_size': first_log['pop_size'],
-        'pp_configured': first_log['pp_used'], 
-        'size_prob_dp': first_log['dp_value'],
-        'all_final_rmses': [],
-        'all_final_rmses_out': [],
-        'all_min_rmse_indices': [],
-        'all_convergence_iters': [],
-        'all_final_sizes': [],
-        'all_durations': [],
+    aggregated_results = {
+        'dataset': individual_run_logs[0]['dataset'],
+        'selector': individual_run_logs[0].get('selector_method_used', current_selector_method),
+        'n_iter': individual_run_logs[0]['n_iter'],
+        'pop_size': individual_run_logs[0]['pop_size'],
+        'pp': individual_run_logs[0]['pp'],
+        'dp': individual_run_logs[0]['dp'],
+        'result_rmse': [],
+        'size': [],
+        'duration': [],
     }
 
-    for log_item in list_of_run_logs:
-        aggregated_summary['all_final_rmses'].append(log_item['final_rmse'])
-        aggregated_summary['all_final_rmses_out'].append(log_item['final_rmse_out'])
-        aggregated_summary['all_min_rmse_indices'].append(log_item['min_rmse_indices'])
-        aggregated_summary['all_convergence_iters'].append(log_item['convergence_iters'])
-        aggregated_summary['all_final_sizes'].append(log_item['final_size'])
-        aggregated_summary['all_durations'].append(log_item['duration'])
+    for run_log in individual_run_logs:
+        aggregated_results['result_rmse'].append(run_log['result'])
+        aggregated_results['size'].append(run_log['size'])
+        aggregated_results['duration'].append(run_log['duration'])
 
-    for key in ['all_final_rmses', 'all_final_rmses_out', 'all_min_rmse_indices', 'all_final_sizes', 'all_durations']:
-        aggregated_summary[key] = np.array(aggregated_summary[key])
-    
-    return aggregated_summary
+    aggregated_results['result_rmse'] = np.array(aggregated_results['result_rmse'])
+    aggregated_results['size'] = np.array(aggregated_results['size'])
+    aggregated_results['duration'] = np.array(aggregated_results['duration'])
 
-def execute_and_save_experiment_config(data_loader_func, dataset_id_str, n_iter_val, pop_size_val, 
-                                       selector_str, pp_val, dp_val, num_gp_runs, base_seed_val, 
-                                       n_inner_jobs, output_path):
-    try:
-        run_logs = run_multiple_gp_instances(
-            data_loader_func, dataset_id_str,
-            n_iter=n_iter_val, pop_size=pop_size_val,
-            selector=selector_str, pp_config=pp_val, dp_value=dp_val,
-            num_runs=num_gp_runs, base_seed=base_seed_val, n_jobs_for_runs=n_inner_jobs,
-        )
+    return aggregated_results
 
-        if not run_logs:
-            print(f"No logs for {dataset_id_str}, iter={n_iter_val}, pop={pop_size_val}, pp={pp_val}, dp={dp_val}. Skipping.")
-            return None
-
-        aggregated_results = aggregate_run_logs(run_logs)
-        
-        experiment_identifier = f"{dataset_id_str}_{n_iter_val}_{pop_size_val}_{pp_val}_{dp_val}_1605"
-        output_filename = os.path.join(output_path, experiment_identifier + ".pkl")
-        
-        with open(output_filename, 'wb') as f_out:
-            pickle.dump(aggregated_results, f_out)
-        print(f"Saved: {output_filename}")
-        return output_filename
-        
-    except Exception as e:
-        print(f"Error processing {dataset_id_str}, iter={n_iter_val}, pop={pop_size_val}, pp={pp_val}, dp={dp_val}: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
 
 if __name__ == "__main__":
     datasets_to_process = [
@@ -159,58 +158,56 @@ if __name__ == "__main__":
         (load_synthetic4, 'synthetic4'), (load_synthetic5, 'synthetic5'),
         (load_synthetic6, 'synthetic6'), (load_synthetic7, 'synthetic7'),
         (load_synthetic8, 'synthetic8'), (load_synthetic9, 'synthetic9'),
-        (load_synthetic10,'synthetic10'),
+        (load_synthetic10, 'synthetic10'),
     ]
     iteration_population_configs = [(400, 200), (100, 500), (40, 1000)]
-    particularity_pressure_options = [2, 5, 10, 15, 20, 50]
-    gp_selector_type = 'dalex_size'
-    dalex_size_probability_options = [0.25, 0.5, 0.75, 1]
+    particularity_pressure_configs = [2, 5, 10, 15, 20, 50]
+    gp_selector_method = 'dalex_size'
+    dalex_size_probability_configs = [0.25, 0.5, 0.75, 1.0]
 
-    DESIRED_CONCURRENT_EXPERIMENTS = 5
-    
-    total_system_cpus = multiprocessing.cpu_count()
-    
-    num_outer_parallel_jobs = min(DESIRED_CONCURRENT_EXPERIMENTS, max(1, total_system_cpus -1 if total_system_cpus > 1 else 1))
-    
-    if num_outer_parallel_jobs > 0:
-      num_inner_jobs_per_experiment = max(1, total_system_cpus // num_outer_parallel_jobs)
-    else:
-      num_inner_jobs_per_experiment = 1
+    num_available_cores = multiprocessing.cpu_count()
+    cores_for_parallelism = max(1, num_available_cores - 1)
 
-    print(f"--- Parallelism Setup ---")
-    print(f"Total System CPUs: {total_system_cpus}")
-    print(f"Concurrent Experiment Configurations (Outer Parallel Jobs): {num_outer_parallel_jobs}")
-    print(f"Parallel GP Runs per Experiment (Inner Parallel Jobs): {num_inner_jobs_per_experiment}")
-    print(f"Estimated Peak Worker Processes: ~{num_outer_parallel_jobs * num_inner_jobs_per_experiment}")
-    print(f"--- Initiating Experiments ---")
+    output_directory = 'logs_experiment_dalex_size_single_loop'
+    os.makedirs(output_directory, exist_ok=True)
 
-    main_output_directory = 'logs_experiment_outer_parallel'
-    os.makedirs(main_output_directory, exist_ok=True)
+    all_experiment_params = list(itertools.product(
+        datasets_to_process,
+        iteration_population_configs,
+        particularity_pressure_configs,
+        dalex_size_probability_configs
+    ))
 
-    all_experiment_tasks = [
-        delayed(execute_and_save_experiment_config)(
-            loader, dataset_name,
-            n_iter_cfg, pop_cfg,
-            gp_selector_type, pp_cfg, dp_cfg,
-            num_gp_runs=30, base_seed_val=5,
-            n_inner_jobs=num_inner_jobs_per_experiment,
-            output_path=main_output_directory
+    for experiment_config in tqdm(all_experiment_params, desc="Total Experiments"):
+        (loader_func, dataset_name_str), (num_iter, pop_s), pp_config, dp_config = experiment_config
+
+        all_run_logs = collect_logs_experiment(
+            dataset_loader_func=loader_func,
+            dataset_name=dataset_name_str,
+            num_iterations=num_iter,
+            population_size=pop_s,
+            selector_method=gp_selector_method,
+            particularity_pressure_param=pp_config,
+            dalex_size_prob_param=dp_config,
+            num_runs=30,
+            base_random_seed=5,
+            num_parallel_jobs=cores_for_parallelism
         )
-        for loader, dataset_name in datasets_to_process
-        for n_iter_cfg, pop_cfg in iteration_population_configs
-        for pp_cfg in particularity_pressure_options
-        for dp_cfg in dalex_size_probability_options
-    ]
 
-    print(f"Total experiment configurations to process: {len(all_experiment_tasks)}")
+        if all_run_logs:
+            aggregated_experiment_logs = aggregate_run_logs(all_run_logs, gp_selector_method)
+            experiment_identifier = (
+                f"{dataset_name_str}_{gp_selector_method}_it{num_iter}_pop{pop_s}"
+                f"_pp{pp_config}_dp{dp_config}_1605"
+            )
+            output_filename = os.path.join(output_directory, experiment_identifier + ".pkl")
+            with open(output_filename, 'wb') as f_out:
+                pickle.dump(aggregated_experiment_logs, f_out)
+        else:
+            print(f"Warning: No logs generated for config: {experiment_config}, skipping aggregation and saving.")
 
-    completed_experiment_paths = Parallel(n_jobs=num_outer_parallel_jobs, backend="loky")(
-        tqdm(all_experiment_tasks, desc="Overall Experiment Progress")
-    )
 
-    successful_experiment_runs = sum(1 for path in completed_experiment_paths if path is not None)
-    print(f"--- Experiment Series Complete ---")
-    print(f"Results stored in: '{main_output_directory}'")
-    print(f"Total configurations scheduled: {len(all_experiment_tasks)}")
-    print(f"Successfully completed configurations: {successful_experiment_runs}")
-    print(f"Files in output directory: {len(os.listdir(main_output_directory))}")
+    print(f"\nFinished all experiments.")
+    print(f"Saved experiments results to '{output_directory}'.")
+    print(f"Total files expected (if all runs succeeded): {len(all_experiment_params)}")
+    print(f"Total files actually generated: {len(os.listdir(output_directory))}")
