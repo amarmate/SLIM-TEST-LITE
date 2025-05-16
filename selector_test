@@ -157,7 +157,7 @@ def aggregate_run_logs(individual_run_logs: list, current_selector_method: str) 
     aggregated_results['duration'] = np.array(aggregated_results['duration'])
     aggregated_results['result_out'] = np.array(aggregated_results['result_out'])
     aggregated_results['min_idx'] = np.array(aggregated_results['min_idx'])
-    aggregated_results['results_conv'] = np.array(aggregated_results['results_conv'])
+    aggregated_results['results_conv'] = aggregated_results['results_conv']
 
     return aggregated_results
 
