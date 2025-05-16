@@ -284,6 +284,7 @@ class LogSpecialist(SLIM_GSGP_Callback):
 
         self.log_rmse.append(min_errs)
         self.log_size.append(sizes)
+        self.log_rmse_out.append(errs_out)
 
     def plot_specialist_fitnesses(self):
         fig, ax = plt.subplots()
