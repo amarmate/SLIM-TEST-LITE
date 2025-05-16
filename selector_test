@@ -143,6 +143,9 @@ def aggregate_run_logs(individual_run_logs: list, current_selector_method: str) 
 
     for run_log in individual_run_logs:
         aggregated_results['result_rmse'].append(run_log['result'])
+        aggregated_results['result_out'].append(run_log['result_out'])
+        aggregated_results['min_idx'].append(run_log['min_idx'])
+        aggregated_results['results_conv'].append(run_log['results_conv'])
         aggregated_results['size'].append(run_log['size'])
         aggregated_results['duration'].append(run_log['duration'])
 
