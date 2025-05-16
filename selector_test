@@ -137,6 +137,9 @@ def aggregate_run_logs(individual_run_logs: list, current_selector_method: str) 
         'pp': individual_run_logs[0]['pp'],
         'dp': individual_run_logs[0]['dp'],
         'result_rmse': [],
+        'result_out': [],
+        'min_idx': [],
+        'results_conv': [],
         'size': [],
         'duration': [],
     }
