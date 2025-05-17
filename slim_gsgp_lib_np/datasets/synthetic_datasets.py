@@ -190,14 +190,11 @@ def load_synthetic7(n=600, seed=0, noise=0, verbose=False):
     center = np.array([0.5, 0.5])
     
     def urban_price(x):
-        # Price decays quadratically with distance from center.
         dist = np.linalg.norm(x - center)
         return 50 * (1 - 2 * dist + 1.5 * dist**2)
     
     def suburban_price(x):
-        # Price with a different quadratic adjustment beyond the threshold.
         dist = np.linalg.norm(x - center)
-        # Shift the polynomial so that dist = 0.3 is the reference.
         return 30 * (1 - (dist - 0.3)) + 5 * (dist - 0.3)**2
     
     def f9(x):
@@ -284,7 +281,6 @@ def load_synthetic8(n=600, seed=0, noise=0, verbose=False):
     
     return x, y_noisy, mask, mask
 
-
 def load_synthetic9(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating bug risk estimation for software modules.
@@ -343,92 +339,50 @@ def load_synthetic9(n=600, seed=0, noise=0, verbose=False):
 
 def load_synthetic10(n=600, seed=0, noise=0, verbose=False):
     """
-    Synthetic stress-strain dataset for 3 materials: ABS plastic, Aluminum 6061-T6, Mild steel.
-    Balanced elastic/plastic per material → 6 masks.
+    Synthetic dataset: Crop yield estimation under nonlinear climate factors.
+    
+    Features:
+      - x[:,0]: Temperatur (°C, 5–35)
+      - x[:,1]: Niederschlag (mm, 0–200)
+      - x[:,2]: Sonnenstunden pro Tag (h, 0–14)
 
-    - Features:
-        x[:,0]: strain ε (0 to 0.2)
-        x[:,1]: temperature T (°C, 20 to 500)
-        x[:,2]: strain rate ε̇ (s⁻¹, 0.001 to 10)
-        x[:,3]: material index (0=ABS,1=Al,2=Steel)
-    - Target:
-        stress σ (MPa)
-    Materials properties (at 20°C):
-      ABS: E≈2.35 GPa, σ_m≈44.8 MPa  
-      Al6061-T6: E≈68.9 GPa, σ_m≈276 MPa  
-      Mild steel: E≈210 GPa, σ_m≈350 MPa
-    Hardening coeff H₀, exponent n₀, and strain rate sensitivity m₀ chosen to reflect typical work-hardening.
+    Regime-Bedingungen (alle nicht-linear):
+      1. Top-Ertrag:    sin(temp·π/30) + log(rain+1) > 1.5
+      2. Mittel-Ertrag: (rain/50)**2 + cos(sun/7) > 1.2
+      3. Trockenstress: sin(temp/10) - (rain/100)**1.5 < 0.5
+      4. Wolkenstress:  (sun/14)·log(temp) < 0.8
     """
+    import numpy as np
+
     np.random.seed(seed)
-    
-    # 1) assign materials equally
-    mats = np.repeat(np.arange(3), n//3)
-    np.random.shuffle(mats)
-    
-    # 2) sample temp and rate
-    temp = np.random.uniform(20, 500, n)
-    rate = np.random.uniform(0.001, 10, n)
-    
-    # 3) base props per material
-    E0 = np.array([2.35e3, 68.9e3, 210e3])  # MPa
-    sigma_m = np.array([44.8, 276, 350])   # MPa
-    H0 = np.array([100, 1000, 1500])        # MPa
-    n0 = np.array([0.1, 0.2, 0.3])
-    m0 = np.array([0.02, 0.03, 0.04])       # strain rate sensitivity exponents
-    
-    # map to samples
-    E0_s = E0[mats]
-    sigma_m_s = sigma_m[mats]
-    H0_s = H0[mats]
-    n0_s = n0[mats]
-    m0_s = m0[mats]
-    
-    # temp dependence (linear degrade)
-    E = E0_s * (1 - 0.0003 * (temp - 20))
-    sigma_yield = sigma_m_s * (1 - 0.0002 * (temp - 20))
-    epsilon_yield = sigma_yield / E
-    H = H0_s * (1 - 0.0005 * (temp - 20))
-    n_exp = n0_s + 0.0001 * (temp - 20)
-    
-    # 4) sample strain for balanced regimes per material
-    strain = np.empty(n)
-    elastic = np.random.rand(n) < 0.5
-    # below yield
-    strain[elastic] = np.random.uniform(0, 0.9 * epsilon_yield[elastic])
-    # above yield
-    strain[~elastic] = np.random.uniform(1.1 * epsilon_yield[~elastic], 0.2)
-    
-    # assemble features
-    x = np.column_stack([strain, temp, rate, mats])
-    
-    # 5) compute stress
-    stress = np.empty(n)
-    # Elastic regime
-    stress[elastic] = E[elastic] * strain[elastic]
-    # Plastic regime with strain rate effect
-    delta = strain[~elastic] - epsilon_yield[~elastic]
-    strain_rate_ref = 0.001
-    strain_rate_factor = 1 + m0_s[~elastic] * np.log(rate[~elastic] / strain_rate_ref)
-    strain_rate_factor = np.maximum(strain_rate_factor, 1)  # ensure factor >= 1
-    stress[~elastic] = (
-        sigma_yield[~elastic]
-        + H[~elastic] * (delta ** n_exp[~elastic]) * strain_rate_factor
-    )
-    
-    # 6) add noise
-    std = np.std(stress)
-    y_noisy = stress + np.random.normal(0, (noise/100)*std, size=n)
-    
-    # 7) create 6 masks: for each material × regime
-    masks = []
-    for m in range(3):
-        masks.append((mats == m) & elastic)
-        masks.append((mats == m) & ~elastic)
-    
-    print("Mask counts (ABS-elastic, ABS-plastic, Al-elastic, Al-plastic, Steel-elastic, Steel-plastic):") if verbose else None 
-    print([mask.sum() for mask in masks]) if verbose else None 
-    
+    temp = np.random.uniform(5, 35, size=n)
+    rain = np.random.uniform(0, 200, size=n)
+    sun  = np.random.uniform(0, 14, size=n)
+    x = np.column_stack([temp, rain, sun])
+
+    # Bedingungen
+    m1 = np.sin(temp * np.pi/30) + np.log(rain+1) > 1.5
+    m2 = (rain/50)**2 + np.cos(sun/7) > 1.2
+    m3 = np.sin(temp/10) - (rain/100)**1.5 < 0.5
+    m4 = (sun/14)*np.log(temp) < 0.8
+
+    # Ertragsfunktionen pro Regime
+    y = np.zeros(n)
+    y[m1] = 8 + 2 * np.sin(temp[m1]/5) + 0.01*rain[m1]
+    y[m2] = 5 + 0.02*rain[m2] + 1.5*np.cos(sun[m2]/3)
+    y[m3] = 3 + 0.5*(sun[m3]/14)**2 - 0.01*temp[m3]
+    y[m4] = 4 + 0.02*sun[m4] + 0.1*np.log(rain[m4]+1)
+
+    # Rauschen
+    std = np.std(y)
+    y_noisy = y + np.random.normal(0, (noise/100)*std, size=n)
+
+    if verbose:
+        print("Regime-Counts:", m1.sum(), m2.sum(), m3.sum(), m4.sum())
+
+    masks = [m1, m2, m3, m4]
     return x, y_noisy, masks, masks
+
 
 
 def load_synthetic11(n=600, seed=0, noise=0, verbose=False):
@@ -484,83 +438,228 @@ def load_synthetic11(n=600, seed=0, noise=0, verbose=False):
 
     return X, y, masks, masks
 
-def load_synthetic12(n=600, seed=0, noise=0, balance=False, verbose=False):
+
+def load_synthetic12(n=600, seed=0, noise=0, verbose=False):
     """
-    Synthetic dataset mimicking one simplified SHA-256 step: a 4-input modular addition,
-    with optional balancing of overflow_count classes.
-
-    - Inputs (X):
-        X[:,0]: word w0 (unsigned 32-bit integer)
-        X[:,1]: word w1 (unsigned 32-bit integer)
-        X[:,2]: word w2 (unsigned 32-bit integer)
-        X[:,3]: word w3 (unsigned 32-bit integer)
-        X[:,4]: overflow_count (number of times the 32-bit sum wrapped modulo 2^32)
-    - Target (y):
-        sum_mod = (w0 + w1 + w2 + w3) mod 2^32 (decimal), with optional noise
-
-    - balance: if True, samples so that each overflow_count class (0,1,2,3,...) is approximately equally represented.
-    - verbose: if True, prints overflow count distribution
-    """
-    rng = np.random.default_rng(seed)
-    mod_base = 2**32
-
-    def sample_batch(k):
-        # sample k raw words, return X_words, sum_raw
-        Xw = rng.integers(0, mod_base, size=(k, 4), dtype=np.uint64)
-        sum_r = Xw.sum(axis=1)
-        return Xw, sum_r
-
-    if not balance:
-        # uniform sampling
-        X_words, sum_raw = sample_batch(n)
-    else:
-        target_classes = 4  # wraps 0,1,2,3
-        per_class = int(np.ceil(n / target_classes))
-        X_list, y_list = [], []
-        counts = {i: 0 for i in range(target_classes)}
-        # keep sampling until each class has per_class samples or pool large enough
-        while sum(counts.values()) < per_class * target_classes:
-            Xw, sum_r = sample_batch(per_class * target_classes)
-            wraps = (sum_r // mod_base).astype(int)
-            for i in range(target_classes):
-                mask = wraps == i
-                needed = per_class - counts[i]
-                if needed > 0:
-                    sel = np.where(mask)[0][:needed]
-                    for idx in sel:
-                        X_list.append(Xw[idx])
-                        y_list.append(sum_r[idx])
-                        counts[i] += 1
-            # break if enough
-        # combine and truncate to n
-        X_words = np.array(X_list[:n], dtype=np.uint64)
-        sum_raw = np.array(y_list[:n], dtype=np.uint64)
-
-    # compute overflow_count and modulo sum
-    overflow_count = (sum_raw // mod_base).astype(np.uint32)
-    sum_mod = (sum_raw % mod_base).astype(np.uint64)
-
-    # Divide sum_mod by 1e9 and the variables as well, so that we can see normal values 
-    sum_mod = sum_mod / 1e9
-    X_words = X_words / 1e9
+    Synthetic dataset: Air quality index under nonlinear environmental factors.
     
-    # add noise if requested
-    if noise > 0:
-        y = sum_mod.astype(float) + rng.normal(0, noise, size=n)
-        y = np.floor(y).astype(np.uint64) % mod_base
-    else:
-        y = sum_mod
+    Features:
+      - x[:,0]: Temperatur (°C, 0–40)
+      - x[:,1]: relative Luftfeuchtigkeit (0–1)
+      - x[:,2]: PM2.5-Konzentration (µg/m³, 0–200)
 
-    # assemble X including overflow count
-    X = np.column_stack([X_words, overflow_count])
+    Regime-Bedingungen:
+      1. Sehr schlecht:     cos(pm/50) - humidity**2 < -0.5
+      2. Schlecht:          exp(-temp/20) + (pm/100)**1.5 > 1.2
+      3. Mäßig:             sin(humidity·π) + log(pm+1) < 0.8
+      4. Gut:               sonst
+    """
+    import numpy as np
+
+    np.random.seed(seed)
+    temp = np.random.uniform(0, 40, size=n)
+    hum  = np.random.uniform(0, 1, size=n)
+    pm   = np.random.uniform(0, 200, size=n)
+    x = np.column_stack([temp, hum, pm])
+
+    # Bedingungen
+    m1 = np.cos(pm/50) - hum**2 < -0.5
+    m2 = np.exp(-temp/20) + (pm/100)**1.5 > 1.2
+    m3 = np.sin(hum * np.pi) + np.log(pm+1) < 0.8
+    m4 = ~(m1 | m2 | m3)
+
+    # AQI-Funktionen
+    y = np.zeros(n)
+    y[m1] = 200 + 0.5*pm[m1] + 10*np.cos(temp[m1]/10)
+    y[m2] = 150 + 0.8*pm[m2] - 5*np.exp(-hum[m2])
+    y[m3] = 100 + 0.3*pm[m3] + 20*np.sin(temp[m3]/15)
+    y[m4] = 50 + 0.2*pm[m4] + 30*hum[m4]
+
+    # Rauschen
+    std = np.std(y)
+    y_noisy = y + np.random.normal(0, (noise/100)*std, size=n)
 
     if verbose:
-        unique, counts = np.unique(overflow_count, return_counts=True)
-        print("Overflow count distribution:")
-        for u, c in zip(unique, counts):
-            print(f" wraps={u}: {c} samples")
+        print("Regime-Counts:", m1.sum(), m2.sum(), m3.sum(), m4.sum())
 
-    # masks 
-    masks = [overflow_count == i for i in np.unique(overflow_count)]
+    masks = [m1, m2, m3, m4]
+    return x, y_noisy, masks, masks
 
-    return X, y, masks, masks 
+
+
+
+
+
+
+
+
+
+# def load_synthetic10(n=600, seed=0, noise=0, verbose=False):
+#     """
+#     Synthetic stress-strain dataset for 3 materials: ABS plastic, Aluminum 6061-T6, Mild steel.
+#     Balanced elastic/plastic per material → 6 masks.
+
+#     - Features:
+#         x[:,0]: strain ε (0 to 0.2)
+#         x[:,1]: temperature T (°C, 20 to 500)
+#         x[:,2]: strain rate ε̇ (s⁻¹, 0.001 to 10)
+#         x[:,3]: material index (0=ABS,1=Al,2=Steel)
+#     - Target:
+#         stress σ (MPa)
+#     Materials properties (at 20°C):
+#       ABS: E≈2.35 GPa, σ_m≈44.8 MPa  
+#       Al6061-T6: E≈68.9 GPa, σ_m≈276 MPa  
+#       Mild steel: E≈210 GPa, σ_m≈350 MPa
+#     Hardening coeff H₀, exponent n₀, and strain rate sensitivity m₀ chosen to reflect typical work-hardening.
+#     """
+#     np.random.seed(seed)
+    
+#     # 1) assign materials equally
+#     mats = np.repeat(np.arange(3), n//3)
+#     np.random.shuffle(mats)
+    
+#     # 2) sample temp and rate
+#     temp = np.random.uniform(20, 500, n)
+#     rate = np.random.uniform(0.001, 10, n)
+    
+#     # 3) base props per material
+#     E0 = np.array([2.35e3, 68.9e3, 210e3])  # MPa
+#     sigma_m = np.array([44.8, 276, 350])   # MPa
+#     H0 = np.array([100, 1000, 1500])        # MPa
+#     n0 = np.array([0.1, 0.2, 0.3])
+#     m0 = np.array([0.02, 0.03, 0.04])       # strain rate sensitivity exponents
+    
+#     # map to samples
+#     E0_s = E0[mats]
+#     sigma_m_s = sigma_m[mats]
+#     H0_s = H0[mats]
+#     n0_s = n0[mats]
+#     m0_s = m0[mats]
+    
+#     # temp dependence (linear degrade)
+#     E = E0_s * (1 - 0.0003 * (temp - 20))
+#     sigma_yield = sigma_m_s * (1 - 0.0002 * (temp - 20))
+#     epsilon_yield = sigma_yield / E
+#     H = H0_s * (1 - 0.0005 * (temp - 20))
+#     n_exp = n0_s + 0.0001 * (temp - 20)
+    
+#     # 4) sample strain for balanced regimes per material
+#     strain = np.empty(n)
+#     elastic = np.random.rand(n) < 0.5
+#     # below yield
+#     strain[elastic] = np.random.uniform(0, 0.9 * epsilon_yield[elastic])
+#     # above yield
+#     strain[~elastic] = np.random.uniform(1.1 * epsilon_yield[~elastic], 0.2)
+    
+#     # assemble features
+#     x = np.column_stack([strain, temp, rate, mats])
+    
+#     # 5) compute stress
+#     stress = np.empty(n)
+#     # Elastic regime
+#     stress[elastic] = E[elastic] * strain[elastic]
+#     # Plastic regime with strain rate effect
+#     delta = strain[~elastic] - epsilon_yield[~elastic]
+#     strain_rate_ref = 0.001
+#     strain_rate_factor = 1 + m0_s[~elastic] * np.log(rate[~elastic] / strain_rate_ref)
+#     strain_rate_factor = np.maximum(strain_rate_factor, 1)  # ensure factor >= 1
+#     stress[~elastic] = (
+#         sigma_yield[~elastic]
+#         + H[~elastic] * (delta ** n_exp[~elastic]) * strain_rate_factor
+#     )
+    
+#     # 6) add noise
+#     std = np.std(stress)
+#     y_noisy = stress + np.random.normal(0, (noise/100)*std, size=n)
+    
+#     # 7) create 6 masks: for each material × regime
+#     masks = []
+#     for m in range(3):
+#         masks.append((mats == m) & elastic)
+#         masks.append((mats == m) & ~elastic)
+    
+#     print("Mask counts (ABS-elastic, ABS-plastic, Al-elastic, Al-plastic, Steel-elastic, Steel-plastic):") if verbose else None 
+#     print([mask.sum() for mask in masks]) if verbose else None 
+    
+#     return x, y_noisy, masks, masks
+
+# def load_synthetic12(n=600, seed=0, noise=0, balance=False, verbose=False):
+#     """
+#     Synthetic dataset mimicking one simplified SHA-256 step: a 4-input modular addition,
+#     with optional balancing of overflow_count classes.
+
+#     - Inputs (X):
+#         X[:,0]: word w0 (unsigned 32-bit integer)
+#         X[:,1]: word w1 (unsigned 32-bit integer)
+#         X[:,2]: word w2 (unsigned 32-bit integer)
+#         X[:,3]: word w3 (unsigned 32-bit integer)
+#         X[:,4]: overflow_count (number of times the 32-bit sum wrapped modulo 2^32)
+#     - Target (y):
+#         sum_mod = (w0 + w1 + w2 + w3) mod 2^32 (decimal), with optional noise
+
+#     - balance: if True, samples so that each overflow_count class (0,1,2,3,...) is approximately equally represented.
+#     - verbose: if True, prints overflow count distribution
+#     """
+#     rng = np.random.default_rng(seed)
+#     mod_base = 2**32
+
+#     def sample_batch(k):
+#         # sample k raw words, return X_words, sum_raw
+#         Xw = rng.integers(0, mod_base, size=(k, 4), dtype=np.uint64)
+#         sum_r = Xw.sum(axis=1)
+#         return Xw, sum_r
+
+#     if not balance:
+#         # uniform sampling
+#         X_words, sum_raw = sample_batch(n)
+#     else:
+#         target_classes = 4  # wraps 0,1,2,3
+#         per_class = int(np.ceil(n / target_classes))
+#         X_list, y_list = [], []
+#         counts = {i: 0 for i in range(target_classes)}
+#         # keep sampling until each class has per_class samples or pool large enough
+#         while sum(counts.values()) < per_class * target_classes:
+#             Xw, sum_r = sample_batch(per_class * target_classes)
+#             wraps = (sum_r // mod_base).astype(int)
+#             for i in range(target_classes):
+#                 mask = wraps == i
+#                 needed = per_class - counts[i]
+#                 if needed > 0:
+#                     sel = np.where(mask)[0][:needed]
+#                     for idx in sel:
+#                         X_list.append(Xw[idx])
+#                         y_list.append(sum_r[idx])
+#                         counts[i] += 1
+#             # break if enough
+#         # combine and truncate to n
+#         X_words = np.array(X_list[:n], dtype=np.uint64)
+#         sum_raw = np.array(y_list[:n], dtype=np.uint64)
+
+#     # compute overflow_count and modulo sum
+#     overflow_count = (sum_raw // mod_base).astype(np.uint32)
+#     sum_mod = (sum_raw % mod_base).astype(np.uint64)
+
+#     # Divide sum_mod by 1e9 and the variables as well, so that we can see normal values 
+#     sum_mod = sum_mod / 1e9
+#     X_words = X_words / 1e9
+    
+#     # add noise if requested
+#     if noise > 0:
+#         y = sum_mod.astype(float) + rng.normal(0, noise, size=n)
+#         y = np.floor(y).astype(np.uint64) % mod_base
+#     else:
+#         y = sum_mod
+
+#     # assemble X including overflow count
+#     X = np.column_stack([X_words, overflow_count])
+
+#     if verbose:
+#         unique, counts = np.unique(overflow_count, return_counts=True)
+#         print("Overflow count distribution:")
+#         for u, c in zip(unique, counts):
+#             print(f" wraps={u}: {c} samples")
+
+#     # masks 
+#     masks = [overflow_count == i for i in np.unique(overflow_count)]
+
+#     return X, y, masks, masks 
