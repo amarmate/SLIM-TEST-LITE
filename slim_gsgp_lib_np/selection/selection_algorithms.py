@@ -80,6 +80,7 @@ def selector(problem='min',
         'dalex':             lambda: dalex_selection(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure),
         'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
         'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size, p_best=dalex_size_prob),
+        'dalex_fast':        lambda: dalex_selection_fast(mode=mode, particularity_pressure=particularity_pressure),
     }
 
     SIMPLE = {
@@ -753,3 +754,51 @@ def dalex_selection_size(mode='min',
         return pop.population[best_index]
 
     return ds
+
+def dalex_selection_fast(mode='min', 
+                         particularity_pressure=20,
+                         **kwards):
+    """
+    Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
+    to select an individual based on a weighted aggregation of test-case errors and then on a size tournament.
+
+    Parameters
+    ----------
+    mode : str, optional
+        'min' for minimization problems, 'max' for maximization problems. Defaults to 'min'.
+    down_sampling : float, optional
+        Proportion of test cases to sample. Defaults to 0.5.
+    particularity_pressure : float, optional
+        Standard deviation for the normal distribution used to sample importance scores.
+        Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
+    tournament_size : int, optional
+        Number of individuals participating in the size tournament. Defaults to 2.
+    p_best : float, optional
+            Probability of selecting the individual with the best fitness in the tournament. Defaults to 0.5.
+            If p set to 0, then it is the dalex_selection_size vanilla version.
+
+    Returns
+    -------
+    Callable
+        A function that takes a population object and returns a tuple (selected individual, n_cases used).
+    """
+  
+    def ds(pop):
+        errors = pop.errors_case 
+        num_total_cases = errors.shape[1]
+        idx = random.sample(range(num_total_cases), particularity_pressure)
+        score = np.sum(errors[:,idx], axis=1)
+
+        if mode == 'min':
+            best_index = np.argmin(score)
+        elif mode == 'max':
+            best_index = np.argmax(score)
+        else:
+            raise ValueError("Invalid mode. Use 'min' or 'max'.")
+        
+        return pop.population[best_index]
+
+    return ds
+
+
+
