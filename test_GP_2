@@ -31,14 +31,14 @@ NOISE_SKOPT = 1e-3
 N_TESTS = 15
 P_TEST = 0.2 
 SEED = 0
-POP_SIZE = 100  # 100
-N_GENERATIONS = 2500 # 2500
-SELECTORS = ['dalex', 'dalex_size']
+POP_SIZE = 2  # 100
+N_GENERATIONS = 2 # 2500
+SELECTORS = ['dalex', 'dalex_fast_rand']
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'  
 EXPERIMENT_NAME = 'GP_Experiment'
-FUNCTIONS = ['add', 'multiply', 'divide', 'subtract']
+FUNCTIONS = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
 STOP_THRESHOLD = 300
 
 np.random.seed(SEED)
@@ -49,7 +49,7 @@ SPACE_PARAMETERS = [
         Real(0.6, 0.9, name='p_xo'),                                          
         Real(0.10, 0.25, name='prob_const'),                                       
         Real(0.6, 0.9, name='prob_terminal'),                                      
-        Real(5, 100, name='particularity_pressure', prior='log-uniform'),
+        Real(1, 50, name='particularity_pressure', prior='log-uniform'),
 ]
 
 # ------------------------------------------- LIMIT THREADS FOR NUMPY --------------------------------------------------------
@@ -61,8 +61,8 @@ os.environ.update({
 
 # ----------------------------------------------------- DATASETS --------------------------------------------------------------
 from slim_gsgp_lib_np.datasets.synthetic_datasets import (
-    load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5,
-    load_synthetic6, load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
+    load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
+    load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
 )
 from slim_gsgp_lib_np.datasets.data_loader import ( 
     load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,

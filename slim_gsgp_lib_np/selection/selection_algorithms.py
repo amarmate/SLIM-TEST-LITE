@@ -25,6 +25,7 @@ Selection operator implementation.
 
 import random
 import numpy as np
+from slim_gsgp_lib_np.selection.utils import calculate_musigma_pp
 
 def selector(problem='min', 
              type='tournament', 
@@ -33,6 +34,7 @@ def selector(problem='min',
              particularity_pressure=20,
              epsilon=1e-6, 
              dalex_size_prob=0.5,
+             n_cases=1000,
              ):
     """
     Returns a selection function based on the specified problem and selection type.
@@ -54,6 +56,8 @@ def selector(problem='min',
         Epsilon value used in epsilon lexicase selection. Defaults to 1e-6.
     dalex_size_prob : float, optional
         Probability of selecting the individual with the best fitness in the tournament. Defaults to 0.5.
+    n_cases : int, optional
+        Number of cases to sample for DALex selection. Defaults to 1000.
 
     Returns
     -------
@@ -80,11 +84,12 @@ def selector(problem='min',
         'e_lexicase':        lambda: epsilon_lexicase_selection(mode=mode, down_sampling=ds),
         'manual_e_lexicase': lambda: manual_epsilon_lexicase_selection(mode=mode, down_sampling=ds, epsilon=epsilon),
         'lexicase':          lambda: lexicase_selection(mode=mode, down_sampling=ds),
-        'dalex':             lambda: dalex_selection(mode=mode, down_sampling=ds, particularity_pressure=pp),
+        'dalex':             lambda: dalex(mode=mode, down_sampling=ds, particularity_pressure=pp),
         'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
-        'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=ds, particularity_pressure=pp, tournament_size=pool_size, p_best=dalex_size_prob),
-        'dalex_fast':        lambda: dalex_selection_fast_min(particularity_pressure=pp),
-        'dalex_fast_size':   lambda: dalex_selection_fast_min_size(particularity_pressure=pp, p_best=dalex_size_prob, tournament_size=pool_size),
+        'dalex_size':        lambda: dalex_size(mode=mode, down_sampling=ds, particularity_pressure=pp, tournament_size=pool_size, p_best=dalex_size_prob),
+        'dalex_fast':        lambda: dalex_fast_min(particularity_pressure=pp),
+        'dalex_fast_rand':   lambda: dalex_fast_min_rand(particularity_pressure=pp, n_cases=n_cases),
+        'dalex_fast_size':   lambda: dalex_fast_min_size(particularity_pressure=pp, p_best=dalex_size_prob, tournament_size=pool_size),
     }
 
     SIMPLE = {
@@ -633,7 +638,7 @@ def roulette_wheel_selection(population):
     return random.choices(population)[0]
  
 
-def dalex_selection(mode='min', down_sampling=0.5, particularity_pressure=20):
+def dalex(mode='min', down_sampling=0.5, particularity_pressure=20):
     """
     Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
     to select an individual based on a weighted aggregation of test-case errors.
@@ -687,7 +692,7 @@ def dalex_selection(mode='min', down_sampling=0.5, particularity_pressure=20):
     return ds
 
 
-def dalex_selection_size(mode='min', 
+def dalex_size(mode='min', 
                          down_sampling=0.5, 
                          particularity_pressure=20,
                          tournament_size=2,
@@ -760,7 +765,7 @@ def dalex_selection_size(mode='min',
     return ds
 
 
-def dalex_selection_fast_min(particularity_pressure=20,
+def dalex_fast_min(particularity_pressure=20,
                              **kwards):
     """
     Returns a function that performs a fast approxiamtion of DALex (Diversely Aggregated Lexicase Selection)
@@ -790,8 +795,51 @@ def dalex_selection_fast_min(particularity_pressure=20,
 
     return ds
 
+def dalex_fast_min_rand(particularity_pressure=10, 
+                        n_cases=1000,
+                        **kwargs):
+    """
+    Returns a fast, sparse approximation of DALEX selection using a pre-sampled
+    list of 'particularity pressures' and a counter to avoid sampling every call.
 
-def dalex_selection_fast_min_size(particularity_pressure=20,
+    Parameters
+    ----------
+    particularity_pressure : float, optional
+        Standard deviation for the normal distribution used to sample importance scores.
+        Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
+    n_cases : int, optional
+        Number of cases to sample. Defaults to 1000.
+
+    Returns
+    -------
+    ds : callable
+        Function that takes a population object `pop` and returns
+        (selected_individual, n_cases_used).
+    """
+    mu, sigma = calculate_musigma_pp(particularity_pressure, n_cases=n_cases)
+    pressures = list(np.random.normal(mu, sigma, 5_000))
+    counter = {'i': 0}
+
+    def ds(pop):
+        errors = pop.errors_case
+        n_cases = errors.shape[1]
+
+        i = counter['i']
+        pp = pressures[i % 1000]
+        counter['i'] = i + 1
+
+        n = int(round(pp))
+        n = max(1, min(n, n_cases))
+
+        idx = random.sample(range(n_cases), n)
+        score = np.sum(errors[:, idx], axis=1)
+        best_index = np.argmin(score)
+
+        return pop.population[best_index]
+    return ds
+
+
+def dalex_fast_min_size(particularity_pressure=20,
                                 tournament_size=2,
                                 p_best=1,
                                 **kwards):

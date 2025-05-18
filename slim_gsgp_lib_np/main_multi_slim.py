@@ -174,6 +174,8 @@ def multi_slim(
     -------
     Best individual or (best individual, multi-slim population, specialists population) if `full_return` is True.
     """
+    random.seed(seed)
+    np.random.seed(seed)
     
     # Validate the inputs given  TODO 
     # validate_parameters()
@@ -259,6 +261,7 @@ def multi_slim(
                                                 particularity_pressure=particularity_pressure,
                                                 epsilon=epsilon,
                                                 dalex_size_prob=dalex_size_prob,
+                                                n_cases=X_train.shape[0],
     )
     
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max

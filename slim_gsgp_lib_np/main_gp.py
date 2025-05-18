@@ -35,6 +35,7 @@ from slim_gsgp_lib_np.selection.selection_algorithms import selector as selectio
 from slim_gsgp_lib_np.utils.logger import log_settings
 from slim_gsgp_lib_np.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
 import numpy as np 
+import random 
 
 def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_test: np.ndarray = None,
        dataset_name: str = None,
@@ -159,6 +160,9 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     #         Input Validation
     # ================================
 
+    random.seed(seed)
+    np.random.seed(seed)
+
     # Setting the log_path
     if log_path is None:
         log_path = os.path.join(os.getcwd(), "log", "gp.csv")
@@ -273,6 +277,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
                                          particularity_pressure=particularity_pressure, 
                                          epsilon=epsilon, 
                                          dalex_size_prob=dalex_size_prob,
+                                         n_cases=X_train.shape[0],
     )
 
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max

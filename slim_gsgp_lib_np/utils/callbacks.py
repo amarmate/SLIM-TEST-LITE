@@ -1,5 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
+from functions.misc_functions import pf_rmse_comp_extended
+
 
 class SLIM_GSGP_Callback:
     """
@@ -290,26 +292,64 @@ class LogSpecialist(SLIM_GSGP_Callback):
         self.log_best_ensemble.append(np.sqrt(total_sq_errs / self.masks.shape[1]))
 
     def plot_specialist_fitnesses(self, best_ensemble=False):
-        fig, ax = plt.subplots()
-        data = np.array(self.log_rmse) 
-        for i in range(data.shape[1]):
-            ax.plot(data[:, i], label=f"Specialist {i+1} ({data[-1, i]:.2f})")
-        if best_ensemble:
-            best_ensemble_data = np.array(self.log_best_ensemble)
-            ax.plot(best_ensemble_data, label=f"Best Ensemble ({best_ensemble_data[-1]:.2f})", linestyle='--')
+        fig, axs = plt.subplots(1, 2, figsize=(20, 6))
 
-        ax.set_title('Specialist RMSE over Generations')
+        data_rmse = np.array(self.log_rmse) 
+        for i in range(data_rmse.shape[1]):
+            axs[0].plot(data_rmse[:, i], label=f"Specialist {i+1} ({data_rmse[-1, i]:.2f})")
+        best_ensemble_data = np.array(self.log_best_ensemble)
+        axs[0].plot(best_ensemble_data, label=f"Best Ensemble ({best_ensemble_data[-1]:.2f})", linestyle='--')
+        axs[0].set_title('Specialist RMSE over Generations')
+        axs[0].set_xlabel('Generation')
+        axs[0].set_ylabel('RMSE')
+        axs[0].legend()
+
+        data_size = np.array(self.log_size)
+        for i in range(data_size.shape[1]):
+            axs[1].plot(data_size[:, i], label=f"Specialist {i+1} ({data_size[-1, i]:.2f})")
+        axs[1].set_title('Specialist Size over Generations')
+        axs[1].set_xlabel('Generation')
+        axs[1].set_ylabel('Size')
+        axs[1].legend()
+
+        plt.tight_layout()
+        plt.show()  
+
+    def plot_best_ensemble(self):
+        fig, ax = plt.subplots()
+        rmse = np.array(self.log_best_ensemble) 
+        sizes = np.sum(self.log_size, axis=1)
+        line1 = ax.plot(rmse, label=f"Best Ensemble ({rmse[-1]:.2f})")
+        ax2 = ax.twinx()
+        line2 = ax2.plot(sizes, label=f"Total Size ({sizes[-1]:.2f})", linestyle='-.', color='orange')
+        ax2.set_ylabel('Size')
+        ax.set_title('Best Ensemble RMSE and SIZE over Generations')
         ax.set_xlabel('Generation')
+        ax.set_ylabel('RMSE')
+        ax.legend(loc='upper left', handles=line1+line2)
+        plt.show()  
+
+    def plot_pf_ensemble(self, comparison=None): 
+        rmse = np.array(self.log_best_ensemble) 
+        sizes = np.sum(self.log_size, axis=1)
+        points = list(zip(sizes, rmse))
+        pf = np.array(pf_rmse_comp_extended(points))
+
+        fig, ax = plt.subplots()
+
+        if comparison is not None:
+            if comparison.shape[1] != 2:
+                raise ValueError("Comparison data must have two columns.")
+            ax.scatter(comparison[:, 0], comparison[:, 1], marker='o', color='red')
+            ax.plot(comparison[:, 0], comparison[:, 1], label='Comparison Pareto Front', color='red')
+            
+        ax.scatter(pf[:, 0], pf[:, 1], marker='o', color='orange')
+        ax.plot(pf[:, 0], pf[:, 1], label='Pareto Front', color='orange')
+
+        ax.set_title('Pareto Front of Ensemble')
+        ax.set_xlabel('Size')
         ax.set_ylabel('RMSE')
         ax.legend()
         plt.show()
 
-    def plot_best_ensemble(self):
-        fig, ax = plt.subplots()
-        data = np.array(self.log_best_ensemble) 
-        ax.plot(data, label=f"Best Ensemble ({data[-1]:.2f})")
-        ax.set_title('Best Ensemble RMSE over Generations')
-        ax.set_xlabel('Generation')
-        ax.set_ylabel('RMSE')
-        ax.legend()
-        plt.show()  
+        return pf
