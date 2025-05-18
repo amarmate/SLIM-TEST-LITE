@@ -95,7 +95,7 @@ import numpy as np # NumPy will now pick up the environment variables
 # Local library imports (from slim_gsgp_lib_np)
 from slim_gsgp_lib_np.utils.utils import train_test_split
 from slim_gsgp_lib_np.main_multi_slim import multi_slim
-from slim_gsgp_lib_np.datasets.data_loader import load_synthetic10
+from slim_gsgp_lib_np.datasets.synthetic_datasets import load_synthetic10
 from slim_gsgp_lib_np.config.multi_slim_config import GPParameters
 
 # ... (rest of your previously refactored script, including
