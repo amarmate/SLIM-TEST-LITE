@@ -263,11 +263,12 @@ class LogSpecialist(SLIM_GSGP_Callback):
         self.y_train = y_train
         self.masks = masks
 
-        self.log_rmse, self.log_size, self.log_rmse_out = [], [], []       
+        self.log_rmse, self.log_size, self.log_rmse_out, self.log_best_ensemble = [], [], [], []  
         self.count_specialists = [] 
 
     def on_generation_start(self, optimizer, generation):
         min_errs, best_inds, sizes, errs_out = [], [], [], []
+        total_sq_errs = 0
 
         for mask in self.masks: 
             errors_mask = optimizer.population.errors_case[:, mask]
@@ -281,18 +282,34 @@ class LogSpecialist(SLIM_GSGP_Callback):
             best_inds.append(optimizer.population.population[best_ind])
             sizes.append(optimizer.population.population[best_ind].total_nodes)
             errs_out.append(min_err_out)
+            total_sq_errs += np.sum(errors_mask[best_ind] ** 2)
 
         self.log_rmse.append(min_errs)
         self.log_size.append(sizes)
         self.log_rmse_out.append(errs_out)
+        self.log_best_ensemble.append(np.sqrt(total_sq_errs / self.masks.shape[1]))
 
-    def plot_specialist_fitnesses(self):
+    def plot_specialist_fitnesses(self, best_ensemble=False):
         fig, ax = plt.subplots()
         data = np.array(self.log_rmse) 
         for i in range(data.shape[1]):
             ax.plot(data[:, i], label=f"Specialist {i+1} ({data[-1, i]:.2f})")
+        if best_ensemble:
+            best_ensemble_data = np.array(self.log_best_ensemble)
+            ax.plot(best_ensemble_data, label=f"Best Ensemble ({best_ensemble_data[-1]:.2f})", linestyle='--')
+
         ax.set_title('Specialist RMSE over Generations')
         ax.set_xlabel('Generation')
         ax.set_ylabel('RMSE')
         ax.legend()
         plt.show()
+
+    def plot_best_ensemble(self):
+        fig, ax = plt.subplots()
+        data = np.array(self.log_best_ensemble) 
+        ax.plot(data, label=f"Best Ensemble ({data[-1]:.2f})")
+        ax.set_title('Best Ensemble RMSE over Generations')
+        ax.set_xlabel('Generation')
+        ax.set_ylabel('RMSE')
+        ax.legend()
+        plt.show()  

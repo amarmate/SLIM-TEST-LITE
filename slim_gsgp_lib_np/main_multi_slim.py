@@ -74,6 +74,7 @@ def multi_slim(
         selector: str = multi_params["selector"],
         down_sampling: float = 0.5, 
         particularity_pressure: float = 20,
+        dalex_size_prob: float = 0.5,
         epsilon: float = 1e-6,
         decay_rate: float = multi_params["decay_rate"],
         ensemble_functions : list = None,
@@ -148,6 +149,8 @@ def multi_slim(
         Fraction of data sampled per individual in lexicase-based selectors.
     particularity_pressure : float, optional
         Controls weight sampling in DALex selection.
+    dalex_size_prob : float, optional
+        Probability of selecting the individual with the best fitness in DALex size selection.
     epsilon : float, optional
         Epsilon tolerance for epsilon-lexicase selection.
     decay_rate : float, optional
@@ -254,7 +257,9 @@ def multi_slim(
                                                 pool_size=tournament_size,
                                                 down_sampling=down_sampling, 
                                                 particularity_pressure=particularity_pressure,
-                                                epsilon=epsilon)
+                                                epsilon=epsilon,
+                                                dalex_size_prob=dalex_size_prob,
+    )
     
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
 

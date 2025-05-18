@@ -69,18 +69,22 @@ def selector(problem='min',
         print("Warning: pool_size must be >2 for double tournament. Setting to 3.")
         pool_size = 3
 
+    pp = particularity_pressure
+    ds = down_sampling
+
     MODED = {
         'tournament':        lambda: tournament_selection_min(pool_size) if mode=='min'
                                     else tournament_selection_max(pool_size),
         'double_tournament': lambda: double_tournament_min(pool_size) if mode=='min'
                                     else None, # No max version of double tournament
-        'e_lexicase':        lambda: epsilon_lexicase_selection(mode=mode, down_sampling=down_sampling),
-        'manual_e_lexicase': lambda: manual_epsilon_lexicase_selection(mode=mode, down_sampling=down_sampling, epsilon=epsilon),
-        'lexicase':          lambda: lexicase_selection(mode=mode, down_sampling=down_sampling),
-        'dalex':             lambda: dalex_selection(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure),
+        'e_lexicase':        lambda: epsilon_lexicase_selection(mode=mode, down_sampling=ds),
+        'manual_e_lexicase': lambda: manual_epsilon_lexicase_selection(mode=mode, down_sampling=ds, epsilon=epsilon),
+        'lexicase':          lambda: lexicase_selection(mode=mode, down_sampling=ds),
+        'dalex':             lambda: dalex_selection(mode=mode, down_sampling=ds, particularity_pressure=pp),
         'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
-        'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=down_sampling, particularity_pressure=particularity_pressure, tournament_size=pool_size, p_best=dalex_size_prob),
-        'dalex_fast':        lambda: dalex_selection_fast(mode=mode, particularity_pressure=particularity_pressure),
+        'dalex_size':        lambda: dalex_selection_size(mode=mode, down_sampling=ds, particularity_pressure=pp, tournament_size=pool_size, p_best=dalex_size_prob),
+        'dalex_fast':        lambda: dalex_selection_fast_min(particularity_pressure=pp),
+        'dalex_fast_size':   lambda: dalex_selection_fast_min_size(particularity_pressure=pp, p_best=dalex_size_prob, tournament_size=pool_size),
     }
 
     SIMPLE = {
@@ -755,19 +759,48 @@ def dalex_selection_size(mode='min',
 
     return ds
 
-def dalex_selection_fast(mode='min', 
-                         particularity_pressure=20,
-                         **kwards):
+
+def dalex_selection_fast_min(particularity_pressure=20,
+                             **kwards):
+    """
+    Returns a function that performs a fast approxiamtion of DALex (Diversely Aggregated Lexicase Selection)
+    to select an individual based on a weighted aggregation of test-case errors..
+
+    Parameters
+    ----------
+    particularity_pressure : float, optional
+        Standard deviation for the normal distribution used to sample importance scores.
+        Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
+
+    Returns
+    -------
+    Callable
+        A function that takes a population object and returns a tuple (selected individual, n_cases used).
+    """
+  
+    def ds(pop):
+        errors = pop.errors_case 
+        num_total_cases = errors.shape[1]
+        idx = random.sample(range(num_total_cases), particularity_pressure)
+        score = np.sum(errors[:,idx], axis=1)
+
+        best_index = np.argmin(score)
+        
+        return pop.population[best_index]
+
+    return ds
+
+
+def dalex_selection_fast_min_size(particularity_pressure=20,
+                                tournament_size=2,
+                                p_best=1,
+                                **kwards):
     """
     Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
     to select an individual based on a weighted aggregation of test-case errors and then on a size tournament.
 
     Parameters
     ----------
-    mode : str, optional
-        'min' for minimization problems, 'max' for maximization problems. Defaults to 'min'.
-    down_sampling : float, optional
-        Proportion of test cases to sample. Defaults to 0.5.
     particularity_pressure : float, optional
         Standard deviation for the normal distribution used to sample importance scores.
         Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
@@ -789,16 +822,15 @@ def dalex_selection_fast(mode='min',
         idx = random.sample(range(num_total_cases), particularity_pressure)
         score = np.sum(errors[:,idx], axis=1)
 
-        if mode == 'min':
+        if random.random() < p_best:
             best_index = np.argmin(score)
-        elif mode == 'max':
-            best_index = np.argmax(score)
-        else:
-            raise ValueError("Invalid mode. Use 'min' or 'max'.")
+        else: 
+            sorted = np.argsort(score)
+            best_index = sorted[:tournament_size]
+            best_index = min(best_index, key=lambda idx: pop.population[idx].total_nodes)
         
         return pop.population[best_index]
 
     return ds
-
 
 
