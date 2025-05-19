@@ -36,7 +36,7 @@ def measure(seed, label=None):
     res = gp(
         X_train=Xtr, y_train=ytr, test_elite=False,
         dataset_name=f"run_{seed}",
-        pop_size=100, n_iter=1000, selector='dalex_fast_rand',
+        pop_size=100, n_iter=500, selector='dalex_fast_rand',
         max_depth=9, init_depth=2, p_xo=0.8,
         prob_const=0.2, prob_terminal=0.7,
         particularity_pressure=10, seed=seed,  # <-- ganzzahliger seed
@@ -60,44 +60,15 @@ if __name__ == "__main__":
     sc = measure(seed=0, label="single")
     print("Single-Core:", sc)
 
-    # Multiprocessing: seeds 1,2,...
-    with multiprocessing.Pool(nproc) as pool:
-        mp_188 = pool.starmap(measure, [(0, f"proc_{i+1}") for i in range(188)])
-
-    with multiprocessing.Pool(nproc) as pool:
-        mp_160 = pool.starmap(measure, [(0, f"proc_{i+1}") for i in range(160)])
-
-    # Joblib: dieselben seeds
     from joblib import Parallel, delayed
-    jb_188 = Parallel(n_jobs=nproc)(
-        delayed(measure)(0, f"joblib_{i+1}") for i in range(160)
-    )
+    j_data = {}
+    for jobs in [140, 150, 160, 170, 180]:
+        j = Parallel(n_jobs=jobs)(
+            delayed(measure)(0, f"joblib_{i+1}") for i in range(160)
+        )
+        j_data[jobs] = j
 
-    jb_120 = Parallel(n_jobs=nproc)(
-        delayed(measure)(0, f"joblib_{i+1}") for i in range(120)
-    )
-
-    import pickle
-    pickle.dump(sc, open("sc.pickle", "wb"))
-    pickle.dump(mp_188, open("mp_188.pickle", "wb"))
-    pickle.dump(mp_160, open("mp_160.pickle", "wb"))
-    pickle.dump(jb_188, open("jb_188.pickle", "wb"))
-    pickle.dump(jb_120, open("jb_120.pickle", "wb"))
-
-    # Now zip all the results
-    import zipfile
-    with zipfile.ZipFile("results.zip", "w") as zf:
-        zf.write("sc.pickle")
-        zf.write("mp_188.pickle")
-        zf.write("mp_160.pickle")
-        zf.write("jb_188.pickle")
-        zf.write("jb_120.pickle")
-        zf.close()
-    # Clean up
-    os.remove("sc.pickle")
-    os.remove("mp_188.pickle")
-    os.remove("mp_160.pickle")
-    os.remove("jb_188.pickle")
-    os.remove("jb_120.pickle")
-    
-
+    # Print the mean time_s for each job 
+    for jobs, data in j_data.items():
+        mean_time = np.mean([d["time_s"] for d in data])
+        print(f"Joblib {jobs} jobs: {mean_time:.2f} seconds")
