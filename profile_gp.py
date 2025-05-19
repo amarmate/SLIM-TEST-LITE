@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     from joblib import Parallel, delayed
     j_data = {}
-    for jobs in [140, 150, 160, 170, 180]:
+    for jobs in [60, 80, 100, 120, 140, 150, 160, 170, 180]:
         j = Parallel(n_jobs=jobs)(
             delayed(measure)(0, f"joblib_{i+1}") for i in range(160)
         )
