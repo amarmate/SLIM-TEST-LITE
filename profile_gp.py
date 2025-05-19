@@ -46,7 +46,7 @@ if __name__ == "__main__":
     print("Single-Core:", sc)
 
     # Multiprocessing
-    nproc = max(1, psutil.cpu_count(logical=True)-1)
+    nproc = max(1, psutil.cpu_count(logical=True)-2)
     with multiprocessing.Pool(nproc) as pool:
         mp = pool.map(measure, range(nproc))
     print("Multiprocessing:", mp)
