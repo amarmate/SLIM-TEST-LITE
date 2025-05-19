@@ -95,7 +95,7 @@ import numpy as np # NumPy will now pick up the environment variables
 # Local library imports (from slim_gsgp_lib_np)
 from slim_gsgp_lib_np.utils.utils import train_test_split
 from slim_gsgp_lib_np.main_multi_slim import multi_slim
-from slim_gsgp_lib_np.datasets.synthetic_datasets import load_synthetic10
+from slim_gsgp_lib_np.datasets.synthetic_datasets import load_synthetic3
 from slim_gsgp_lib_np.config.multi_slim_config import GPParameters
 
 # ... (rest of your previously refactored script, including
@@ -103,9 +103,9 @@ from slim_gsgp_lib_np.config.multi_slim_config import GPParameters
 #      and the run_gp_benchmark() function and the if __name__ == "__main__": block)
 # --- Configuration Constants ---
 # Dataset Configuration
-DATASET_LOADER = load_synthetic10
-DATASET_NAME_STR = 'Synthetic10' # For logging and potential output naming
-NUM_SAMPLES = 3000
+DATASET_LOADER = load_synthetic3
+DATASET_NAME_STR = 'Synthetic3' # For logging and potential output naming
+NUM_SAMPLES = 1000
 TEST_SET_FRACTION = 0.3
 BASE_RANDOM_SEED = 0 # Base seed for reproducibility
 

@@ -34,15 +34,20 @@ def dataset3(n=500, seed=0, noise=0):
     return x, y_noisy, mask
 
 
+FUNCTIONS = ['add', 'multiply', 'subtract', 'AQ']
 def run_gp():
     start = time.time()
     X, y, _ = dataset3(n=1000, seed=0, noise=0)
     X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2)
 
-    elite, gp_pop = gp(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, test_elite=True,
-                      full_return=True, dataset_name='test', selector='dalex_fast_rand', n_iter=200, pop_size=100, 
-                      verbose=1, max_depth=8, init_depth=3, p_xo=0.8, seed=0, down_sampling=1,
-    )
+    res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name='test',
+                        pop_size=int(100), n_iter=int(2000), selector='dalex_fast_rand',
+                        max_depth=9, init_depth=2, p_xo=0.8, prob_const=0.2, 
+                        prob_terminal=0.7, particularity_pressure=10, seed=0,
+                        full_return=True, n_jobs=1, verbose=False, log_level=0,
+                        tree_functions=FUNCTIONS, it_tolerance=20000, 
+                        dalex_n_cases=5, down_sampling=1,
+            )
     print('Time taken:', time.time() - start)
 
 

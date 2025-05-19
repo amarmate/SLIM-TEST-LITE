@@ -188,6 +188,7 @@ def simplify_tuple_expression(expr_tuple, latex=True):
             'divide': lambda a, b: sp.Mul(a, sp.Pow(b, -1)),
             'sqrt': lambda a: sp.Pow(sp.Abs(a), 0.5),
             'cond': lambda cond, true_val, false_val: sp.Piecewise((true_val, cond > 0), (false_val, True)),
+            'AQ' : lambda a, b: a / sp.sqrt(1 + b**2),
         }
 
         if isinstance(expr, tuple):
