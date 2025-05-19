@@ -63,13 +63,13 @@ if __name__ == "__main__":
     # Multiprocessing: seeds 1,2,...
     nproc = max(1, psutil.cpu_count(logical=True) - 4)
     with multiprocessing.Pool(nproc) as pool:
-        mp = pool.starmap(measure, [(i+1, f"proc_{i+1}") for i in range(nproc)])
+        mp = pool.starmap(measure, [(0, f"proc_{i+1}") for i in range(nproc)])
     print("Multiprocessing:", mp)
 
     # Joblib: dieselben seeds
     from joblib import Parallel, delayed
     jb = Parallel(n_jobs=nproc)(
-        delayed(measure)(i+1, f"joblib_{i+1}") for i in range(nproc)
+        delayed(measure)(0, f"joblib_{i+1}") for i in range(nproc)
     )
     print("Joblib Parallel:", jb)
 
