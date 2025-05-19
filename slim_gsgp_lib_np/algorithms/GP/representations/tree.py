@@ -53,6 +53,7 @@ class Tree:
     FUNCTIONS = None
     CONSTANTS = None
 
+    @profile
     def __init__(self, repr_):
         """
         Initializes a Tree object.

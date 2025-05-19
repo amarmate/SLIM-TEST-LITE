@@ -68,7 +68,7 @@ def run_gp():
 
     start_time = time.time() # Wall clock time
     res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name='test',
-             pop_size=int(100), n_iter=int(250), selector='dalex_fast',
+             pop_size=int(100), n_iter=int(250), selector='dalex_fast_rand',
              max_depth=9, init_depth=2, p_xo=0.8, prob_const=0.2,
              prob_terminal=0.7, particularity_pressure=10, seed=0,
              full_return=True, n_jobs=1, verbose=True, log_level=0,

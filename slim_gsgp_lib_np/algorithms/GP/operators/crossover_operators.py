@@ -25,7 +25,9 @@ Crossover operator implementation.
 """
 
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import (random_subtree, substitute_subtree, 
-                                                                       get_indices_with_levels, get_depth)
+                                                                       get_indices_with_levels, get_depth, 
+                                                                       )
+
 from slim_gsgp_lib_np.utils.utils import swap_sub_tree, get_subtree    
 import random
 
@@ -209,7 +211,6 @@ def crossover_trees(max_depth,
             index2 = random.choice(indices_with_levels_tree2[level2])
             subtree2 = get_subtree(tree2.repr_, list(index2))
             depth2 = get_depth(subtree2)
-
             if depth2 <= max_depth - level1 and (level2 > 0 or depth1 > 1) and (level1 > 0 or depth2 > 1):
                 break
 
@@ -219,3 +220,4 @@ def crossover_trees(max_depth,
         return new_tree1, new_tree2
 
     return inner_xo
+

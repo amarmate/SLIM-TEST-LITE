@@ -587,7 +587,6 @@ def get_const_array(name, length, CONSTANTS):
         _const_cache[key] = np.full((length,), val)
     return _const_cache[key]
 
-@profile
 def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
     """
     Evaluates a tree genotype on input vectors.
@@ -634,41 +633,62 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
         elif repr_ in CONSTANTS:
             # return np.full((X.shape[0],), CONSTANTS[repr_](None))
             return get_const_array(repr_, X.shape[0], CONSTANTS)
+        
 
-
+# ============================ IMPROVED ===========================
+from collections import deque, defaultdict
 def get_indices_with_levels(tree):
-    """
-    Returns a dictionary mapping each depth level to a list of index paths
-    pointing to subtrees or terminal nodes at that level.
-
-    Supports nodes with arbitrary arity (e.g., 1, 2, 3...).
-
-    Parameters
-    ----------
-    tree : tuple or terminal
-        The root node of the tree.
-
-    Returns
-    -------
-    dict
-        A dictionary {level: [index_paths]}.
-    """
     indices_by_level = defaultdict(list)
-
-    def traverse(sub_tree, path=(), level=0):
+    stack = deque([(tree, (), 0)]) 
+    
+    while stack:
+        sub_tree, path, level = stack.pop()
         if not isinstance(sub_tree, tuple):
             indices_by_level[level].append(path)
         else:
-            if path != ():  # don't include the root twice
+            if path: 
                 indices_by_level[level].append(path)
-            op, *args = sub_tree
-            for i, child in enumerate(args):
-                traverse(child, path + (i + 1,), level + 1)
-
-    traverse(tree)
-    indices_by_level[0].append(())  # root
-
+            for i, child in reversed(list(enumerate(sub_tree[1:]))):
+                stack.append((child, path + (i+1,), level + 1))
+    
+    indices_by_level[0].append(()) 
     return dict(indices_by_level)
+
+# def get_indices_with_levels(tree):
+#     """
+#     Returns a dictionary mapping each depth level to a list of index paths
+#     pointing to subtrees or terminal nodes at that level.
+
+#     Supports nodes with arbitrary arity (e.g., 1, 2, 3...).
+
+#     Parameters
+#     ----------
+#     tree : tuple or terminal
+#         The root node of the tree.
+
+#     Returns
+#     -------
+#     dict
+#         A dictionary {level: [index_paths]}.
+#     """
+#     indices_by_level = defaultdict(list)
+
+#     def traverse(sub_tree, path=(), level=0):
+#         if not isinstance(sub_tree, tuple):
+#             indices_by_level[level].append(path)
+#         else:
+#             if path != ():  # don't include the root twice
+#                 indices_by_level[level].append(path)
+#             op, *args = sub_tree
+#             for i, child in enumerate(args):
+#                 traverse(child, path + (i + 1,), level + 1)
+
+#     traverse(tree)
+#     indices_by_level[0].append(())  # root
+#     return dict(indices_by_level)
+
+
+# ============================== IMPROVED ==============================
 
 def get_depth(tree):
     """
