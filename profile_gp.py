@@ -23,6 +23,8 @@ def dataset3(n=500, seed=0, noise=0):
         y += np.random.normal(0,(noise/100)*np.std(y),size=n)
     return train_test_split(x,y,p_test=0.2,seed=0)
 
+Xtr, ytr, Xte, yte = dataset3(n=2000, seed=0, noise=0)
+
 def measure(seed, label=None):
     proc = psutil.Process()
     mem0 = proc.memory_info().rss / 1024**2
