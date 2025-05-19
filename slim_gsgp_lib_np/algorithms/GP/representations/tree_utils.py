@@ -578,6 +578,16 @@ def tree_depth_and_nodes(FUNCTIONS):
     return depth_and_nodes
 
 
+# ----------------------------- acceleration of execute tree function ------------------------------
+_const_cache = {}
+def get_const_array(name, length, CONSTANTS):
+    key = (name, length)
+    if key not in _const_cache:
+        val = CONSTANTS[name](None)
+        _const_cache[key] = np.full((length,), val)
+    return _const_cache[key]
+
+@profile
 def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
     """
     Evaluates a tree genotype on input vectors.
@@ -615,13 +625,16 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
         # Apply the function to the evaluated children
         output = FUNCTIONS[function_name]["function"](*child_results)
 
-        return bound_value(output, -1e12, 1e12)
+        # return bound_value(output, -1e12, 1e12)
+        return output
 
     else:  # Terminal or constant
         if repr_ in TERMINALS:
             return X[:, TERMINALS[repr_]]
         elif repr_ in CONSTANTS:
-            return np.full((X.shape[0],), CONSTANTS[repr_](None))
+            # return np.full((X.shape[0],), CONSTANTS[repr_](None))
+            return get_const_array(repr_, X.shape[0], CONSTANTS)
+
 
 def get_indices_with_levels(tree):
     """
