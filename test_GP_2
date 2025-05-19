@@ -9,6 +9,11 @@ from joblib import Parallel, delayed, parallel_config
 import mlflow
 import warnings
 
+import pickle
+from pathlib import Path
+import tempfile
+
+
 from slim_gsgp_lib_np.main_gp import gp
 from functions.utils_test import (pf_rmse_comp, pf_rmse_comp_time, 
                              simplify_tuple_expression, register_mlflow_charts, log_latex_as_image,
@@ -74,6 +79,11 @@ datasets = {name.split('load_')[1] : loader for name, loader in globals().items(
 # ----------------------------------------------------- MAIN FUNCTIONS -------------------------------------------------------------
 def tuning(data_split, name, split_id, selector): 
     trial_results, calls_count = [], 0
+
+    temp_dir = Path(tempfile.gettempdir()) / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "tuning"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    trial_results, calls_count = [], 0
+
     X, _, y, _ = data_split
 
     def objective(params): 
@@ -149,6 +159,7 @@ def tuning(data_split, name, split_id, selector):
     )
 
     df_tr = pd.DataFrame(trial_results)
+
     best_trial = df_tr.loc[df_tr['mean_cv_rmse'].idxmin()]
     best_hyperparams = best_trial[['init_depth','max_depth','p_xo','prob_const',
                                    'prob_terminal','particularity_pressure']].to_dict()
@@ -156,12 +167,19 @@ def tuning(data_split, name, split_id, selector):
     mlflow.log_params(best_hyperparams) 
     mlflow.set_tag("tuning_step", 'complete')
 
-    return df_tr, best_hyperparams, best_cv_rmse # Return the data
+    df_tr.to_pickle(temp_dir / "checkpoint_tuning.pkl")
+    with open(temp_dir / "checkpoint_best_params.pkl", 'wb') as f:
+        pickle.dump(best_hyperparams, f)
+
+    return df_tr, best_hyperparams, best_cv_rmse 
 
 def test_algo(params, data_split, name, split_id, bcv_rmse, selector): 
     X_train, X_test, y_train, y_test = data_split
     all_fold_pf, logs, records = [], [], []
-    
+
+    temp_dir = Path(tempfile.gettempdir()) / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "testing"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
     # TESTING 
     for test_n in range(N_TESTS): 
         talg = time.time()
@@ -210,12 +228,18 @@ def test_algo(params, data_split, name, split_id, bcv_rmse, selector):
         mlflow.log_metric("testing_nodes", elite.total_nodes, step=test_n+1)
         mlflow.log_metric("testing_time", elapsed, step=test_n+1)
 
-    #
     main_test_df = pd.DataFrame(records)
     best_example_latex = main_test_df.loc[main_test_df['rmse_test'].idxmin()]['latex_repr']
     log_latex_as_image(best_example_latex, name, split_id, prefix=selector, suffix='')
     pf = pf_rmse_comp_time(all_fold_pf)
     mlflow.set_tag("testing_step", 'complete')
+
+    main_test_df.to_pickle(temp_dir / "checkpoint_testing.pkl")
+    with open(temp_dir / "checkpoint_pf.pkl", 'wb') as f:
+        pickle.dump(pf, f)
+    with open(temp_dir / "checkpoint_logs.pkl", 'wb') as f:
+        pickle.dump(logs, f)
+
 
     return main_test_df, pf, logs
 
