@@ -11,7 +11,6 @@ import warnings
 
 import pickle
 from pathlib import Path
-import tempfile
 
 
 from slim_gsgp_lib_np.main_gp import gp
@@ -59,7 +58,7 @@ SPACE_PARAMETERS = [
 
 # ------------------------------------------- LIMIT THREADS FOR NUMPY --------------------------------------------------------
 os.environ.update({
-    k: '1' for k in [
+    k: '5' for k in [
         "OMP_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
         "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"
     ]})
@@ -80,7 +79,7 @@ datasets = {name.split('load_')[1] : loader for name, loader in globals().items(
 def tuning(data_split, name, split_id, selector): 
     trial_results, calls_count = [], 0
 
-    temp_dir = Path(tempfile.gettempdir()) / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "tuning"
+    temp_dir = Path('temp') / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "tuning"
     temp_dir.mkdir(parents=True, exist_ok=True)
     trial_results, calls_count = [], 0
 
@@ -177,7 +176,7 @@ def test_algo(params, data_split, name, split_id, bcv_rmse, selector):
     X_train, X_test, y_train, y_test = data_split
     all_fold_pf, logs, records = [], [], []
 
-    temp_dir = Path(tempfile.gettempdir()) / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "testing"
+    temp_dir = Path('temp') / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "testing"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     # TESTING 
