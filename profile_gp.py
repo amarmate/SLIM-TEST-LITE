@@ -72,3 +72,9 @@ if __name__ == "__main__":
         delayed(measure)(i+1, f"joblib_{i+1}") for i in range(nproc)
     )
     print("Joblib Parallel:", jb)
+
+    import pickle
+    pickle.dump(sc, open("sc.pkl", "wb"))
+    pickle.dump(mp, open("mp.pkl", "wb"))
+    pickle.dump(jb, open("jb.pkl", "wb"))
+    print("Results saved to sc.pkl, mp.pkl, jb.pkl")
