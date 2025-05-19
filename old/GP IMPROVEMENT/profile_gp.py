@@ -2,6 +2,14 @@ from slim_gsgp_lib_np.utils.utils import train_test_split
 from slim_gsgp_lib_np.main_gp import gp
 import numpy as np
 import time
+import os 
+
+os.environ.update({
+    k: '1' for k in [
+        "OMP_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"
+    ]})
+
 
 def dataset3(n=500, seed=0, noise=0):
     """
@@ -28,11 +36,11 @@ def dataset3(n=500, seed=0, noise=0):
 
 def run_gp():
     start = time.time()
-    X, y, _ = dataset3(n=500, seed=0, noise=0)
+    X, y, _ = dataset3(n=1000, seed=0, noise=0)
     X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.2)
 
     elite, gp_pop = gp(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, test_elite=True,
-                      full_return=True, dataset_name='test', selector='dalex', n_iter=40, pop_size=1000, 
+                      full_return=True, dataset_name='test', selector='dalex_fast_rand', n_iter=200, pop_size=100, 
                       verbose=1, max_depth=8, init_depth=3, p_xo=0.8, seed=0, down_sampling=1,
     )
     print('Time taken:', time.time() - start)

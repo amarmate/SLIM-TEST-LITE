@@ -25,7 +25,7 @@ Selection operator implementation.
 
 import random
 import numpy as np
-from slim_gsgp_lib_np.selection.utils import calculate_musigma_pp
+from slim_gsgp_lib_np.selection.utils import get_musigma_from_cache
 
 def selector(problem='min', 
              type='tournament', 
@@ -34,7 +34,8 @@ def selector(problem='min',
              particularity_pressure=20,
              epsilon=1e-6, 
              dalex_size_prob=0.5,
-             n_cases=1000,
+             n_cases=2,
+             n=1000,
              ):
     """
     Returns a selection function based on the specified problem and selection type.
@@ -57,7 +58,7 @@ def selector(problem='min',
     dalex_size_prob : float, optional
         Probability of selecting the individual with the best fitness in the tournament. Defaults to 0.5.
     n_cases : int, optional
-        Number of cases to sample for DALex selection. Defaults to 1000.
+        Number of cases to sample for DALex selection. Defaults to 2.
 
     Returns
     -------
@@ -87,8 +88,8 @@ def selector(problem='min',
         'dalex':             lambda: dalex(mode=mode, down_sampling=ds, particularity_pressure=pp),
         'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
         'dalex_size':        lambda: dalex_size(mode=mode, down_sampling=ds, particularity_pressure=pp, tournament_size=pool_size, p_best=dalex_size_prob),
-        'dalex_fast':        lambda: dalex_fast_min(particularity_pressure=pp),
-        'dalex_fast_rand':   lambda: dalex_fast_min_rand(particularity_pressure=pp, n_cases=n_cases),
+        'dalex_fast':        lambda: dalex_fast_min(n_cases=n_cases),
+        'dalex_fast_rand':   lambda: dalex_fast_min_rand(particularity_pressure=pp),
         'dalex_fast_size':   lambda: dalex_fast_min_size(particularity_pressure=pp, p_best=dalex_size_prob, tournament_size=pool_size),
     }
 
@@ -637,7 +638,6 @@ def roulette_wheel_selection(population):
     # return random.choices(population, weights=[ind.fitness for ind in population])[0]
     return random.choices(population)[0]
  
-
 def dalex(mode='min', down_sampling=0.5, particularity_pressure=20):
     """
     Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
@@ -764,8 +764,7 @@ def dalex_size(mode='min',
 
     return ds
 
-
-def dalex_fast_min(particularity_pressure=20,
+def dalex_fast_min(n_cases=20,
                              **kwards):
     """
     Returns a function that performs a fast approxiamtion of DALex (Diversely Aggregated Lexicase Selection)
@@ -782,11 +781,11 @@ def dalex_fast_min(particularity_pressure=20,
     Callable
         A function that takes a population object and returns a tuple (selected individual, n_cases used).
     """
-  
+    
     def ds(pop):
         errors = pop.errors_case 
         num_total_cases = errors.shape[1]
-        idx = random.sample(range(num_total_cases), particularity_pressure)
+        idx = random.sample(range(num_total_cases), n_cases)
         score = np.sum(errors[:,idx], axis=1)
 
         best_index = np.argmin(score)
@@ -796,7 +795,6 @@ def dalex_fast_min(particularity_pressure=20,
     return ds
 
 def dalex_fast_min_rand(particularity_pressure=10, 
-                        n_cases=1000,
                         **kwargs):
     """
     Returns a fast, sparse approximation of DALEX selection using a pre-sampled
@@ -807,8 +805,6 @@ def dalex_fast_min_rand(particularity_pressure=10,
     particularity_pressure : float, optional
         Standard deviation for the normal distribution used to sample importance scores.
         Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
-    n_cases : int, optional
-        Number of cases to sample. Defaults to 1000.
 
     Returns
     -------
@@ -816,17 +812,16 @@ def dalex_fast_min_rand(particularity_pressure=10,
         Function that takes a population object `pop` and returns
         (selected_individual, n_cases_used).
     """
-    mu, sigma = calculate_musigma_pp(particularity_pressure, n_cases=n_cases)
-    pressures = list(np.random.normal(mu, sigma, 5_000))
-    counter = {'i': 0}
+    sample_size = 5_000
+    mu, sigma = get_musigma_from_cache(particularity_pressure)
+    pressures = list(np.random.normal(mu, sigma, sample_size))
 
     def ds(pop):
         errors = pop.errors_case
         n_cases = errors.shape[1]
 
-        i = counter['i']
-        pp = pressures[i % 1000]
-        counter['i'] = i + 1
+        id = random.randint(0, sample_size - 1)
+        pp = pressures[id]
 
         n = int(round(pp))
         n = max(1, min(n, n_cases))

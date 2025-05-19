@@ -45,6 +45,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        elitism: bool = gp_solve_parameters["elitism"], n_elites: int = gp_solve_parameters["n_elites"],
        selector: str = gp_parameters["selector"],
        dalex_size_prob: float = 0.5,
+       dalex_n_cases: int = 2, 
        max_depth: int | None = gp_solve_parameters["max_depth"],
        init_depth: int = gp_pi_init["init_depth"],
        log_path: str = None, seed: int = gp_parameters["seed"],
@@ -99,6 +100,8 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         "manual_e_lexicase", "dalex", "dalex_size", "rank_based", "double_tournament"
     dalex_size_prob : float, optional   
         Probability of selecting the individual with the best fitness from the pool in the dalex_size selection algorithm (default is 0.5).
+    dalex_n_cases : int, optional   
+        Number of cases to use in the dalex selection fast algorithm (default is 2).
     n_elites : int, optional
         The number of elites.
     max_depth : int, optional
@@ -277,7 +280,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
                                          particularity_pressure=particularity_pressure, 
                                          epsilon=epsilon, 
                                          dalex_size_prob=dalex_size_prob,
-                                         n_cases=X_train.shape[0],
+                                         n_cases=dalex_n_cases,
     )
 
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max

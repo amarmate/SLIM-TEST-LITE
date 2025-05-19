@@ -75,6 +75,7 @@ def multi_slim(
         down_sampling: float = 0.5, 
         particularity_pressure: float = 20,
         dalex_size_prob: float = 0.5,
+        dalex_n_cases: int = 2,
         epsilon: float = 1e-6,
         decay_rate: float = multi_params["decay_rate"],
         ensemble_functions : list = None,
@@ -151,6 +152,8 @@ def multi_slim(
         Controls weight sampling in DALex selection.
     dalex_size_prob : float, optional
         Probability of selecting the individual with the best fitness in DALex size selection.
+    dalex_n_cases : int, optional   
+        Number of cases to sample in DALex fast selection.
     epsilon : float, optional
         Epsilon tolerance for epsilon-lexicase selection.
     decay_rate : float, optional
@@ -261,7 +264,7 @@ def multi_slim(
                                                 particularity_pressure=particularity_pressure,
                                                 epsilon=epsilon,
                                                 dalex_size_prob=dalex_size_prob,
-                                                n_cases=X_train.shape[0],
+                                                n_cases=dalex_n_cases,
     )
     
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max

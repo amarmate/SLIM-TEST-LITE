@@ -40,6 +40,7 @@ FUNCTIONS = {
     'sqrt' : {'function': protected_sqrt, 'arity': 1},
     'cond' : {'function': lambda x, y, z: np.where(x > 0, y, z), 'arity': 3},
     'sq' : {'function': lambda x: x**2, 'arity': 1},
+    'AQ' : {'function': lambda x, y: x / np.sqrt(1 + y**2), 'arity': 2},
 }
 
 # CONSTANTS = {

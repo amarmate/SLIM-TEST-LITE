@@ -27,47 +27,48 @@ from skopt import gp_minimize
 from skopt.space import Integer, Real
 
 # ------------------------------------------------   SETTINGS   --------------------------------------------------------------
-N_SPLITS = 4
-N_CV = 4
-N_SEARCHES_HYPER = 20
-N_RANDOM_STARTS = 8
+N_SPLITS = 5                # 4 
+N_CV = 3                    # 4 
+N_SEARCHES_HYPER = 15       # 20
+N_RANDOM_STARTS = 7         # 10 
 NOISE_SKOPT = 1e-3
-N_TESTS = 15
+N_TESTS = 12                # 15 
 P_TEST = 0.2 
 SEED = 0
-POP_SIZE = 100  # 100
-N_GENERATIONS = 2500 # 2500
-SELECTORS = ['dalex_fast_rand', 'dalex']
+SELECTORS = ['dalex_fast_rand', 'dalex_fast' 'dalex']
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'  
 EXPERIMENT_NAME = 'GP_Experiment'
-FUNCTIONS = ['add', 'multiply', 'divide', 'subtract', 'sqrt']
-STOP_THRESHOLD = 300
+FUNCTIONS = ['add', 'multiply', 'subtract', 'AQ']
+STOP_THRESHOLD = 1000
+PI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 
 np.random.seed(SEED)
 
 SPACE_PARAMETERS = [
         # Integer(2, 4, name='init_depth'),
-        Integer(6, 9, name='max_depth'),                   
-        Real(0.6, 0.9, name='p_xo'),                                          
-        Real(0.10, 0.25, name='prob_const'),                                       
-        Real(0.6, 0.9, name='prob_terminal'),                                      
-        Real(1, 50, name='particularity_pressure', prior='log-uniform'),
+        # Real(0.7, 0.95, name='p_xo'),                                          
+        # Integer(6, 9, name='max_depth'),                   
+        # Real(0.10, 0.25, name='prob_const'),  
+        Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
+        Real(0.5, 0.9, name='prob_terminal'),    
+        Real(2, 60, name='particularity_pressure', prior='log-uniform'),
+        Real(1, 10, name='dalex_n_cases', prior='uniform'),
 ]
 
 # ------------------------------------------- LIMIT THREADS FOR NUMPY --------------------------------------------------------
 os.environ.update({
-    k: '5' for k in [
+    k: '1' for k in [
         "OMP_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS",
         "OPENBLAS_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "BLIS_NUM_THREADS"
     ]})
 
 # ----------------------------------------------------- DATASETS --------------------------------------------------------------
-from slim_gsgp_lib_np.datasets.synthetic_datasets import (
-    load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
-    load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
-)
+# from slim_gsgp_lib_np.datasets.synthetic_datasets import (
+#     load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
+#     load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
+# )
 from slim_gsgp_lib_np.datasets.data_loader import ( 
     load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,
     load_istanbul, load_ld50, load_bioav, load_parkinson_updrs, load_ppb, load_resid_build_sale_price,
@@ -87,7 +88,9 @@ def tuning(data_split, name, split_id, selector):
 
     def objective(params): 
         nonlocal calls_count
-        md, px, pc, pt, pp = params
+        # md, px, pc, pt, pp, dnc = params
+        pis, pt, pp, dnc = params
+        ngen, pop_size = PI[pis]
         t0 = time.time()
 
         kf = KFold(n_splits=N_CV, shuffle=True, random_state=SEED)
@@ -99,11 +102,12 @@ def tuning(data_split, name, split_id, selector):
 
             talg = time.time()
             res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
-                        pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=selector,
-                        max_depth=int(md), init_depth=2, p_xo=px, prob_const=pc, 
+                        pop_size=int(pop_size), n_iter=int(ngen), selector=selector,
+                        max_depth=9, init_depth=2, p_xo=0.8, prob_const=0.2, 
                         prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
                         full_return=True, n_jobs=1, verbose=False, log_level=0,
                         tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD, 
+                        dalex_n_cases=int(dnc), down_sampling=1,
             )
             elite, population = res
             rmses.append(rmse(elite.predict(X_val), y_val))
@@ -131,11 +135,14 @@ def tuning(data_split, name, split_id, selector):
             'trial_id':                calls_count,
             'seed':                    SEED,
             'init_depth':              2,
-            'max_depth':               int(md),
-            'p_xo':                    px,
-            'prob_const':              pc,
+            'max_depth':               9,
+            'p_xo':                    0.8,
+            'prob_const':              0.2,
+            'pop_size':                pop_size,
+            'n_iter':                  ngen,
             'prob_terminal':           pt,
             'particularity_pressure':  pp,
+            'dalex_n_cases':           int(dnc),
             'mean_cv_rmse':            mean_rmse,
             'std_cv_rmse':             std_rmse,
             'mean_cv_nodes':           mean_nodes,
@@ -183,9 +190,8 @@ def test_algo(params, data_split, name, split_id, bcv_rmse, selector):
     for test_n in range(N_TESTS): 
         talg = time.time()
         res = gp(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, test_elite=True, dataset_name=name,
-                    pop_size=POP_SIZE, n_iter=N_GENERATIONS, selector=selector, seed=SEED+test_n,
-                    full_return=True, n_jobs=1, verbose=False, log_level='evaluate', **params,
-                    tree_functions=FUNCTIONS, it_tolerance=np.inf, 
+                    selector=selector, seed=SEED+test_n, full_return=True, n_jobs=1, verbose=False, 
+                    log_level='evaluate', **params, tree_functions=FUNCTIONS, it_tolerance=np.inf, 
         )
         elapsed = time.time() - talg
         elite, population, log = res
