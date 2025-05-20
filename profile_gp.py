@@ -71,4 +71,4 @@ if __name__ == "__main__":
     # Print the mean time_s for each job 
     for jobs, data in j_data.items():
         mean_time = np.mean([d["time_s"] for d in data])
-        print(f"Joblib {jobs} jobs: {mean_time:.2f} seconds")
+        print(f"Joblib {jobs} jobs: {mean_time:.2f} seconds -> {mean_time/jobs} seconds/job")
