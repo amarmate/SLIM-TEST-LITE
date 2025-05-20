@@ -36,7 +36,7 @@ def measure(seed, label=None):
     res = gp(
         X_train=Xtr, y_train=ytr, test_elite=False,
         dataset_name=f"run_{seed}",
-        pop_size=100, n_iter=100, selector='dalex_fast_rand',
+        pop_size=100, n_iter=500, selector='dalex_fast_rand',
         max_depth=9, init_depth=2, p_xo=0.8,
         prob_const=0.2, prob_terminal=0.7,
         particularity_pressure=10, seed=seed,  # <-- ganzzahliger seed
@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     from joblib import Parallel, delayed
     j_data = {}
-    for jobs in [3, 5, 7, 8, 9, 11, 13, 15, 16]:
+    for jobs in [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]:
         j = Parallel(n_jobs=jobs)(
             delayed(measure)(0, f"joblib_{i+1}") for i in range(jobs)
         )
