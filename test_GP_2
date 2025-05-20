@@ -363,10 +363,10 @@ if __name__ == '__main__':
     ]
     total_combos = len(tasks_expt)
 
-    if args.chunk_size is not None:
-        combos_per_chunk = args.chunk_size // N_SPLITS
+    if args.cs is not None:
+        combos_per_chunk = args.cs // N_SPLITS
         num_chunks = (total_combos + combos_per_chunk - 1) // combos_per_chunk
-        idx = args.chunk_idx
+        idx = args.ci
         if not (0 <= idx < num_chunks):
             raise ValueError(f"chunk_idx must be in [0, {num_chunks-1}]")
         start = idx * combos_per_chunk
