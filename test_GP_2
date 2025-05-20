@@ -259,10 +259,10 @@ def parse_args():
     args = parser.parse_args()
     if args.workers > os.cpu_count():
         raise ValueError(f"workers cannot be greater than available CPU cores ({os.cpu_count()})")
-    if (args.chunk_size is None) ^ (args.chunk_idx is None):
-        parser.error("Both --chunk_size and --chunk_idx must be provided together")
-    if args.chunk_size is not None and args.chunk_size < N_SPLITS:
-        parser.error(f"--chunk_size must be at least N_SPLITS ({N_SPLITS})")
+    if (args.cs is None) ^ (args.ci is None):
+        parser.error("Both --cs (chunk_size) and --ci (chunk_idx) must be provided together")
+    if args.cs is not None and args.cs < N_SPLITS:
+        parser.error(f"--cs (chunk_size) must be at least N_SPLITS ({N_SPLITS})")
 
     return args
 
