@@ -228,7 +228,6 @@ class GP:
         for callback in self.callbacks:
             callback.on_train_end(self)
 
-    @profile
     def evolve_population(
         self,
         population,
