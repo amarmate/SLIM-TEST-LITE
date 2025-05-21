@@ -95,6 +95,7 @@ class GP:
         self.find_elit_func = find_elit_func
         self.settings_dict = settings_dict
         self.callbacks = callbacks if callbacks is not None else []
+        self.hall_of_fame = []
 
         if elite_tree != None:
             self.elite_tree = [Tree(tree.repr_) for tree in elite_tree]
@@ -247,15 +248,14 @@ class GP:
         # Add elites if elitism is enabled.
         if elitism:
             offs_pop.extend(self.elites)
+            self.hall_of_fame.extend(self.elites)
 
         # Fill the offspring population.
         while len(offs_pop) < self.pop_size:
-            # Randomly decide whether to use crossover or mutation.
             if random.random() < self.p_xo:
                 offspring = self.crossover_step(population, max_depth, depth_calculator)
             else:
                 offspring = [self.mutation_step(population, max_depth, depth_calculator)]
-            # offs_pop.extend([Tree(child) for child in offspring])
             offs_pop.extend(offspring)
 
         # Ensure the offspring population matches the required size.

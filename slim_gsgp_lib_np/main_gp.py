@@ -336,9 +336,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
     )
 
     if full_return: 
-        if log_level == 'evaluate':
-            return optimizer.elite, optimizer.population, optimizer.log
-        return optimizer.elite, optimizer.population
+        return optimizer
     return optimizer.elite
 
 
