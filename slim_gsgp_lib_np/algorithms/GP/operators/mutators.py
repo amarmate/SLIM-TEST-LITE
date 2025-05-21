@@ -35,7 +35,6 @@ from slim_gsgp_lib_np.utils.utils import (
         create_grow_random_tree,
         swap_sub_tree,
     )
-
 from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth_and_nodes, get_indices_with_levels, random_index_at_level
 
 
@@ -292,12 +291,7 @@ def mutate_tree_subtree_dc(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t)
         A mutation function that respects tree depth limits.
     """
 
-    @profile
     def mut(tree):
-        # indices_with_levels = get_indices_with_levels(tree1)
-        # level = random.choice(list(indices_with_levels.keys()))
-        # index = random.choice(indices_with_levels[level])
-
         d, tree = tree.depth, tree.repr_
         level = random.choice(range(0, d))
         index = random_index_at_level(tree, level)
@@ -319,7 +313,6 @@ def mutate_tree_subtree_dc(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c, p_t)
                 p_c=p_c,
                 p_t=p_t,
             )
-
         return swap_sub_tree(tree, new_subtree, list(index))
 
     return mut
@@ -345,10 +338,8 @@ def mutate_tree_point(TERMINALS, CONSTANTS, FUNCTIONS, p_c):
     """
     def mut(tree):
         d, tree = tree.depth, tree.repr_
-
-        indices_with_levels = get_indices_with_levels(tree)
-        all_indices = [index for indices in indices_with_levels.values() for index in indices]
-        index = random.choice(all_indices)
+        level = random.choice(list(range(1, d)))   
+        index = random_index_at_level(tree, level)
         subtree = get_subtree(tree, list(index))
 
         if isinstance(subtree, tuple):
@@ -393,13 +384,8 @@ def prune_mutation_tree(TERMINALS, CONSTANTS, p_c):
     """
     def mut(tree):
         d, tree = tree.depth, tree.repr_
-
-        # Obtain all node occurrences with their index paths.
-        indices_with_levels = get_indices_with_levels(tree)
-        all_indices = [index for level in indices_with_levels.values() for index in level][:-1]
-
-        # Select a random occurrence from the tree.
-        chosen_index = random.choice(all_indices)
+        level = random.choice(list(range(1, d)))
+        chosen_index = random_index_at_level(tree, level)
         
         # Determine the replacement: constant (with probability p_c) or terminal.
         if random.random() < p_c:
@@ -441,18 +427,16 @@ def mutate_tree_hoist(TERMINALS, CONSTANTS, p_c):
             return get_substitution_levels(index[:-1], possible)
 
     def mutate(tree): 
-        d ,tree = tree.depth, tree.repr_
+        d, tree = tree.depth, tree.repr_
+        level = random.choice(list(range(1, d)))
+        index = random_index_at_level(tree, level)
 
-        indices_levels = get_indices_with_levels(tree)
-        level = random.choice(list(indices_levels.keys())[:-1])
-        index = random.choice(indices_levels[level])
         hoist_subtree = get_subtree(tree, list(index))
         depth_subtree, _ = tree_depth_and_nodes(hoist_subtree)
 
         possible_substitutions = get_substitution_levels(index, [])
 
         if len(possible_substitutions) == 1 and depth_subtree == 1:
-            # If the subtree is a terminal, we cannot replace the full tree with a terminal, so we substitute the node
             if random.random() < p_c:
                 new_terminal = random.choice(list(CONSTANTS.keys()))
             else:
