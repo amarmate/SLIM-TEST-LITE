@@ -64,7 +64,7 @@ class Condition:
 
         self.repr_ = repr_
         self.train_semantics, self.test_semantics = None, None  
-        self.depth, self.nodes_count = tree_depth_and_nodes(Condition.FUNCTIONS)(repr_)
+        self.depth, self.nodes_count = tree_depth_and_nodes(repr_)
 
     def apply_tree(self, inputs):
         """
