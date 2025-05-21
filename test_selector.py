@@ -32,7 +32,7 @@ gen_params = {
     "log_level": 'evaluate',
     "it_tolerance": 20000,
     "down_sampling": 1,
-    "full_return": False,
+    "full_return": True,
     "verbose": False,
 }
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         for selector in selectors
     ]
 
-    n_cores = cpu_count()
+    n_cores = 16
     print(f"Starte auf {n_cores} Cores, insgesamt {len(tasks)} Tasks")
 
     results = []
