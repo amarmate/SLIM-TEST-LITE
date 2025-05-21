@@ -24,9 +24,9 @@
 Crossover operator implementation.
 """
 
-from slim_gsgp_lib_np.utils.utils import swap_sub_tree, get_subtree    
+from slim_gsgp_lib_np.utils.utils import swap_sub_tree, get_subtree  
 from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
-from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth_and_nodes, get_indices_with_levels
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth_and_nodes, random_index_at_level
 import random
 
 
@@ -131,6 +131,97 @@ import random
 #     return inner_xo
 
 
+# def crossover_trees(max_depth,
+#                     **kwargs):
+#     """
+#     Returns a function that performs crossover between two tree representations.
+
+#     Parameters
+#     ----------
+#     max_depth : int
+#         Maximum depth of the trees.
+#         This is used to limit the depth of the trees during crossover.
+
+#     Returns
+#     -------
+#     Callable
+#         A function (`inner_xo`) that performs crossover between two tree representations.
+#         Inner function to perform crossover between two trees.
+
+#         Parameters
+#         ----------
+#         tree1 : tuple
+#             The first tree representation.
+#         tree2 : tuple
+#             The second tree representation.
+
+#         Returns
+#         -------
+#         tuple
+#             Two new tree representations after performing crossover.
+#         Notes
+#         -----
+#         This function selects random crossover points from both `tree1` and `tree2` and swaps
+#         their subtrees at those points. If either tree is a terminal node, it returns the tree
+#         representations unchanged.
+
+#     Notes
+#     -----
+#     The returned function (`inner_xo`) takes two tree representations and their node counts,
+#     selects random subtrees, and swaps them to create the representations of the new offspring trees.
+#     """
+
+#     @profile
+#     def inner_xo(tree1, tree2):
+#         """
+#         Performs crossover between two tree representations.
+#         Inner function to perform crossover between two trees.
+
+#         Parameters
+#         ----------
+#         tree1 : tuple
+#             The first tree representation.
+#         tree2 : tuple
+#             The second tree representation.
+
+#         Returns
+#         -------
+#         tuple
+#             Two new tree representations after performing crossover.
+#         Notes
+#         -----
+#         This function selects random crossover points from both `tree1` and `tree2` and swaps
+#         their subtrees at those points. If either tree is a terminal node, it returns the tree
+#         representations unchanged.
+#         """
+
+#         indices_with_levels_tree1 = get_indices_with_levels(tree1.repr_)
+#         indices_with_levels_tree2 = get_indices_with_levels(tree2.repr_)
+
+#         lvs1 = list(indices_with_levels_tree1.keys())
+#         level1 = random.choice(lvs1)
+#         index1 = random.choice(indices_with_levels_tree1[level1])
+#         subtree1 = get_subtree(tree1.repr_, list(index1))
+#         depth1, nodes1 = tree_depth_and_nodes(subtree1)
+
+#         max_level_2 = min(max_depth - depth1, tree2.depth - 1)
+
+#         while True:
+#             level2 = random.choice(range(0, max_level_2 + 1))
+#             index2 = random.choice(indices_with_levels_tree2[level2])
+#             subtree2 = get_subtree(tree2.repr_, list(index2))
+#             depth2, nodes2 = tree_depth_and_nodes(subtree2)
+#             if depth2 <= max_depth - level1 and (level2 > 0 or depth1 > 1) and (level1 > 0 or depth2 > 1):
+#                 break
+
+#         # Swap the subtrees
+#         new_tree1 = swap_sub_tree(tree1.repr_, subtree2, list(index1))
+#         new_tree2 = swap_sub_tree(tree2.repr_, subtree1, list(index2))
+#         return Tree(new_tree1), Tree(new_tree2)
+
+#     return inner_xo
+
+
 def crossover_trees(max_depth,
                     **kwargs):
     """
@@ -194,81 +285,24 @@ def crossover_trees(max_depth,
         representations unchanged.
         """
 
-        indices_with_levels_tree1 = get_indices_with_levels(tree1.repr_)
-        indices_with_levels_tree2 = get_indices_with_levels(tree2.repr_)
-
-        lvs1 = list(indices_with_levels_tree1.keys())
-        level1 = random.choice(lvs1)
-        index1 = random.choice(indices_with_levels_tree1[level1])
+        level1 = random.choice(range(0, tree1.depth))
+        index1 = random_index_at_level(tree1.repr_, level1)
         subtree1 = get_subtree(tree1.repr_, list(index1))
-        depth1, nodes1 = tree_depth_and_nodes(subtree1)
+        depth1, _ = tree_depth_and_nodes(subtree1)
 
         max_level_2 = min(max_depth - depth1, tree2.depth - 1)
-
         while True:
             level2 = random.choice(range(0, max_level_2 + 1))
-            index2 = random.choice(indices_with_levels_tree2[level2])
+            index2 = random_index_at_level(tree2.repr_, level2)
             subtree2 = get_subtree(tree2.repr_, list(index2))
-            depth2, nodes2 = tree_depth_and_nodes(subtree2)
-            if depth2 <= max_depth - level1 and (level2 > 0 or depth1 > 1) and (level1 > 0 or depth2 > 1):
+            depth2, _ = tree_depth_and_nodes(subtree2)
+            if depth2 + level1 <= max_depth and (level2 > 0 or depth1 > 1) and (level1 > 0 or depth2 > 1):
                 break
 
         # Swap the subtrees
         new_tree1 = swap_sub_tree(tree1.repr_, subtree2, list(index1))
         new_tree2 = swap_sub_tree(tree2.repr_, subtree1, list(index2))
 
-        # new_tree_nodes1 = tree1.nodes_count - nodes1 + nodes2
-        # new_tree_nodes2 = tree2.nodes_count - nodes2 + nodes1
-
-        # new_depth_1, new_depth_2 = max(tree1.depth, level1 + depth2), max(tree2.depth, level2 + depth1)
-        # if len(index1) == mlv1: 
-        #     new_depth_1 = mlv1 + depth2 
-        # elif len(index1) == 0: 
-        #     new_depth_1 = depth2 
-
-        # else:
-        #     a,b = False, False
-        #     for index in indices_with_levels_tree1[mlv1]: 
-        #         if a and b: 
-        #             final_depth_1 = max(tree1.depth, mlv1 - level1 + depth2)
-        #             break 
-        #         elif index1 == index[:level1]: 
-        #             a = True
-        #         else: 
-        #             b = True 
-                    
-
-        # if len(index2) == mlv2:
-        #     new_depth_2 = mlv2 + depth1
-        # elif len(index2) == 0:
-        #     new_depth_2 = depth1
-        # else: 
-        #     a,b = False, False
-        #     for index in indices_with_levels_tree2[mlv2]: 
-        #         if a and b: 
-        #             final_depth_2 = max(tree2.depth, mlv2 - level2 + depth1)
-        #             break 
-        #         elif index2 == index[:level2]: 
-        #             a = True
-        #         else: 
-        #             b = True
-        
-        # new_tree1 = Tree(new_tree1, depth=new_depth_1, node_count=new_tree_nodes1)
-        # new_tree2 = Tree(new_tree2, depth=new_depth_2, node_count=new_tree_nodes2)
-
-        # if tree_depth_and_nodes(new_tree1.repr_)[0] != new_depth_1:
-        #     print("Error in tree 1 depth calculation")
-        #     print(new_tree1.repr_)  
-        #     raise ValueError("Tree 1 depth calculation error")
-
         return Tree(new_tree1), Tree(new_tree2)
-
+    
     return inner_xo
-
-
-
-# print('catch2')
-#                     print(mlv1)
-#                     print(subtree2)
-#                     print(tree1.repr_)
-#                     new_depth_1 = mlv1 + depth2

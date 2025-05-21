@@ -308,10 +308,7 @@ class GP:
             p1, i1 = p1
             self.lex_rounds.append(i1)
 
-        offs1 = self.mutator(p1.repr_, 
-                             num_of_nodes=p1.nodes_count
-                             )
-
+        offs1 = self.mutator(p1)
         elapsed = time.time() - start
         self.time_dict['mutation'].append(elapsed)
         return offs1

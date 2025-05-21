@@ -647,6 +647,26 @@ def get_indices_with_levels(tree):
     indices_by_level[0].append(()) 
     return dict(indices_by_level)
 
+def random_index_at_level(tree, target_level):
+    """
+    Returns a random index (path) at the given level in the tree.
+    """
+    if target_level == 0:
+        return ()
+
+    stack = deque([(tree, (), 0)])
+    candidates = []
+
+    while stack:
+        node, path, level = stack.pop()
+        if level == target_level:
+            candidates.append(path)
+        elif isinstance(node, tuple):
+            for i, child in reversed(list(enumerate(node[1:]))):
+                stack.append((child, path + (i + 1,), level + 1))
+    return random.choice(candidates) if candidates else ()
+
+
 # def get_indices_with_levels(tree):
 #     """
 #     Returns a dictionary mapping each depth level to a list of index paths

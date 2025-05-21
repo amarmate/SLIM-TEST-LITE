@@ -281,6 +281,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
                                          epsilon=epsilon, 
                                          dalex_size_prob=dalex_size_prob,
                                          n_cases=dalex_n_cases,
+                                         n=X_train.shape[0],
     )
 
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max

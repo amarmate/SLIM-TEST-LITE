@@ -33,10 +33,10 @@ def measure(seed, label=None):
     res = gp(
         X_train=Xtr, y_train=ytr, test_elite=False,
         dataset_name=f"run_{seed}",
-        pop_size=100, n_iter=500, selector='dalex_fast_rand',
-        max_depth=9, init_depth=2, p_xo=0.8,
-        prob_const=0.2, prob_terminal=0.7,
-        particularity_pressure=10, seed=seed,  # <-- ganzzahliger seed
+        pop_size=100, n_iter=200, selector='dalex_fast_rand',
+        max_depth=8, init_depth=2, p_xo=0.8,
+        prob_const=0.2, prob_terminal=0.7, tournament_size=2, 
+        particularity_pressure=10, seed=seed, 
         full_return=False, n_jobs=1, verbose=True,
         log_level=0, tree_functions=['add','multiply','subtract','AQ'],
         it_tolerance=20000, dalex_n_cases=5, down_sampling=1
@@ -54,7 +54,7 @@ def measure(seed, label=None):
 
 if __name__ == "__main__":
     # Single-Core: seed = 0
-    sc = measure(seed=0, label="single")
+    sc = measure(seed=10, label="single")
     # print("Single-Core:", sc)
 
     # from joblib import Parallel, delayed

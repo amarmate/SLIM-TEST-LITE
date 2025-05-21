@@ -49,10 +49,10 @@ np.random.seed(SEED)
 SPACE_PARAMETERS = [
         # Integer(2, 4, name='init_depth'),
         # Real(0.7, 0.95, name='p_xo'),                                          
-        # Integer(6, 9, name='max_depth'),                   
-        # Real(0.10, 0.25, name='prob_const'),  
+        # Real(0.10, 0.25, name='prob_const'), 
+        # Real(0.5, 0.9, name='prob_terminal'),    
+        Integer(6, 9, name='max_depth'),                    
         Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
-        Real(0.5, 0.9, name='prob_terminal'),    
         Real(2, 60, name='particularity_pressure', prior='log-uniform'),
         Real(1, 10, name='dalex_n_cases', prior='uniform'),
 ]
@@ -89,7 +89,7 @@ def tuning(data_split, name, split_id, selector):
     def objective(params): 
         nonlocal calls_count
         # md, px, pc, pt, pp, dnc = params
-        pis, pt, pp, dnc = params
+        md, pis, pp, dnc = params
         ngen, pop_size = PI[pis]
         t0 = time.time()
 
@@ -103,8 +103,8 @@ def tuning(data_split, name, split_id, selector):
             talg = time.time()
             res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
                         pop_size=int(pop_size), n_iter=int(ngen), selector=selector,
-                        max_depth=9, init_depth=2, p_xo=0.8, prob_const=0.2, 
-                        prob_terminal=pt, particularity_pressure=pp, seed=SEED+i,
+                        max_depth=int(md), init_depth=2, p_xo=0.8, prob_const=0.2, 
+                        prob_terminal=0.7, particularity_pressure=pp, seed=SEED+i,
                         full_return=True, n_jobs=1, verbose=False, log_level=0,
                         tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD, 
                         dalex_n_cases=int(dnc), down_sampling=1,
@@ -135,12 +135,12 @@ def tuning(data_split, name, split_id, selector):
             'trial_id':                calls_count,
             'seed':                    SEED,
             'init_depth':              2,
-            'max_depth':               9,
+            'max_depth':               int(md),
             'p_xo':                    0.8,
             'prob_const':              0.2,
             'pop_size':                pop_size,
             'n_iter':                  ngen,
-            'prob_terminal':           pt,
+            'prob_terminal':           0.7,
             'particularity_pressure':  pp,
             'dalex_n_cases':           int(dnc),
             'mean_cv_rmse':            mean_rmse,
@@ -244,7 +244,6 @@ def test_algo(params, data_split, name, split_id, bcv_rmse, selector):
         pickle.dump(pf, f)
     with open(temp_dir / "checkpoint_logs.pkl", 'wb') as f:
         pickle.dump(logs, f)
-
 
     return main_test_df, pf, logs
 

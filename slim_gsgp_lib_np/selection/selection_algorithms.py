@@ -85,11 +85,11 @@ def selector(problem='min',
         'e_lexicase':        lambda: epsilon_lexicase_selection(mode=mode, down_sampling=ds),
         'manual_e_lexicase': lambda: manual_epsilon_lexicase_selection(mode=mode, down_sampling=ds, epsilon=epsilon),
         'lexicase':          lambda: lexicase_selection(mode=mode, down_sampling=ds),
-        'dalex':             lambda: dalex(mode=mode, down_sampling=ds, particularity_pressure=pp),
+        'dalex':             lambda: dalex_min(down_sampling=ds, particularity_pressure=pp),
         'rank_based':        lambda: rank_based(mode=mode, pool_size=pool_size),
         'dalex_size':        lambda: dalex_size(mode=mode, down_sampling=ds, particularity_pressure=pp, tournament_size=pool_size, p_best=dalex_size_prob),
-        'dalex_fast':        lambda: dalex_fast_min(n_cases=n_cases),
-        'dalex_fast_rand':   lambda: dalex_fast_min_rand(particularity_pressure=pp),
+        'dalex_fast':        lambda: dalex_fast_min(n, n_cases=n_cases, tournament_size=pool_size),
+        'dalex_fast_rand':   lambda: dalex_fast_min_rand(n, particularity_pressure=pp, tournament_size=pool_size),
         'dalex_fast_size':   lambda: dalex_fast_min_size(particularity_pressure=pp, p_best=dalex_size_prob, tournament_size=pool_size),
     }
 
@@ -638,15 +638,13 @@ def roulette_wheel_selection(population):
     # return random.choices(population, weights=[ind.fitness for ind in population])[0]
     return random.choices(population)[0]
  
-def dalex(mode='min', down_sampling=0.5, particularity_pressure=20):
+def dalex_min(down_sampling=0.5, particularity_pressure=20):
     """
     Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
     to select an individual based on a weighted aggregation of test-case errors.
 
     Parameters
     ----------
-    mode : str, optional
-        'min' for minimization problems, 'max' for maximization problems. Defaults to 'min'.
     down_sampling : float, optional
         Proportion of test cases to sample. Defaults to 0.5.
     particularity_pressure : float, optional
@@ -679,14 +677,7 @@ def dalex(mode='min', down_sampling=0.5, particularity_pressure=20):
         weights = exp_I / np.sum(exp_I)
         F = np.dot(subset_errors, weights)
 
-        if mode == 'min':
-            best_index = np.argmin(F)
-        elif mode == 'max':
-            best_index = np.argmax(F)
-        else:
-            raise ValueError("Invalid mode. Use 'min' or 'max'.")
-        
-        # Return the selected individual and the number of cases used (n_cases)
+        best_index = np.argmin(F)
         return pop.population[best_index]
 
     return ds
@@ -764,8 +755,34 @@ def dalex_size(mode='min',
 
     return ds
 
-def dalex_fast_min(n_cases=20,
-                             **kwards):
+
+# --------------------------------- SPEED ENHANCER --------------------------------- #
+class CaseSampler:
+    def __init__(self, shape, cases):
+        self.cases = cases
+        self.indices = np.random.choice(shape, cases, replace=True)
+        self.cursor = 0
+
+    def sample(self, n_cases: int) -> np.ndarray:
+        result = self.indices[self.cursor:self.cursor + n_cases]
+        self.cursor = (self.cursor + n_cases) % self.cases
+        return result
+    
+class PressureSampler:
+    def __init__(self, mu: float, sigma: float, sample_size: int):
+        self.pressures = np.random.normal(mu, sigma, sample_size)
+        self.cursor = 0 
+
+    def sample(self) -> int:
+        result = self.pressures[self.cursor]
+        self.cursor = (self.cursor + 1) % len(self.pressures)
+        return result
+
+
+def dalex_fast_min(shape, 
+                    n_cases=20,
+                    tournament_size=2,
+                    **kwards):
     """
     Returns a function that performs a fast approxiamtion of DALex (Diversely Aggregated Lexicase Selection)
     to select an individual based on a weighted aggregation of test-case errors..
@@ -781,20 +798,22 @@ def dalex_fast_min(n_cases=20,
     Callable
         A function that takes a population object and returns a tuple (selected individual, n_cases used).
     """
+    sampler = CaseSampler(shape , 1_000_000)
     
     def ds(pop):
-        errors = pop.errors_case 
+        errors = pop.errors_case
         num_total_cases = errors.shape[1]
-        idx = random.sample(range(num_total_cases), n_cases)
-        score = np.sum(errors[:,idx], axis=1)
-
-        best_index = np.argmin(score)
-        
+        # idx = random.sample(range(num_total_cases), n_cases)
+        idx = sampler.sample(n_cases)
+        score = errors[:, idx].sum(axis=1)
+        best_indices = np.argsort(score)[:2]
+        best_index = random.choice(best_indices)
         return pop.population[best_index]
-
     return ds
 
-def dalex_fast_min_rand(particularity_pressure=10, 
+def dalex_fast_min_rand(shape, 
+                        particularity_pressure=10, 
+                        tournament_size=2,
                         **kwargs):
     """
     Returns a fast, sparse approximation of DALEX selection using a pre-sampled
@@ -812,24 +831,21 @@ def dalex_fast_min_rand(particularity_pressure=10,
         Function that takes a population object `pop` and returns
         (selected_individual, n_cases_used).
     """
-    sample_size = 5_000
     mu, sigma = get_musigma_from_cache(particularity_pressure)
-    pressures = list(np.random.normal(mu, sigma, sample_size))
+    pressures = PressureSampler(mu, sigma, 10_000)
+    sampler = CaseSampler(shape, 100_000)
 
     def ds(pop):
         errors = pop.errors_case
         n_cases = errors.shape[1]
-
-        id = random.randint(0, sample_size - 1)
-        pp = pressures[id]
-
+        pp = pressures.sample()
         n = int(round(pp))
         n = max(1, min(n, n_cases))
-
-        idx = random.sample(range(n_cases), n)
-        score = np.sum(errors[:, idx], axis=1)
-        best_index = np.argmin(score)
-
+        idx = sampler.sample(n)
+        score = errors[:, idx].sum(axis=1)
+        best_indices = np.argsort(score)[:tournament_size]
+        best_index = random.choice(best_indices)
+        # best_index = np.argmin(score)
         return pop.population[best_index]
     return ds
 
