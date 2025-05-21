@@ -27,10 +27,9 @@ Mutator operator implementation.
 import random
 import numpy as np
 
-from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import (create_grow_random_tree,
-                                                                random_subtree,
-                                                                substitute_subtree)
-
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import (random_subtree,substitute_subtree)
+from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
+                                                                                        
 from slim_gsgp_lib_np.utils.utils import (
         get_subtree,
         create_grow_random_tree,
@@ -501,12 +500,12 @@ def mutator(FUNCTIONS, TERMINALS, CONSTANTS,
     def mutation(tree, num_of_nodes):
         r = random.random()
         if r < 0.45:
-            return subtree_mut(tree)
+            return Tree(subtree_mut(tree))
         elif r < 0.65:
-            return point_mut(tree)
+            return Tree(point_mut(tree))
         elif r < 0.85:
-            return prune_mut(tree)
+            return Tree(prune_mut(tree))
         else:
-            return hoist_mut(tree)
+            return Tree(hoist_mut(tree))
 
     return mutation

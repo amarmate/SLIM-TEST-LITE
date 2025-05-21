@@ -30,9 +30,6 @@ def measure(seed, label=None):
     mem0 = proc.memory_info().rss / 1024**2
     t0 = time.time()
 
-    # … Daten generieren und train/test split …
-
-    # Verwende seed als Integer, nicht label
     res = gp(
         X_train=Xtr, y_train=ytr, test_elite=False,
         dataset_name=f"run_{seed}",
@@ -40,7 +37,7 @@ def measure(seed, label=None):
         max_depth=9, init_depth=2, p_xo=0.8,
         prob_const=0.2, prob_terminal=0.7,
         particularity_pressure=10, seed=seed,  # <-- ganzzahliger seed
-        full_return=False, n_jobs=1, verbose=False,
+        full_return=False, n_jobs=1, verbose=True,
         log_level=0, tree_functions=['add','multiply','subtract','AQ'],
         it_tolerance=20000, dalex_n_cases=5, down_sampling=1
     )
@@ -58,17 +55,17 @@ def measure(seed, label=None):
 if __name__ == "__main__":
     # Single-Core: seed = 0
     sc = measure(seed=0, label="single")
-    print("Single-Core:", sc)
+    # print("Single-Core:", sc)
 
-    from joblib import Parallel, delayed
-    j_data = {}
-    for jobs in [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]:
-        j = Parallel(n_jobs=jobs)(
-            delayed(measure)(0, f"joblib_{i+1}") for i in range(jobs)
-        )
-        j_data[jobs] = j
+    # from joblib import Parallel, delayed
+    # j_data = {}
+    # for jobs in [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]:
+    #     j = Parallel(n_jobs=jobs)(
+    #         delayed(measure)(0, f"joblib_{i+1}") for i in range(jobs)
+    #     )
+    #     j_data[jobs] = j
 
-    # Print the mean time_s for each job 
-    for jobs, data in j_data.items():
-        mean_time = np.mean([d["time_s"] for d in data])
-        print(f"Joblib {jobs} jobs: {mean_time:.2f} seconds -> {mean_time/jobs} seconds/job")
+    # # Print the mean time_s for each job 
+    # for jobs, data in j_data.items():
+    #     mean_time = np.mean([d["time_s"] for d in data])
+    #     print(f"Joblib {jobs} jobs: {mean_time:.2f} seconds -> {mean_time/jobs} seconds/job")

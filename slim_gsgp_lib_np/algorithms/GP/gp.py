@@ -228,6 +228,7 @@ class GP:
         for callback in self.callbacks:
             callback.on_train_end(self)
 
+    @profile
     def evolve_population(
         self,
         population,
@@ -255,7 +256,8 @@ class GP:
                 offspring = self.crossover_step(population, max_depth, depth_calculator)
             else:
                 offspring = [self.mutation_step(population, max_depth, depth_calculator)]
-            offs_pop.extend([Tree(child) for child in offspring])
+            # offs_pop.extend([Tree(child) for child in offspring])
+            offs_pop.extend(offspring)
 
         # Ensure the offspring population matches the required size.
         if len(offs_pop) > population.size:
@@ -300,7 +302,6 @@ class GP:
         """
         start = time.time()
 
-        # Select a parent and mutate.
         p1 = self.selector(population) 
 
         if self.selector.__name__ in ["els", "mels"]:
@@ -310,13 +311,6 @@ class GP:
         offs1 = self.mutator(p1.repr_, 
                              num_of_nodes=p1.nodes_count
                              )
-
-        # Ensure the mutated offspring does not exceed the maximum allowed depth.
-        if max_depth is not None:
-            while depth_calculator(offs1) > max_depth:
-                offs1 = self.mutator(p1.repr_, 
-                                     num_of_nodes=p1.nodes_count
-                                     )
 
         elapsed = time.time() - start
         self.time_dict['mutation'].append(elapsed)

@@ -70,6 +70,9 @@ def protected_sqrt(x1):
     """
     return np.sqrt(np.abs(x1))
 
+def AQ_np(x, y):
+    return np.divide(x, np.sqrt(1 + y**2))
+
 def mean_(x1, x2):
     """
     Compute the mean of two tensors.

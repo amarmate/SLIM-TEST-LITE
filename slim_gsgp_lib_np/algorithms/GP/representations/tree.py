@@ -53,7 +53,7 @@ class Tree:
     FUNCTIONS = None
     CONSTANTS = None
 
-    def __init__(self, repr_):
+    def __init__(self, repr_, depth=None, node_count=None):
         """
         Initializes a Tree object.
 
@@ -67,7 +67,12 @@ class Tree:
         self.CONSTANTS = Tree.CONSTANTS
 
         self.repr_ = repr_
-        self.depth, self.nodes_count = tree_depth_and_nodes(Tree.FUNCTIONS)(repr_)
+        if depth is not None and node_count is not None:
+            self.depth = depth
+            self.nodes_count = node_count
+        else:
+            self.depth, self.nodes_count = tree_depth_and_nodes(repr_)
+
         self.total_nodes = self.nodes_count 
         self.fitness = None
         self.test_fitness = None

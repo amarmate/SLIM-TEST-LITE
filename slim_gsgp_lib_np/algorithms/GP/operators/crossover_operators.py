@@ -24,11 +24,9 @@
 Crossover operator implementation.
 """
 
-from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import (random_subtree, substitute_subtree, 
-                                                                       get_indices_with_levels, get_depth, 
-                                                                       )
-
 from slim_gsgp_lib_np.utils.utils import swap_sub_tree, get_subtree    
+from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import tree_depth_and_nodes, get_indices_with_levels
 import random
 
 
@@ -199,10 +197,11 @@ def crossover_trees(max_depth,
         indices_with_levels_tree1 = get_indices_with_levels(tree1.repr_)
         indices_with_levels_tree2 = get_indices_with_levels(tree2.repr_)
 
-        level1 = random.choice(list(indices_with_levels_tree1.keys()))
+        lvs1 = list(indices_with_levels_tree1.keys())
+        level1 = random.choice(lvs1)
         index1 = random.choice(indices_with_levels_tree1[level1])
         subtree1 = get_subtree(tree1.repr_, list(index1))
-        depth1 = get_depth(subtree1)
+        depth1, nodes1 = tree_depth_and_nodes(subtree1)
 
         max_level_2 = min(max_depth - depth1, tree2.depth - 1)
 
@@ -210,14 +209,66 @@ def crossover_trees(max_depth,
             level2 = random.choice(range(0, max_level_2 + 1))
             index2 = random.choice(indices_with_levels_tree2[level2])
             subtree2 = get_subtree(tree2.repr_, list(index2))
-            depth2 = get_depth(subtree2)
+            depth2, nodes2 = tree_depth_and_nodes(subtree2)
             if depth2 <= max_depth - level1 and (level2 > 0 or depth1 > 1) and (level1 > 0 or depth2 > 1):
                 break
 
         # Swap the subtrees
         new_tree1 = swap_sub_tree(tree1.repr_, subtree2, list(index1))
         new_tree2 = swap_sub_tree(tree2.repr_, subtree1, list(index2))
-        return new_tree1, new_tree2
+
+        # new_tree_nodes1 = tree1.nodes_count - nodes1 + nodes2
+        # new_tree_nodes2 = tree2.nodes_count - nodes2 + nodes1
+
+        # new_depth_1, new_depth_2 = max(tree1.depth, level1 + depth2), max(tree2.depth, level2 + depth1)
+        # if len(index1) == mlv1: 
+        #     new_depth_1 = mlv1 + depth2 
+        # elif len(index1) == 0: 
+        #     new_depth_1 = depth2 
+
+        # else:
+        #     a,b = False, False
+        #     for index in indices_with_levels_tree1[mlv1]: 
+        #         if a and b: 
+        #             final_depth_1 = max(tree1.depth, mlv1 - level1 + depth2)
+        #             break 
+        #         elif index1 == index[:level1]: 
+        #             a = True
+        #         else: 
+        #             b = True 
+                    
+
+        # if len(index2) == mlv2:
+        #     new_depth_2 = mlv2 + depth1
+        # elif len(index2) == 0:
+        #     new_depth_2 = depth1
+        # else: 
+        #     a,b = False, False
+        #     for index in indices_with_levels_tree2[mlv2]: 
+        #         if a and b: 
+        #             final_depth_2 = max(tree2.depth, mlv2 - level2 + depth1)
+        #             break 
+        #         elif index2 == index[:level2]: 
+        #             a = True
+        #         else: 
+        #             b = True
+        
+        # new_tree1 = Tree(new_tree1, depth=new_depth_1, node_count=new_tree_nodes1)
+        # new_tree2 = Tree(new_tree2, depth=new_depth_2, node_count=new_tree_nodes2)
+
+        # if tree_depth_and_nodes(new_tree1.repr_)[0] != new_depth_1:
+        #     print("Error in tree 1 depth calculation")
+        #     print(new_tree1.repr_)  
+        #     raise ValueError("Tree 1 depth calculation error")
+
+        return Tree(new_tree1), Tree(new_tree2)
 
     return inner_xo
 
+
+
+# print('catch2')
+#                     print(mlv1)
+#                     print(subtree2)
+#                     print(tree1.repr_)
+#                     new_depth_1 = mlv1 + depth2

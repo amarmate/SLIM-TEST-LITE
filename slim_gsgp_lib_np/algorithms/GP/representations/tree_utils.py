@@ -555,27 +555,20 @@ def tree_depth(FUNCTIONS):
 
     return depth
 
-def tree_depth_and_nodes(FUNCTIONS):
-    def depth_and_nodes(tree):
-        if not isinstance(tree, tuple):
-            return 1, 1
+def tree_depth_and_nodes(tree):
+    max_depth = 0
+    total_nodes = 0
+    stack = [(tree, 1)]
+    while stack:
+        node, depth = stack.pop()
+        total_nodes += 1
+        if depth > max_depth:
+            max_depth = depth
+        if isinstance(node, tuple):
+            for child in node[1:]:
+                stack.append((child, depth + 1))
+    return max_depth, total_nodes
 
-        func = tree[0]
-        arity = FUNCTIONS[func]["arity"]
-        args = tree[1:1+arity]
-
-        depths = []
-        total_nodes = 1  # count current node
-
-        for child in args:
-            child_depth, child_nodes = depth_and_nodes(child)
-            depths.append(child_depth)
-            total_nodes += child_nodes
-
-        depth = 1 + max(depths) if depths else 1
-        return depth, total_nodes
-
-    return depth_and_nodes
 
 
 # ----------------------------- acceleration of execute tree function ------------------------------
@@ -627,7 +620,7 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
         # return bound_value(output, -1e12, 1e12)
         return output
 
-    else:  # Terminal or constant
+    else: 
         if repr_ in TERMINALS:
             return X[:, TERMINALS[repr_]]
         elif repr_ in CONSTANTS:

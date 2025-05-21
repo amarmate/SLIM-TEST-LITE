@@ -23,14 +23,10 @@
 This script sets up the configuration dictionaries for the execution of the GP algorithm
 """
 from slim_gsgp_lib_np.initializers.initializers import rhh, grow, full
-from slim_gsgp_lib_np.selection.selection_algorithms import tournament_selection_min
-
 from slim_gsgp_lib_np.evaluators.fitness_functions import *
-from slim_gsgp_lib_np.utils.utils import protected_div, protected_sqrt
+from slim_gsgp_lib_np.utils.utils import protected_div, protected_sqrt, AQ_np
 import numpy as np
 
-# Define functions and constants
-# todo use only one dictionary for the parameters of each algorithm
 
 FUNCTIONS = {
     'add': {'function': np.add, 'arity': 2},
@@ -39,8 +35,8 @@ FUNCTIONS = {
     'divide': {'function': protected_div, 'arity': 2},
     'sqrt' : {'function': protected_sqrt, 'arity': 1},
     'cond' : {'function': lambda x, y, z: np.where(x > 0, y, z), 'arity': 3},
-    'sq' : {'function': lambda x: x**2, 'arity': 1},
-    'AQ' : {'function': lambda x, y: x / np.sqrt(1 + y**2), 'arity': 2},
+    'sq' : {'function': np.square, 'arity': 1},
+    'AQ' : {'function': AQ_np, 'arity': 2},
 }
 
 # CONSTANTS = {
