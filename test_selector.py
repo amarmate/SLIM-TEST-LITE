@@ -113,15 +113,23 @@ def run_task(task):
         "pf": pf
     }
 
-if __name__ == "__main__":
-    dataset_names = { 
-        "airfoil": load_airfoil,
-        "breast_cancer": load_breast_cancer,
-        "concrete_strength": load_concrete_strength,
-        "ld50": load_ld50
-    }
+def commit_and_push_data(filename, commit_msg):
+    os.system(f"git add {filename}")
+    os.system(f"git commit -m \"{commit_msg}\"")
+    os.system("git push origin main")
 
-    # Unveränderte Task-Liste
+if __name__ == "__main__":
+    partial_csv = os.path.join("/data", "gp_partial.csv")
+    final_csv   = os.path.join("/data", "gp_experiment_results.csv")
+
+    # 1) Data-Repo klonen oder updaten
+    os.chdir(os.path.join('..', "/data"))
+    if not os.path.isdir(".git"):
+        os.system(f"git clone git@github.com:amarmate/data_transfer.git")
+    else:
+        os.system("git fetch origin && git reset --hard origin/main")
+
+    # 2) Tasks aufbauen
     tasks = [
         (name, create_split(loader, split_id), split_id, seed, selector)
         for name, loader in dataset_names.items()
@@ -130,18 +138,31 @@ if __name__ == "__main__":
         for selector in selectors
     ]
 
-    n_cores = 16
-    print(f"Starte auf {n_cores} Cores, insgesamt {len(tasks)} Tasks")
-
     results = []
-    with Pool(processes=n_cores) as pool:
-        for res in tqdm(
-            pool.imap_unordered(run_task, tasks),
-            total=len(tasks),
-            desc="GP Experiments"
-        ):
+    # 3) Experimente in /SLIM ausführen
+    os.chdir(os.path.join('..', '/SLIM'))
+    with Pool(processes=min(16, os.cpu_count())) as pool:
+        for i, res in enumerate(tqdm(pool.imap_unordered(run_task, tasks),
+                                     total=len(tasks),
+                                     desc="GP Experiments")):
             results.append(res)
 
-    df = pd.DataFrame(results)
-    df.to_csv("gp_experiment_results.csv", index=False)
-    print("Fertig – Ergebnisse in gp_experiment_results.csv")
+            # Teilergebnisse alle 50 Tasks oder am Ende
+            if (i + 1) % 50 == 0 or (i + 1) == len(tasks):
+                df_part = pd.DataFrame(results)
+                df_part.to_csv(partial_csv, index=False)
+
+                os.chdir(os.path.join('..', "/data"))
+                msg = f"Partial after {i+1} tasks @ {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}"
+                commit_and_push_data("gp_partial.csv", msg)
+                os.chdir(os.path.join('..', '/SLIM'))
+
+    # 4) Finale Ergebnisse speichern und pushen
+    df_full = pd.DataFrame(results)
+    df_full.to_csv(final_csv, index=False)
+
+    os.chdir(os.path.join('..', "/data"))
+    commit_and_push_data("gp_experiment_results.csv",
+                         f"Final results @ {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}")
+
+    print("Fertig – alle Ergebnisse in /data gespeichert und gepusht.")
