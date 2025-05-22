@@ -158,7 +158,7 @@ def run_gp_benchmark():
     print(f"Executing multi_slim with '{GP_PARAMS_CONFIG.selector}' selector for GP engine...")
     time_start = time.time()
 
-    _ensemble_models, _multi_pop_details, _spec_pop_details = multi_slim(
+    optimizer = multi_slim(
         X_train=features_train, y_train=target_train,
         X_test=features_test, y_test=target_test,
         dataset_name=DATASET_NAME_STR,
