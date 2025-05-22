@@ -119,6 +119,13 @@ def commit_and_push_data(filename, commit_msg):
     os.system("git push origin main")
 
 if __name__ == "__main__":
+    dataset_names = {
+        "airfoil": load_airfoil,
+        "breast_cancer": load_breast_cancer,
+        "concrete_strength": load_concrete_strength,
+        "ld50": load_ld50
+    }
+
     partial_csv = os.path.join("/data", "gp_partial.csv")
     final_csv   = os.path.join("/data", "gp_experiment_results.csv")
 
