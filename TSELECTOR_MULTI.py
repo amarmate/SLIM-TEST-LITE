@@ -28,8 +28,6 @@ FINAL_NAME = "sel_multi_results.csv"
 gen_params = { 
     "test_elite": True,
     "dataset_name": "test",
-    "pop_size": 100,
-    "n_iter": 2000,
     "max_depth": 9,
     "init_depth": 2,
     "p_xo": 0.8,
@@ -43,7 +41,9 @@ gen_params = {
     "verbose": False,
 }
 
-CUTOFF = 200
+PI_SETTINGS = [(1000, 250), (400, 500), (150, 1000)]  # (ITERATIONS, POP_SIZE)    
+CUTOFF = 0.1
+
 selectors = ['dalex', 'dalex_fast', 'dalex_fast_rand']
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -70,13 +70,18 @@ def create_split(loader, split_id):
 
 def run_task(task):
     """
-    task is a tuple: (dataset_name, data_split, split_id, seed, selector)
+    task is a tuple: (dataset_name, data_split, mask_split, split_id, seed, selector, pi_setting)
     """
-    dataset_name, data_split, mask_split, split_id, seed, selector = task
+    dataset_name, data_split, mask_split, split_id, seed, selector, pi_setting = task
     t0 = time.time()
     lspec = LogSpecialist(
         data_split['X_train'], data_split['y_train'], mask_split['mask_train']
     )
+
+    data_split.update({
+        'n_iter': PI_SETTINGS[pi_setting][0],
+        'pop_size': PI_SETTINGS[pi_setting][1],
+    })
 
     optimizer = gp(
         seed=seed,
@@ -138,6 +143,8 @@ def run_task(task):
         "split_id": split_id,
         "seed": seed,
         "selector": selector,
+        "pop_size": data_split['pop_size'],
+        "n_iter": data_split['n_iter'],
         "train_rmse": train_fit,
         "test_rmse": test_fit,
         "nodes_count": nodes_count,
@@ -212,11 +219,12 @@ if __name__ == "__main__":
 
     # 2) Tasks aufbauen
     tasks = [
-        (name, *create_split(loader, split_id), split_id, seed, selector)
+        (name, *create_split(loader, split_id), split_id, seed, selector, pi_setting)
         for name, loader in dataset_names.items()
         for split_id in range(3)
         for seed in range(1, 20)
         for selector in selectors
+        for pi_setting in range(0,3)
     ]
 
     results = []
