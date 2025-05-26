@@ -60,8 +60,8 @@ def create_split(loader, split_id):
         'y_test': y_test,
     }
     masks = { 
-        'mask_train': mask_train,
-        'mask_test': mask_test,
+        'mask_train': np.array(mask_train),
+        'mask_test': np.array(mask_test),
     }
     return (dataset, masks)
 
