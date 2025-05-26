@@ -158,7 +158,7 @@ def run_task(task):
 
     final_ensemble = l_ensemble[-1]
     size_ensemble = np.sum(final_sizes)
-    best_ensemble = min(final_ensemble)
+    best_ensemble = min(l_ensemble)
     auc_ensemble = np.trapezoid(l_ensemble, dx=1)
     conv_ensemble = np.where(np.array(l_ensemble) == best_ensemble)[0][0]
 
