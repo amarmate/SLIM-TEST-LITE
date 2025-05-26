@@ -146,7 +146,13 @@ if __name__ == "__main__":
         "airfoil": load_airfoil,
         "breast_cancer": load_breast_cancer,
         "concrete_strength": load_concrete_strength,
-        "ld50": load_ld50
+        "ld50": load_ld50,
+        "bioav": load_bioav,
+        "boston": load_boston,
+        "efficiency_heating": load_efficiency_heating,
+        "istanbul": load_istanbul,
+        "resid_build_sale_price": load_resid_build_sale_price,
+        "ppb": load_ppb
     }
 
     partial_csv = os.path.join("/data", "gp_partial.csv")
