@@ -46,6 +46,7 @@ selectors = ['dalex', 'dalex_fast', 'dalex_fast_rand']
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 def create_split(loader, split_id):
     X, y, _, mask = loader()
+    mask = np.array(mask)
     train_ids, test_ids = train_test_split(
         X, y, p_test=0.2, seed=split_id, indices_only=True
     )
