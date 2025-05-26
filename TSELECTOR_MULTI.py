@@ -46,13 +46,13 @@ selectors = ['dalex', 'dalex_fast', 'dalex_fast_rand']
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 def create_split(loader, split_id):
     X, y, _, mask = loader()
-    mask = np.array(mask)
     train_ids, test_ids = train_test_split(
         X, y, p_test=0.2, seed=split_id, indices_only=True
     )
     X_train, X_test = X[train_ids], X[test_ids]
     y_train, y_test = y[train_ids], y[test_ids]
-    mask_train, mask_test = mask[train_ids], mask[test_ids]
+    mask_train = [sbmask[train_ids] for sbmask in mask]
+    mask_test = [sbmask[test_ids] for sbmask in mask]
     dataset =  {
         'X_train': X_train,
         'y_train': y_train,
