@@ -22,6 +22,9 @@ os.environ.update({k: '1' for k in [
     "OPENBLAS_NUM_THREADS","VECLIB_MAXIMUM_THREADS","BLIS_NUM_THREADS"
 ]})
 
+PARTIAL_NAME = "sel_multi_partial.csv"
+FINAL_NAME = "sel_multi_results.csv"
+
 gen_params = { 
     "test_elite": True,
     "dataset_name": "test",
@@ -112,8 +115,9 @@ def run_task(task):
 
     best_test = min(val_rmse)
     best_train = min(train_rmse)
-    itconv_train = np.where(np.array(val_rmse) == best_test)[0][0]
-    itconv_test = np.where(np.array(train_rmse) == best_train)[0][0]
+    itconv_train = np.where(np.array(train_rmse) == best_train)[0][0]
+    itconv_test = np.where(np.array(val_rmse) == best_test)[0][0]
+
 
     last_best, count = np.inf, 0
     for i, point in enumerate(train_rmse): 
@@ -192,8 +196,8 @@ if __name__ == "__main__":
         ]
     }
 
-    partial_csv = os.path.join("/data", "sel_multi_partial.csv")
-    final_csv   = os.path.join("/data", "sel_multi_results.csv")
+    partial_csv = os.path.join("/data", PARTIAL_NAME)
+    final_csv   = os.path.join("/data", FINAL_NAME)
 
     # 1) Data-Repo klonen oder updaten
     os.chdir(os.path.join('..', "/data"))
@@ -231,7 +235,7 @@ if __name__ == "__main__":
 
                 os.chdir(os.path.join('..', "/data"))
                 msg = f"Partial after {i+1} tasks @ {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}"
-                commit_and_push_data("gp_partial.csv", msg)
+                commit_and_push_data(PARTIAL_NAME, msg)
                 os.chdir(os.path.join('..', '/SLIM'))
 
     # 4) Finale Ergebnisse speichern und pushen
@@ -239,7 +243,7 @@ if __name__ == "__main__":
     df_full.to_csv(final_csv, index=False)
 
     os.chdir(os.path.join('..', "/data"))
-    commit_and_push_data("gp_experiment_results.csv",
+    commit_and_push_data(FINAL_NAME,
                          f"Final results @ {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}")
 
     print("Fertig – alle Ergebnisse in /data gespeichert und gepusht.")

@@ -97,8 +97,8 @@ def run_task(task):
 
     best_test = min(val_rmse)
     best_train = min(train_rmse)
-    itconv_train = np.where(np.array(val_rmse) == best_test)[0][0]
-    itconv_test = np.where(np.array(train_rmse) == best_train)[0][0]
+    itconv_train = np.where(np.array(train_rmse) == best_train)[0][0]
+    itconv_test = np.where(np.array(val_rmse) == best_test)[0][0]
 
     last_best, count = np.inf, 0
     for i, point in enumerate(train_rmse): 
