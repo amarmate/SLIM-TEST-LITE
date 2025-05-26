@@ -5,7 +5,8 @@ from multiprocessing import Pool, cpu_count
 from slim_gsgp_lib_np.utils.utils import train_test_split
 from slim_gsgp_lib_np.main_gp import gp
 from slim_gsgp_lib_np.datasets.data_loader import (
-    load_airfoil, load_breast_cancer, load_concrete_strength, load_ld50
+    load_airfoil, load_breast_cancer, load_concrete_strength, load_ld50, load_bioav, load_boston, 
+    load_efficiency_heating, load_istanbul, load_resid_build_sale_price, load_ppb
 )
 from functions.metrics_test import rmse
 from functions.misc_functions import pf_rmse_comp_extended
@@ -36,8 +37,10 @@ gen_params = {
     "verbose": False,
 }
 
+CUTOFF = 200
 selectors = ['dalex', 'dalex_fast', 'dalex_fast_rand']
 
+# ----------------------------------------------------------------------------------------------------------------------------------------------------
 def create_split(loader, split_id):
     X, y = loader()
     X_train, X_test, y_train, y_test = train_test_split(
@@ -92,8 +95,24 @@ def run_task(task):
     mean_diversity = np.mean(diversity_var)
     mean_size = np.mean(nodes_log)
 
-    itconv_train = np.where(np.array(val_rmse) < test_fit)[0]
-    itconv_test = np.where(np.array(train_rmse) < test_fit)[0]
+    best_test = min(val_rmse)
+    best_train = min(train_rmse)
+    itconv_train = np.where(np.array(val_rmse) == best_test)[0][0]
+    itconv_test = np.where(np.array(train_rmse) == best_train)[0][0]
+
+    last_best, count = np.inf, 0
+    for i, point in enumerate(train_rmse): 
+        if point < last_best * 0.999:
+            count = 0
+            last_best = point
+        else:
+            count += 1
+        if count >= CUTOFF:
+            break
+
+    cutoff = i 
+    cutoff_train = train_rmse[cutoff]
+    cutoff_test = val_rmse[cutoff]
 
     return {
         "dataset": dataset_name,
@@ -110,6 +129,10 @@ def run_task(task):
         "mean_size": mean_size,
         "itconv_train": itconv_train,
         "itconv_test": itconv_test,
+        "best_test": best_test,
+        "cutoff_it": cutoff,
+        "cutoff_train": cutoff_train,
+        "cutoff_test": cutoff_test,
         "pf": pf
     }
 
