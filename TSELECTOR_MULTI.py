@@ -204,28 +204,28 @@ if __name__ == "__main__":
         ]
     }
 
-    partial_csv = os.path.join("/data", PARTIAL_NAME)
-    final_csv   = os.path.join("/data", FINAL_NAME)
-
-    # 0) Bereits existierende Teilergebnisse einlesen
-    results = []
-    start_idx = 0
-    if os.path.exists(partial_csv):
-        df_exist = pd.read_csv(partial_csv)
-        results = df_exist.to_dict('records')
-        start_idx = len(df_exist)
-        print(f"Überspringe {start_idx} bereits berechnete Tasks.")
-
+    os.chdir(os.path.join('..', "/data"))
 
     # 1) Data-Repo klonen oder updaten
     if not os.path.isdir(".git"):
+        print("Klonen des Repos...")
         os.system(f"git clone git@github.com:amarmate/data_transfer.git")
     else:
+        print("Aktualisiere bestehendes Repo...")
         os.system("git fetch origin && git reset --hard origin/main")
 
     # Identify myself github 
     os.system("git config user.name 'Mateus GP Bot'")
     os.system("git config user.email 'mbaptistaamaral@gmail.com'")
+
+    # 0) Bereits existierende Teilergebnisse einlesen
+    results = []
+    start_idx = 0
+    if os.path.exists(PARTIAL_NAME):
+        df_exist = pd.read_csv(PARTIAL_NAME)
+        results = df_exist.to_dict('records')
+        start_idx = len(df_exist)
+        print(f"Überspringe {start_idx} bereits berechnete Tasks.")
 
     # 2) Tasks aufbauen
     tasks = [
@@ -238,7 +238,6 @@ if __name__ == "__main__":
     ]
 
     # 3) Experimente in /SLIM ausführen
-    os.chdir(os.path.join('..', '/SLIM'))
     tasks_to_run = tasks[start_idx:]
 
     with Pool(processes=min(16, os.cpu_count())) as pool:
@@ -251,18 +250,14 @@ if __name__ == "__main__":
             # Teilergebnisse alle 50 Tasks oder am Ende
             if (i + 1) % 50 == 0 or (i + 1) == len(tasks):
                 df_part = pd.DataFrame(results)
-                df_part.to_csv(partial_csv, index=False)
-
-                os.chdir(os.path.join('..', "/data"))
+                df_part.to_csv(PARTIAL_NAME, index=False)
                 msg = f"Partial after {i+1} tasks @ {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}"
                 commit_and_push_data(PARTIAL_NAME, msg)
-                os.chdir(os.path.join('..', '/SLIM'))
 
     # 4) Finale Ergebnisse speichern und pushen
     df_full = pd.DataFrame(results)
-    df_full.to_csv(final_csv, index=False)
+    df_full.to_csv(FINAL_NAME, index=False)
 
-    os.chdir(os.path.join('..', "/data"))
     commit_and_push_data(FINAL_NAME,
                          f"Final results @ {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}")
 
