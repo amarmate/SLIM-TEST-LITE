@@ -241,7 +241,7 @@ if __name__ == "__main__":
     tasks_to_run = tasks[start_idx:]
     os.chdir(os.path.join('..', 'SLIM'))
 
-    with Pool(processes=min(16, os.cpu_count())) as pool:
+    with Pool(processes=min(15, os.cpu_count())) as pool:
         for rel_i, res in enumerate(tqdm(pool.imap_unordered(run_task, tasks_to_run),
                                      total=len(tasks_to_run),
                                      desc="GP Experiments")):
