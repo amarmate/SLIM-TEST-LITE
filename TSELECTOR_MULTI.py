@@ -237,7 +237,6 @@ if __name__ == "__main__":
         for pi_setting in range(0,3)
     ]
 
-    results = []
     # 3) Experimente in /SLIM ausführen
     os.chdir(os.path.join('..', '/SLIM'))
     tasks_to_run = tasks[start_idx:]
