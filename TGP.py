@@ -7,11 +7,11 @@ import time
 import pandas as pd
 from joblib import Parallel, delayed, parallel_config
 import mlflow
-import warnings
+import json
+from pathlib import Path
 
 import pickle
 from pathlib import Path
-
 
 from slim_gsgp_lib_np.main_gp import gp
 from functions.utils_test import (pf_rmse_comp, pf_rmse_comp_time, 
@@ -28,14 +28,14 @@ from skopt.space import Integer, Real
 
 # ------------------------------------------------   SETTINGS   --------------------------------------------------------------
 N_SPLITS = 4                # 4 
-N_CV = 3                    # 4 
+N_CV = 4                    # 4 
 N_SEARCHES_HYPER = 15       # 20
 N_RANDOM_STARTS = 7         # 10 
 NOISE_SKOPT = 1e-3
 N_TESTS = 12                # 15 
 P_TEST = 0.2 
 SEED = 0
-SELECTORS = ['dalex_fast', 'dalex']
+SELECTORS = ['dalex']
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'  
@@ -48,13 +48,12 @@ np.random.seed(SEED)
 
 SPACE_PARAMETERS = [
         # Integer(2, 4, name='init_depth'),
-        # Real(0.7, 0.95, name='p_xo'),                                          
         # Real(0.10, 0.25, name='prob_const'), 
         # Real(0.5, 0.9, name='prob_terminal'),    
         Integer(6, 9, name='max_depth'),                    
         Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
-        Real(2, 60, name='particularity_pressure', prior='log-uniform'),
-        Real(1, 10, name='dalex_n_cases', prior='uniform'),
+        Real(4, 60, name='particularity_pressure', prior='log-uniform'),
+        Real(0.7, 0.95, name='p_xo'),                                          
 ]
 
 # ------------------------------------------- LIMIT THREADS FOR NUMPY --------------------------------------------------------
@@ -77,6 +76,29 @@ from slim_gsgp_lib_np.datasets.data_loader import (
 datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
 
 # ----------------------------------------------------- MAIN FUNCTIONS -------------------------------------------------------------
+def load_config_and_progress(run_dir: Path):
+    cfg_path = run_dir / "config.json"
+    prog_path = run_dir / "progress.json"
+    config = json.loads(cfg_path.read_text()) if cfg_path.exists() else DEFAULT_CONFIG
+    progress = json.loads(prog_path.read_text()) if prog_path.exists() else {}
+    return config, progress
+
+def save_progress(progress: dict, run_dir: Path):
+    (run_dir / "progress.json").write_text(json.dumps(progress, indent=2))
+
+def ensure_run_dirs(experiment_name: str):
+    base = Path("../data") / "slim_runs" / experiment_name
+    for sub in ["config.json", "progress.json", "results", "logs"]:
+        path = base / sub
+        if sub in ("config.json", "progress.json"):
+            if not path.exists(): path.write_text("{}")
+        else:
+            path.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+
+
 def tuning(data_split, name, split_id, selector): 
     trial_results, calls_count = [], 0
 
@@ -89,7 +111,7 @@ def tuning(data_split, name, split_id, selector):
     def objective(params): 
         nonlocal calls_count
         # md, px, pc, pt, pp, dnc = params
-        md, pis, pp, dnc = params
+        md, pis, pp, pxo = params
         ngen, pop_size = PI[pis]
         t0 = time.time()
 
@@ -103,11 +125,11 @@ def tuning(data_split, name, split_id, selector):
             talg = time.time()
             res = gp(X_train=X_train, y_train=y_train, test_elite=False, dataset_name=name,
                         pop_size=int(pop_size), n_iter=int(ngen), selector=selector,
-                        max_depth=int(md), init_depth=2, p_xo=0.8, prob_const=0.2, 
+                        max_depth=int(md), init_depth=2, p_xo=pxo, prob_const=0.2, 
                         prob_terminal=0.7, particularity_pressure=pp, seed=SEED+i,
                         full_return=True, n_jobs=1, verbose=False, log_level=0,
                         tree_functions=FUNCTIONS, it_tolerance=STOP_THRESHOLD, 
-                        dalex_n_cases=int(dnc), down_sampling=1,
+                        down_sampling=1,
             )
             elite, population = res
             rmses.append(rmse(elite.predict(X_val), y_val))
@@ -136,13 +158,13 @@ def tuning(data_split, name, split_id, selector):
             'seed':                    SEED,
             'init_depth':              2,
             'max_depth':               int(md),
-            'p_xo':                    0.8,
+            'p_xo':                    pxo,
             'prob_const':              0.2,
             'pop_size':                pop_size,
             'n_iter':                  ngen,
             'prob_terminal':           0.7,
             'particularity_pressure':  pp,
-            'dalex_n_cases':           int(dnc),
+            # 'dalex_n_cases':           int(dnc),
             'mean_cv_rmse':            mean_rmse,
             'std_cv_rmse':             std_rmse,
             'mean_cv_nodes':           mean_nodes,
@@ -179,11 +201,20 @@ def tuning(data_split, name, split_id, selector):
 
     return df_tr, best_hyperparams, best_cv_rmse 
 
+
+
 def test_algo(params, data_split, name, split_id, bcv_rmse, selector): 
     X_train, X_test, y_train, y_test = data_split
     all_fold_pf, logs, records = [], [], []
 
     temp_dir = Path('temp') / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "testing"
+    
+    if temp_dir.exists():
+        print(f"Testing results for {name} - {selector} already exist. Skipping testing...")
+        return pd.read_pickle(temp_dir / "checkpoint_testing.pkl"), \
+               pickle.load(open(temp_dir / "checkpoint_pf.pkl", 'rb')), \
+               pickle.load(open(temp_dir / "checkpoint_logs.pkl", 'rb'))
+    
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     # TESTING 

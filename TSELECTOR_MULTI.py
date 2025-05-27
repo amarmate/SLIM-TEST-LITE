@@ -192,6 +192,7 @@ def commit_and_push_data(filename, commit_msg):
     os.system(f"git commit -m \"{commit_msg}\"")
     os.system("git push origin main")
 
+
 if __name__ == "__main__":
     dataset_names = {
         loader.__name__.split('_')[1]: loader
@@ -206,8 +207,17 @@ if __name__ == "__main__":
     partial_csv = os.path.join("/data", PARTIAL_NAME)
     final_csv   = os.path.join("/data", FINAL_NAME)
 
+    # 0) Bereits existierende Teilergebnisse einlesen
+    results = []
+    start_idx = 0
+    if os.path.exists(partial_csv):
+        df_exist = pd.read_csv(partial_csv)
+        results = df_exist.to_dict('records')
+        start_idx = len(df_exist)
+        print(f"Überspringe {start_idx} bereits berechnete Tasks.")
+
+
     # 1) Data-Repo klonen oder updaten
-    os.chdir(os.path.join('..', "/data"))
     if not os.path.isdir(".git"):
         os.system(f"git clone git@github.com:amarmate/data_transfer.git")
     else:
@@ -230,14 +240,17 @@ if __name__ == "__main__":
     results = []
     # 3) Experimente in /SLIM ausführen
     os.chdir(os.path.join('..', '/SLIM'))
+    tasks_to_run = tasks[start_idx:]
+
     with Pool(processes=min(16, os.cpu_count())) as pool:
-        for i, res in enumerate(tqdm(pool.imap_unordered(run_task, tasks),
+        for rel_i, res in enumerate(tqdm(pool.imap_unordered(run_task, tasks),
                                      total=len(tasks),
                                      desc="GP Experiments")):
             results.append(res)
 
             # Teilergebnisse alle 50 Tasks oder am Ende
             if (i + 1) % 50 == 0 or (i + 1) == len(tasks):
+                i = start_idx + rel_i
                 df_part = pd.DataFrame(results)
                 df_part.to_csv(partial_csv, index=False)
 
