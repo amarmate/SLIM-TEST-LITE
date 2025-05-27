@@ -16,6 +16,9 @@ SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'  
 EXPERIMENT_NAME = 'GP_Experiment'
 
+DATA_DIR = 'data'
+REPO_URL = 'git@github.com:amarmate/data_transfer.git'
+
 # --------------------------- # 
 # GP Experiment Configuration # 
 # --------------------------- # 
@@ -37,3 +40,33 @@ SPACE_PARAMETERS = [
         # Real(0.10, 0.25, name='prob_const'), 
         # Real(0.5, 0.9, name='prob_terminal'),             
 ]
+
+
+# --------------------------- #
+#    Save Configuration       #
+# --------------------------- #
+
+config = {
+    'N_SPLITS': N_SPLITS,
+    'N_CV': N_CV,
+    'N_SEARCHES_HYPER': N_SEARCHES_HYPER,
+    'N_RANDOM_STARTS': N_RANDOM_STARTS,
+    'NOISE_SKOPT': NOISE_SKOPT,
+    'N_TESTS': N_TESTS,
+    'P_TEST': P_TEST,
+    'SEED': SEED,
+    'N_TIME_BINS': N_TIME_BINS,
+    'SUFFIX_SAVE': SUFFIX_SAVE,
+    'PREFIX_SAVE': PREFIX_SAVE,
+    'EXPERIMENT_NAME': EXPERIMENT_NAME,
+
+    'DATA_DIR': DATA_DIR,
+    'REPO_URL': REPO_URL,
+
+    'SELECTORS': SELECTORS,
+    'FUNCTIONS': FUNCTIONS,
+    'STOP_THRESHOLD': STOP_THRESHOLD,
+    'PI': PI,
+
+    'SPACE_PARAMETERS': SPACE_PARAMETERS
+}

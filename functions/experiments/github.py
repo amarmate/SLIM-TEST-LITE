@@ -1,17 +1,30 @@
 from pathlib import Path
 import os, subprocess, time
 
+def init_or_update_repo(config):
+    os.system("git config user.name 'Mateus GP Bot'")
+    os.system("git config user.email 'mbaptistaamaral@gmail.com'")
 
-def init_or_update_repo():
-    if not (DATA_DIR / ".git").exists():
-        subprocess.run(["git", "clone", REPO_URL, str(DATA_DIR)], check=True)
+    prev_dir = os.getcwd()
+    data_dir = Path("..") / config['DATA_DIR']
+    os.chdir(data_dir)
+
+    if not (data_dir / ".git").exists():
+        subprocess.run(["git", "clone", config['REPO_URL'], str(data_dir)], check=True)
     else:
-        os.chdir(DATA_DIR)
         subprocess.run(["git", "fetch", "origin"], check=True)
         subprocess.run(["git", "reset", "--hard", "origin/main"], check=True)
 
-def commit_and_push(filename: str, msg: str):
-    os.chdir(DATA_DIR)
+    os.chdir(prev_dir)
+    
+
+def commit_and_push(config: dict, filename: str, msg: str):
+    prev_dir = os.getcwd()
+    data_dir = Path("..") / config['DATA_DIR']
+    os.chdir(data_dir)
+
     subprocess.run(["git", "add", filename], check=True)
     subprocess.run(["git", "commit", "-m", msg], check=True)
     subprocess.run(["git", "push", "origin", "main"], check=True)
+
+    os.chdir(prev_dir)
