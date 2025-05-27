@@ -242,14 +242,14 @@ if __name__ == "__main__":
     os.chdir(os.path.join('..', 'SLIM'))
 
     with Pool(processes=min(16, os.cpu_count())) as pool:
-        for rel_i, res in enumerate(tqdm(pool.imap_unordered(run_task, tasks),
-                                     total=len(tasks),
+        for rel_i, res in enumerate(tqdm(pool.imap_unordered(run_task, tasks_to_run),
+                                     total=len(tasks_to_run),
                                      desc="GP Experiments")):
             results.append(res)
             i = start_idx + rel_i
 
             # Teilergebnisse alle 50 Tasks oder am Ende
-            if (i + 1) % 50 == 0 or (i + 1) == len(tasks):
+            if (i + 1) % 50 == 0 or (i + 1) == len(tasks_to_run):
                 os.chdir(os.path.join('..', 'data'))
                 df_part = pd.DataFrame(results)
                 df_part.to_csv(PARTIAL_NAME, index=False)
