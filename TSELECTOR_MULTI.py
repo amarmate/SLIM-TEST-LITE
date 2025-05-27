@@ -247,10 +247,10 @@ if __name__ == "__main__":
                                      total=len(tasks),
                                      desc="GP Experiments")):
             results.append(res)
+            i = start_idx + rel_i
 
             # Teilergebnisse alle 50 Tasks oder am Ende
             if (i + 1) % 50 == 0 or (i + 1) == len(tasks):
-                i = start_idx + rel_i
                 df_part = pd.DataFrame(results)
                 df_part.to_csv(partial_csv, index=False)
 
