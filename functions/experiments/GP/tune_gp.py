@@ -23,6 +23,9 @@ def tuning(config,
         data_split, name, split_id, selector
         ): 
     
+
+    # REMOVE FROM TASK X_TEST AND Y_TEST
+    
     trial_results, calls_count = [], 0
 
     temp_dir = Path('temp') / f"{EXPERIMENT_NAME}_{selector}" / name / f"split_{split_id}" / "tuning"

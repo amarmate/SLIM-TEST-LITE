@@ -26,6 +26,9 @@ N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'  
 EXPERIMENT_NAME = 'GP_Experiment'
+TEST_DIR = 'test'
+TRAIN_DIR = 'train'
+
 
 DATA_DIR = 'data'
 REPO_URL = 'git@github.com:amarmate/data_transfer.git'
@@ -37,8 +40,12 @@ REPO_URL = 'git@github.com:amarmate/data_transfer.git'
 
 SELECTORS = ['dalex']
 FUNCTIONS = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD = 1000
+STOP_THRESHOLD = 1
 PI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
+PROB_TERMINAL = 0.7
+PROB_CONST = 0.2
+INIT_DEPTH = 2
+
 
 
 SPACE_PARAMETERS = [
@@ -57,6 +64,21 @@ SPACE_PARAMETERS = [
 # --------------------------- #
 #    Save Configuration       #
 # --------------------------- #
+
+gen_params = { 
+    "test_elite": True,
+    "dataset_name": "test",
+    "init_depth": INIT_DEPTH,
+    "prob_const": PROB_CONST,
+    "prob_terminal": PROB_TERMINAL,
+    "tree_functions": FUNCTIONS,
+    "log_level": 'evaluate',
+    "it_tolerance": STOP_THRESHOLD,
+    "down_sampling": 1,
+    "full_return": True,
+    "verbose": False,
+}
+
 
 config = {
     'N_SPLITS': N_SPLITS,
@@ -80,5 +102,6 @@ config = {
     'STOP_THRESHOLD': STOP_THRESHOLD,
     'PI': PI,
 
-    'SPACE_PARAMETERS': SPACE_PARAMETERS
+    'SPACE_PARAMETERS': SPACE_PARAMETERS,
+    'gen_params' : gen_params,
 }
