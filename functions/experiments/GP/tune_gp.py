@@ -15,6 +15,7 @@ from functions.utils_test import pf_rmse_comp
 from functions.metrics_test import *
 from sklearn.model_selection import KFold
 from skopt import gp_minimize
+from functions.experiments.GP.config_gp import *
 
 
 
