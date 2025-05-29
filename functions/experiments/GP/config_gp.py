@@ -27,8 +27,7 @@ SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'  
 EXPERIMENT_NAME = 'GP_Experiment'
 TEST_DIR = 'test'
-TRAIN_DIR = 'train'
-
+TUNE_DIR = 'train'
 
 DATA_DIR = 'data'
 REPO_URL = 'git@github.com:amarmate/data_transfer.git'
@@ -95,6 +94,8 @@ config = {
     'EXPERIMENT_NAME': EXPERIMENT_NAME,
 
     'DATA_DIR': DATA_DIR,
+    'TEST_DIR': TEST_DIR,
+    'TUNE_DIR': TUNE_DIR,
     'REPO_URL': REPO_URL,
 
     'SELECTORS': SELECTORS,

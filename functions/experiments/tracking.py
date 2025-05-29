@@ -10,7 +10,7 @@ def get_tasks(args, config):
         config (dict): Configuration dictionary containing experiment settings.
     
     Returns:
-        list: A list of tasks to be executed, where each task is a tuple containing:
+        list: A list of tasks to be executed, where each task is a dictionnary containing:
             - gen_params: A dictionary with parameters for the genetic algorithm.
             - split_id: The split identifier for the task.
             - mask: The mask for the task, if applicable.
@@ -96,4 +96,8 @@ def split_task(task, config):
     gen_params = config['gen_params'].copy()
     gen_params.update(update_dict)
 
-    return gen_params, split_id, mask 
+    return {
+        'gen_params': gen_params,
+        'split_id': split_id,
+        'mask': mask
+    }

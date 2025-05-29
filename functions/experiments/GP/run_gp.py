@@ -1,24 +1,24 @@
 import numpy as np 
 from functions.experiments.GP.config_gp import *
 from functions.experiments.tracking import get_tasks
-from functions.experiments.GP.tune_gp import tuning
-from functions.experiments.GP.test_gp import test_gp
+
+from functions.experiments.tunner import Tuner
+from functions.experiments.GP.tune_gp import gp_tune
+
+from functions.experiments.tester import Tester 
+from functions.experiments.GP.test_gp import gp_test
 from functions.experiments.github import commit_and_push
 
-# Parallel libraries 
 from joblib import Parallel, delayed, parallel_config
 
 
 
 def run_experiment(config, task):
-    # task: 
-        # Returns:
-        # list: A list of tasks to be executed, where each task is a tuple containing:
-        #     - gen_params: A dictionary with parameters for the genetic algorithm.
-        #     - split_id: The split identifier for the task.
-        #     - mask: The mask for the task, if applicable.
-
-    pass 
+    tuner = Tuner(config=config, 
+                objective_fn = gp_tune,
+                **task)
+    _, bp, _, _ = tuner.tune()
+    pass
 
 
 
