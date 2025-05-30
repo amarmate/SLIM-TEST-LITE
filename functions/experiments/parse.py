@@ -33,4 +33,9 @@ def parse_args(config):
         parser.error("Both --cs (chunk_size) and --ci (chunk_idx) must be provided together")
     if args.cs is not None and args.cs < config['N_SPLITS']:
         parser.error(f"--cs (chunk_size) must be at least N_SPLITS ({config['N_SPLITS']})")
+
+    # Add default values for chunk size and index if not provided
+    if args.workers is None or args.workers <= 0:
+        args.workers = int(os.cpu_count() * 0.9)
+
     return args

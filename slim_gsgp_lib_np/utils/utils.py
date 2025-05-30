@@ -469,8 +469,8 @@ def validate_inputs(*args, **kwargs):
         'y_train': np.ndarray,
         'X_test': (np.ndarray, type(None)),  # Can be None
         'y_test': (np.ndarray, type(None)),  # Can be None
-        'pop_size': int,
-        'n_iter': int,
+        'pop_size': (int, np.integer),
+        'n_iter': (int, np.integer),
         'elitism': bool,
         'n_elites': int,
         'init_depth': int,

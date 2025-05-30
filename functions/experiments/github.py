@@ -2,8 +2,8 @@ from pathlib import Path
 import os, subprocess, time
 
 def init_or_update_repo(config):
-    os.system("git config user.name 'Mateus GP Bot'")
-    os.system("git config user.email 'mbaptistaamaral@gmail.com'")
+    os.system('git config --global user.name "Mateus GP Bot"')
+    os.system('git config --global user.email "mbaptistaamaral@gmail.com"')
 
     prev_dir = os.getcwd()
     data_dir = Path("..") / config['DATA_DIR']

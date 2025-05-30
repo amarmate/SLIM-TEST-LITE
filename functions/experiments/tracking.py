@@ -18,6 +18,10 @@ def get_tasks(args, config):
 
 
     data_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME']
+    if not data_dir.exists():
+        os.mkdir(data_dir)
+        print(f"Created directory: {data_dir}")
+        
     previous_dir = os.getcwd()
     os.chdir(data_dir)
 

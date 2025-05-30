@@ -103,6 +103,7 @@ config = {
     'FUNCTIONS': FUNCTIONS,
     'STOP_THRESHOLD': STOP_THRESHOLD,
     'PI': PI,
+    'datasets' : datasets,
 
     'SPACE_PARAMETERS': SPACE_PARAMETERS,
     'gen_params' : gen_params,

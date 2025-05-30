@@ -10,7 +10,7 @@ from functions.metrics_test import *
 class Tuner:
     def __init__(self, config, split_id,
                  gen_params, objective_fn,
-                 mask, step=0):
+                 mask):
         """
         Initialize the Tuner with configuration and parameters.
         
@@ -19,7 +19,6 @@ class Tuner:
             split_id (int): Identifier for the data split.
             gen_params (dict): Parameters for the genetic algorithm including dataset and model settings.
             objective_fn (callable): Function to evaluate the performance of the model.
-            step (int, optional): Step number for tuning. Defaults to 0. If using multi-slim, then the second step is 1.
         """
         
         self.split_id = split_id
@@ -33,9 +32,8 @@ class Tuner:
         self.seed = config['SEED']
         self.name = gen_params['dataset_name']
         self.selector = gen_params['selector']
-        self.PI = config['PI_SETTINGS']
+        self.PI = config['PI']
         self.suffix = config['SUFFIX_SAVE'] 
-        self.step = step
 
         self.calls_count = 0
         self.trial_results = []
@@ -43,24 +41,20 @@ class Tuner:
 
         self.gen_params.pop('X_test', None)
         self.gen_params.pop('y_test', None)
-        self.dataset = {
-            'X_train': gen_params['X_train'],
-            'y_train': gen_params['y_train'],
-            'X_test': gen_params['X_test'], 
-            'y_test': gen_params['y_test']
-        }
 
-        self.save_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME'] / config['TUNE_DIR'] / step / self.name / self.selector
+        self.save_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME'] / config['TUNE_DIR'] / self.name / self.selector
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def _wrapped_objective(self, params):
         p = dict(zip(self.param_names, params))
         gp_params = self.gen_params.copy()
+        gp_params['log_level'] = 0
 
         if 'pop_iter_setting' in p:
             pis = int(p.pop('pop_iter_setting'))
-            gp_params['n_iter'], gp_params['pop_size'] = self.PI[pis]
+            p['n_iter'], p['pop_size'] = self.PI[pis]
         gp_params.update(p)
+        self.temp_params = gp_params
 
         t0 = time.time()
         mean_rmse, stats = self.objective_fn(gp_params, self.split_id, n_splits=self.n_folds)
@@ -71,14 +65,13 @@ class Tuner:
 
         record = {
             'trial_id': self.calls_count,
+            'split_id': self.split_id,
+            'seed': self.seed,
             **{k: gp_params[k] for k in p.keys()},
             'mean_rmse': mean_rmse,
             'elapsed_sec': elapsed,
             **stats,
         }
-
-        record.pop('X_train')
-        record.pop('y_train')
 
         mlflow.log_metric("tuning_time_sec", elapsed, step=self.calls_count)
         mlflow.log_metric("tuning_rmse", mean_rmse, step=self.calls_count)
@@ -117,18 +110,25 @@ class Tuner:
 
             df = pd.DataFrame(self.trial_results)
             best_idx = df['mean_rmse'].idxmin()
-            best_params = df.loc[best_idx, self.param_names].to_dict()  
+
+            test_params = self.temp_params.copy()
+            best_params = {}
+            for key in test_params:
+                if key in df.columns:
+                    test_params[key] = df.loc[best_idx, key]
+                    best_params[key] = test_params[key]
+
             best_score = float(df.loc[best_idx, 'mean_rmse'])
 
             mlflow.log_params(best_params)
             mlflow.log_metric("best_rmse", best_score)
+            mlflow.set_tag("tunning_step", 'completed')
+
+            test_params['bcv_rmse'] = best_score
+            test_params.pop('X_train')
+            test_params.pop('y_train')  
 
             df.to_parquet(ckpt_dir, index=False)
-            mlflow.log_artifact(str(ckpt_dir), artifact_path="tuning_results")
             with open(ckpt_params, 'wb') as f:
-                pickle.dump(best_params, f)
-
-            best_params.update(self.dataset)
-            best_params['best_cv_rmse'] = best_score
-
-            return best_params 
+                pickle.dump(test_params, f)            
+            return test_params 

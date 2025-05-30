@@ -10,8 +10,8 @@ from functions.utils_test import pf_rmse_comp_time, log_latex_as_image
 
 class Tester:
     def __init__(self, config, split_id, 
-                 best_params, test_fn, 
-                 mask):
+                 best_params, test_fn,
+                 gen_params, mask, **kwargs):
         """
         Initalize the Tester class for running tests on a dataset with given parameters.
         Args:
@@ -26,7 +26,7 @@ class Tester:
 
         self.config = config
         self.split_id = split_id
-        self.params = best_params
+        self.params = best_params.copy()
         self.test_fn = test_fn
 
         self.name = best_params['dataset_name']
@@ -35,6 +35,17 @@ class Tester:
         self.N_TESTS = config['N_TESTS']
         self.seed = config['SEED']
         self.suffix = config['SUFFIX_SAVE']
+
+        self.params.update(
+            {
+             'X_train'    : gen_params['X_train'],
+             'y_train'    : gen_params['y_train'],
+             'X_test'     : gen_params['X_test'], 
+             'y_test'     : gen_params['y_test'],
+             'test_elite' : True, 
+             'log_level'  : 'evaluate',
+            }
+        )
 
         self.save_dir = Path('..') / config['DATA_DIR'] / config['EXPERIMENT_NAME'] / config['TEST_DIR'] / self.name / self.selector
         self.save_dir.mkdir(parents=True, exist_ok=True)

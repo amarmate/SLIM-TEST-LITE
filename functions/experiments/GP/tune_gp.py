@@ -15,6 +15,7 @@ def gp_tune(gp_params, split_id, n_splits=5):
         X_te, y_te = gp_params['X_train'][te], gp_params['y_train'][te]
         copy_params['X_train'] = X_tr
         copy_params['y_train'] = y_tr
+        copy_params['max_depth'] = int(copy_params['max_depth'])
 
         res = gp(**copy_params, seed=split_id + i)
         elite = res.elite

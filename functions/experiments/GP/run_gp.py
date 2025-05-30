@@ -16,23 +16,25 @@ import threading
 
 
 def run_experiment(config, task):
-    print(f"Running task: {task['name']} with selector {task['selector']} and split {task['split_id']}")
+    name, selector, split_id = task['gen_params']['dataset_name'], task['gen_params']['selector'], task['split_id']
+    print(f"Running task: {name} / selector {selector} / split {split_id}")
     tuner = Tuner(config=config, 
                 objective_fn = gp_tune,
                 **task)
-    bp = tuner.tune()
+    params = tuner.tune()
 
-
-    print(f'Tunning completed for {task["name"]} with selector {task["selector"]} and split {task["split_id"]}. Best parameters: {bp}')
-    print(f"Running testing for task: {task['name']} with selector {task['selector']} and split {task['split_id']}")
+    print(f'Tunning completed for {name} / selector {selector} / split {split_id}')
+    print(f"Running testing for task: {name} / selector {selector} / split {split_id}")
 
     tester = Tester(config=config, 
                     test_fn=gp_test,
-                    best_params=bp, 
+                    best_params=params, 
                     **task)
     tester.run()
 
-    print(f'Testing completed for {task["name"]} with selector {task["selector"]} and split {task["split_id"]}. Results saved.')
+    print(f'Testing completed for {name} / selector {selector} / split {split_id}')
+
+
 
 def run_gp(args):
     np.random.seed(SEED)
