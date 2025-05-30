@@ -15,8 +15,7 @@ def get_tasks(args, config):
             - split_id: The split identifier for the task.
             - mask: The mask for the task, if applicable.
     """
-    
-    data_dir = Path("..") / config['DATA_DIR']
+    data_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME']
     previous_dir = os.getcwd()
     os.chdir(data_dir)
 
@@ -29,16 +28,15 @@ def get_tasks(args, config):
     ]
     total_tasks = len(tasks)
 
-    # 2. Split the tasks based on the provided arguments
     if args.cs is not None:
         cs, id = args.cs, args.ci
         tasks = tasks[cs * args.start: cs * (args.start + 1)]
         print(f"Running chunk {id} with {len(tasks)} tasks out of {total_tasks}")
 
-    # 3. Check if some tasks have already been completed 
     for task in tasks: 
         _, dataset_name, selector, split_id, task_name = task
-        directory = Path(config['TEST_DIR']) / dataset_name / selector / f'{config['PREFIX_SAVE']}_stats_{split_id}_{config['SUFFIX_SAVE']}.parquet'
+
+        directory = Path(config['TEST_DIR']) / dataset_name / selector / f"checkpoint_testing_split{split_id}_{config['SUFFIX_SAVE']}.parquet"
         if directory.exists():
             print(f"Task {task_name} already completed. Skipping...")
             tasks.remove(task)
@@ -47,10 +45,7 @@ def get_tasks(args, config):
     
     os.chdir(previous_dir)
 
-    # 3. Print the stats 
     print(f"Total tasks: {len(tasks)} out of {total_tasks}")
-
-    # 4. Split the tasks for ease of use
     tasks = [split_task(task, config) for task in tasks]
 
     return tasks 

@@ -7,14 +7,12 @@ from pathlib import Path
 from skopt import gp_minimize
 from functions.metrics_test import *
 
-
-
 class Tuner:
     def __init__(self, config, split_id,
                  gen_params, objective_fn,
-                 step=0):
+                 mask, step=0):
         """
-        Initialize the GPTuner with configuration and parameters.
+        Initialize the Tuner with configuration and parameters.
         
         Args:
             config (dict): Configuration dictionary containing experiment settings.
@@ -36,6 +34,7 @@ class Tuner:
         self.name = gen_params['dataset_name']
         self.selector = gen_params['selector']
         self.PI = config['PI_SETTINGS']
+        self.suffix = config['SUFFIX_SAVE'] 
         self.step = step
 
         self.calls_count = 0
@@ -44,8 +43,14 @@ class Tuner:
 
         self.gen_params.pop('X_test', None)
         self.gen_params.pop('y_test', None)
+        self.dataset = {
+            'X_train': gen_params['X_train'],
+            'y_train': gen_params['y_train'],
+            'X_test': gen_params['X_test'], 
+            'y_test': gen_params['y_test']
+        }
 
-        self.save_dir = Path("../") / config['DATA_DIR'] / config['TUNE_DIR'] / step / self.name / self.selector
+        self.save_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME'] / config['TUNE_DIR'] / step / self.name / self.selector
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def _wrapped_objective(self, params):
@@ -72,6 +77,9 @@ class Tuner:
             **stats,
         }
 
+        record.pop('X_train')
+        record.pop('y_train')
+
         mlflow.log_metric("tuning_time_sec", elapsed, step=self.calls_count)
         mlflow.log_metric("tuning_rmse", mean_rmse, step=self.calls_count)
         if 'mean_nodes' in stats:
@@ -81,6 +89,21 @@ class Tuner:
         return mean_rmse
 
     def tune(self):
+        """
+        Perform hyperparameter tuning using Bayesian optimization with Gaussian processes.
+        Returns:
+            dict: Best hyperparameters found during tuning with the dataset information included.
+        """
+
+        ckpt_dir = self.save_dir / f"checkpoint_tunning{self.split_id}_{self.suffix}.parquet"
+        ckpt_params = self.save_dir / f"checkpoint_params{self.split_id}_{self.suffix}.pkl"
+
+        if ckpt_params.exists():
+            print(f"Checkpoint already exists: {ckpt_params}")
+            with open(ckpt_params, 'rb') as f:
+                best_params = pickle.load(f)
+            return best_params
+
         with mlflow.start_run(run_name=f"{self.name}_split{self.split_id}_{self.selector}"):
             res = gp_minimize(
                 func=self._wrapped_objective,
@@ -100,10 +123,13 @@ class Tuner:
             mlflow.log_params(best_params)
             mlflow.log_metric("best_rmse", best_score)
 
-            df.to_parquet(self.save_dir / f"checkpoint_tunning{self.split_id}.parquet", index=False)
-            mlflow.log_artifact(str(self.save_dir / f"checkpoint_tunning{self.split_id}.parquet"))
-            with open(self.temp_dir / f"checkpoint_params{self.split_id}.pkl", 'wb') as f:
+            df.to_parquet(ckpt_dir, index=False)
+            mlflow.log_artifact(str(ckpt_dir), artifact_path="tuning_results")
+            with open(ckpt_params, 'wb') as f:
                 pickle.dump(best_params, f)
 
-            return df, best_params, best_score, res
+            best_params.update(self.dataset)
+
+            # return df, best_params, best_score, res
+            return best_params 
 

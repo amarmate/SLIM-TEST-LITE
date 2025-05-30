@@ -17,7 +17,13 @@ def run_experiment(config, task):
     tuner = Tuner(config=config, 
                 objective_fn = gp_tune,
                 **task)
-    _, bp, _, _ = tuner.tune()
+    bp = tuner.tune()
+
+    tester = Tester(config=config, 
+                    test_fn=gp_test,
+                    best_params=bp, 
+                    **task)
+
     pass
 
 
