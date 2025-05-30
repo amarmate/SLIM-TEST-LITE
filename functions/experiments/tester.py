@@ -73,7 +73,7 @@ class Tester:
                     seed=self.seed + test_n,
                 )
 
-                all_records.extend(records)
+                all_records.append(records)
                 all_pop_stats.extend(pop_stats)
                 all_logs.append(logs)
 
