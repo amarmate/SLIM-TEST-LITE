@@ -97,7 +97,7 @@ class Tuner:
                 best_params = pickle.load(f)
             return best_params
 
-        with mlflow.start_run(run_name=f"{self.name}_split{self.split_id}_{self.selector}"):
+        with mlflow.start_run(run_name=f"{self.name}_split{self.split_id}_{self.selector}_train"):
             res = gp_minimize(
                 func=self._wrapped_objective,
                 dimensions=self.space,
