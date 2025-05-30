@@ -15,11 +15,12 @@ def get_tasks(args, config):
             - split_id: The split identifier for the task.
             - mask: The mask for the task, if applicable.
     """
+
+
     data_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME']
     previous_dir = os.getcwd()
     os.chdir(data_dir)
 
-    # 1. Get the tasks to be executed
     tasks = [
         (dataset, name, selector, split_id, f'{name}-{selector}-{split_id}')
         for selector in config['SELECTORS']

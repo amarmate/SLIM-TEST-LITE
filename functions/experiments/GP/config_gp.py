@@ -65,7 +65,7 @@ SPACE_PARAMETERS = [
 # --------------------------- #
 
 gen_params = { 
-    "test_elite": True,
+    "test_elite": False,
     "dataset_name": "test",
     "init_depth": INIT_DEPTH,
     "prob_const": PROB_CONST,

@@ -129,7 +129,6 @@ class Tuner:
                 pickle.dump(best_params, f)
 
             best_params.update(self.dataset)
+            best_params['best_cv_rmse'] = best_score
 
-            # return df, best_params, best_score, res
             return best_params 
-

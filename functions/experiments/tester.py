@@ -5,6 +5,9 @@ from pathlib import Path
 import pandas as pd
 import mlflow
 
+from functions.utils_test import pf_rmse_comp_time, log_latex_as_image
+
+
 class Tester:
     def __init__(self, config, split_id, 
                  best_params, test_fn, 
@@ -55,41 +58,34 @@ class Tester:
                 mlflow.set_tag("testing_step", test_n+1)
 
                 records, pop_stats, logs = self.test_fn(
-                    self.params, self.data_split,
+                    self.params, self.split_id,
                     seed=self.seed + test_n,
-                    selector=self.selector
                 )
-                # sammle alle Infos
+
                 all_records.extend(records)
                 all_pop_stats.extend(pop_stats)
                 all_logs.append(logs)
 
-                # Logge Metriken aus records[-1]
-                last = records[-1]
                 step = test_n+1
-                for metric, val in last.items():
+                for metric, val in records.items():
                     if metric in ('rmse_test','mae_test','r2_test','nodes','time_sec','gen_gap_%','overfit_%'):
                         mlflow.log_metric(f"testing_{metric}", val, step=step)
 
-            # Abschließende Auswertung
             df = pd.DataFrame(all_records)
             best_idx = df['rmse_test'].idxmin()
             best_latex = df.loc[best_idx, 'latex_repr']
-            # Default-Funktion, um LaTeX-Baum zu visualisieren
             log_latex_as_image(best_latex, self.name, self.split_id,
-                               prefix=self.selector)
+                               prefix=self.config['PREFIX_SAVE'], 
+                               suffix=self.config['SUFFIX_SAVE'],
+            )
 
             pf = pf_rmse_comp_time(all_pop_stats)
             mlflow.set_tag("testing_complete", True)
 
-            # Artefakte speichern und loggen
-            df.to_pickle(ckpt_test)
-            mlflow.log_artifact(str(ckpt_test))
+            df.to_parquet(ckpt_test, index=False)        
+
             with open(ckpt_pf, 'wb') as f:
                 pickle.dump(pf, f)
-            mlflow.log_artifact(str(ckpt_pf))
             with open(ckpt_logs, 'wb') as f:
                 pickle.dump(all_logs, f)
-            mlflow.log_artifact(str(ckpt_logs))
-
         return df, pf, all_logs
