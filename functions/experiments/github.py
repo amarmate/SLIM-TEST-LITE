@@ -17,7 +17,6 @@ def init_or_update_repo(config):
 
     os.chdir(prev_dir)
     
-
 def commit_and_push(config: dict, filename: str, msg: str):
     prev_dir = os.getcwd()
     data_dir = Path("..") / config['DATA_DIR']
@@ -28,3 +27,19 @@ def commit_and_push(config: dict, filename: str, msg: str):
     subprocess.run(["git", "push", "origin", "main"], check=True)
 
     os.chdir(prev_dir)
+
+def auto_commit_and_push(config: dict, msg: str):
+    prev_dir = os.getcwd()
+    data_dir = Path("..") / config['DATA_DIR']
+    os.chdir(data_dir)
+
+    subprocess.run(["git", "add", "."], check=True)
+    result = subprocess.run(["git", "diff", "--cached", "--quiet"])
+    if result.returncode != 0:
+        subprocess.run(["git", "commit", "-m", msg], check=True)
+        subprocess.run(["git", "push", "origin", "main"], check=True)
+        print(f"Changes committed and pushed with message: {msg}")
+    else:
+        print("Warning: No changes to commit! Skipping commit and push.")
+    os.chdir(prev_dir)
+
