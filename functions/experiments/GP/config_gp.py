@@ -31,6 +31,7 @@ TUNE_DIR = 'train'
 
 DATA_DIR = 'data'
 REPO_URL = 'git@github.com:amarmate/data_transfer.git'
+AUTO_COMMIT_INTERVAL = 1 * 3600 # 1 hour 
 
 
 # --------------------------- # 

@@ -149,7 +149,7 @@ def tuning_first(data_split, name, split_id, selector):
             rmses.append(rmse(elite.predict(X_val), y_val))
             nodes.append(elite.total_nodes)
             times.append(time.time() - talg)
-            pop_stats = [(rmse(ind.predict(X_sval), y_val), ind.total_nodes) for ind in population]
+            pop_stats = [(rmse(ind.predict(X_val), y_val), ind.total_nodes) for ind in population]
             all_fold_pf.extend(pop_stats)
         
         mean_rmse    = float(np.mean(rmses))

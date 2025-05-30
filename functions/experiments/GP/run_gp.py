@@ -1,4 +1,5 @@
 import numpy as np 
+import time 
 from functions.experiments.GP.config_gp import *
 from functions.experiments.tracking import get_tasks
 
@@ -7,9 +8,10 @@ from functions.experiments.GP.tune_gp import gp_tune
 
 from functions.experiments.tester import Tester 
 from functions.experiments.GP.test_gp import gp_test
-from functions.experiments.github import auto_commit_and_push
+from functions.experiments.github import periodic_commit
 
 from joblib import Parallel, delayed, parallel_config
+import threading
 
 
 
@@ -20,8 +22,8 @@ def run_experiment(config, task):
                 **task)
     bp = tuner.tune()
 
+
     print(f'Tunning completed for {task["name"]} with selector {task["selector"]} and split {task["split_id"]}. Best parameters: {bp}')
-    auto_commit_and_push(config, f"AUTO: tune-{task['name']}-{task['split_id']}-{task['selector']} at {np.datetime64('now', 's')}")
     print(f"Running testing for task: {task['name']} with selector {task['selector']} and split {task['split_id']}")
 
     tester = Tester(config=config, 
@@ -31,12 +33,15 @@ def run_experiment(config, task):
     tester.run()
 
     print(f'Testing completed for {task["name"]} with selector {task["selector"]} and split {task["split_id"]}. Results saved.')
-    auto_commit_and_push(config, f"AUTO: test-{task['name']}-{task['split_id']}-{task['selector']} at {np.datetime64('now', 's')}")
-
 
 def run_gp(args):
     np.random.seed(SEED)
-    
+
+    commit_thread = threading.Thread(
+        target=periodic_commit, args=(config), daemon=True
+    )
+    commit_thread.start()
+
     tasks = get_tasks(args, config)
 
     with parallel_config(n_jobs=args.workers, prefer='threads', verbose=10):

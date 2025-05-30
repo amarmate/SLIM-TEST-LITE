@@ -43,3 +43,15 @@ def auto_commit_and_push(config: dict, msg: str):
         print("Warning: No changes to commit! Skipping commit and push.")
     os.chdir(prev_dir)
 
+def periodic_commit(config):
+    interval = config['AUTO_COMMIT_INTERVAL']
+    while True:
+        time.sleep(interval)
+        try:
+            msg = f"Auto commit @ {time.strftime('%Y-%m-%d %H:%M:%S')}"
+            auto_commit_and_push(config, msg)
+            print("Auto commit & push executed.")
+        except Exception as e:
+            print(f"Auto commit failed: {e}")
+
+
