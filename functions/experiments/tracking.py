@@ -35,7 +35,7 @@ def get_tasks(args, config):
 
     if args.cs is not None:
         cs, id = args.cs, args.ci
-        tasks = tasks[cs * args.start: cs * (args.start + 1)]
+        tasks = tasks[cs * id: cs * (id + 1)]
         print(f"Running chunk {id} with {len(tasks)} tasks out of {total_tasks}")
 
     for task in tasks: 
