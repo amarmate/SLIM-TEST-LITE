@@ -57,7 +57,7 @@ class Tuner:
         
         params.update(p)
         params['it_tolerance'] = int(params['it_tolerance'] * params['n_iter'])
-        self.params['mask'] = self.mask
+        params['mask'] = self.mask
         self.temp_params = params
 
         t0 = time.time()
