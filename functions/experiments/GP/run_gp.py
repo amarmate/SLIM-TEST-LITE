@@ -1,5 +1,5 @@
 import numpy as np 
-import time 
+import mlflow 
 from functions.experiments.GP.config_gp import *
 from functions.experiments.tracking import get_tasks
 
@@ -14,14 +14,15 @@ from joblib import Parallel, delayed, parallel_config
 import threading
 
 
-
 def run_experiment(config, task):
     name, selector, split_id = task['gen_params']['dataset_name'], task['gen_params']['selector'], task['split_id']
     print(f"Running task: {name} / selector {selector} / split {split_id}")
+    mlflow.set_experiment(f"{name}_{selector}_split{split_id}")
+
     tuner = Tuner(config=config, 
                 objective_fn = gp_tune,
                 **task)
-    params = tuner.tune()
+    params = tuner.tune()    
 
     print(f'Tunning completed for {name} / selector {selector} / split {split_id}')
     print(f"Running testing for task: {name} / selector {selector} / split {split_id}")
@@ -45,6 +46,6 @@ def run_gp(args):
     commit_thread.start()
 
     tasks = get_tasks(args, config)
-
-    with parallel_config(n_jobs=args.workers, prefer='threads', verbose=10):
+    
+    with parallel_config(n_jobs=args.workers, prefer='processes', verbose=10):
         Parallel()(delayed(run_experiment)(config, task) for task in tasks)

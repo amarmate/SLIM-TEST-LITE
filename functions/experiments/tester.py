@@ -38,12 +38,13 @@ class Tester:
 
         self.params.update(
             {
-             'X_train'    : gen_params['X_train'],
-             'y_train'    : gen_params['y_train'],
-             'X_test'     : gen_params['X_test'], 
-             'y_test'     : gen_params['y_test'],
-             'test_elite' : True, 
-             'log_level'  : 'evaluate',
+             'X_train'      : gen_params['X_train'],
+             'y_train'      : gen_params['y_train'],
+             'X_test'       : gen_params['X_test'], 
+             'y_test'       : gen_params['y_test'],
+             'test_elite'   : True, 
+             'log_level'    : 'evaluate',
+             'it_tolerance' : 1e10,  # Remove tolerance for testing 
             }
         )
 
@@ -62,7 +63,7 @@ class Tester:
         all_pop_stats = []
         all_logs = []
 
-        with mlflow.start_run(run_name=f"{self.name}_split{self.split_id}_{self.selector}_test"):
+        with mlflow.start_run(run_name=f"test"):
             mlflow.set_tag("testing_start", True)
 
             for test_n in range(self.N_TESTS):
@@ -79,7 +80,7 @@ class Tester:
 
                 step = test_n+1
                 for metric, val in records.items():
-                    if metric in ('rmse_test','mae_test','r2_test','nodes','time_sec','gen_gap_%','overfit_%'):
+                    if metric in ('rmse_test','mae_test','r2_test','nodes','time','gen_gap_%','overfit_%'):
                         mlflow.log_metric(f"testing_{metric}", val, step=step)
 
             df = pd.DataFrame(all_records)

@@ -40,7 +40,7 @@ AUTO_COMMIT_INTERVAL = 1 * 3600 # 1 hour
 
 SELECTORS = ['dalex']
 FUNCTIONS = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD = 1
+STOP_THRESHOLD = 0.2
 PI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 PROB_TERMINAL = 0.7
 PROB_CONST = 0.2

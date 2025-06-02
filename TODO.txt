@@ -1,6 +1,1 @@
 CODE:
-- create mlflow experiment for every dataset instead of everything in the same experiment (default)
-- test if data output is correct 
-- change the iteration tollerance 
-- test github 
-- why is parallel not working? only one thread is being used 

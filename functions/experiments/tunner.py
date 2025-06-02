@@ -53,7 +53,9 @@ class Tuner:
         if 'pop_iter_setting' in p:
             pis = int(p.pop('pop_iter_setting'))
             p['n_iter'], p['pop_size'] = self.PI[pis]
+        
         gp_params.update(p)
+        gp_params['it_tolerance'] = int(gp_params['it_tolerance'] * gp_params['n_iter'])
         self.temp_params = gp_params
 
         t0 = time.time()
@@ -88,8 +90,8 @@ class Tuner:
             dict: Best hyperparameters found during tuning with the dataset information included.
         """
 
-        ckpt_dir = self.save_dir / f"checkpoint_tunning{self.split_id}_{self.suffix}.parquet"
-        ckpt_params = self.save_dir / f"checkpoint_params{self.split_id}_{self.suffix}.pkl"
+        ckpt_dir = self.save_dir / f"checkpoint_tunning_split{self.split_id}_{self.suffix}.parquet"
+        ckpt_params = self.save_dir / f"checkpoint_params_split{self.split_id}_{self.suffix}.pkl"
 
         if ckpt_params.exists():
             print(f"Checkpoint already exists: {ckpt_params}")
@@ -97,7 +99,7 @@ class Tuner:
                 best_params = pickle.load(f)
             return best_params
 
-        with mlflow.start_run(run_name=f"{self.name}_split{self.split_id}_{self.selector}_train"):
+        with mlflow.start_run(run_name=f"train"):
             res = gp_minimize(
                 func=self._wrapped_objective,
                 dimensions=self.space,
