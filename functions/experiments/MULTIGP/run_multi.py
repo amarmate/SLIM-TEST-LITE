@@ -48,7 +48,7 @@ def run_experiment(config, task):
 
 
 # ------------------------------------------------- MAIN FUNCTION ------------------------------------------------- #
-def run_gp(args):
+def run_multi(args):
     np.random.seed(SEED)
 
     mlflow.set_tracking_uri("file:../data/mlruns")

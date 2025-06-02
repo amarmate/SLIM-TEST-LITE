@@ -108,4 +108,5 @@ config = {
 
     'SPACE_PARAMETERS': SPACE_PARAMETERS,
     'gen_params' : gen_params,
+    'multi_run'  : False
 }

@@ -35,6 +35,7 @@ class Tuner:
         self.PI = config['PI']
         self.suffix = config['SUFFIX_SAVE'] 
         self.mask = mask 
+        self.multi = config['multi_run']
 
         self.calls_count = 0
         self.trial_results = []
@@ -54,9 +55,16 @@ class Tuner:
         if 'pop_iter_setting' in p:
             pis = int(p.pop('pop_iter_setting'))
             p['n_iter'], p['pop_size'] = self.PI[pis]
-        
-        params.update(p)
-        params['it_tolerance'] = int(params['it_tolerance'] * params['n_iter'])
+            params.update(p)
+            params['it_tolerance'] = int(params['it_tolerance'] * params['n_iter'])
+
+        if 'pop_iter_setting_gp' in p: 
+            pis = int(p.pop('pop_iter_setting_gp'))
+            p['n_iter_gp'], p['pop_size_gp'] = self.PI[pis]
+            params.update(p)
+            params['it_tolerance_gp'] = int(params['it_tolerance_gp'] * params['n_iter_gp'])
+            params['it_tolerance'] =  int(params['it_tolerance'] * params['n_iter'])
+
         params['mask'] = self.mask
         self.temp_params = params
 
@@ -77,10 +85,8 @@ class Tuner:
             **stats,
         }
 
-        mlflow.log_metric("tuning_time_sec", elapsed, step=self.calls_count)
-        mlflow.log_metric("tuning_rmse", mean_rmse, step=self.calls_count)
-        if 'mean_nodes' in stats:
-            mlflow.log_metric("tuning_nodes", stats['mean_nodes'], step=self.calls_count)
+        for key, value in stats.items(): 
+            mlflow.log_metric(key, value, step=self.calls_count)
 
         self.trial_results.append(record)
         return mean_rmse

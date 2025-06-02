@@ -10,7 +10,7 @@ def init_or_update_repo(config):
     os.chdir(data_dir)
 
     if not (data_dir / ".git").exists():
-        subprocess.run(["git", "clone", config['REPO_URL'], str(data_dir)], check=True)
+        subprocess.run(["git", "clone", "--depth 1", config['REPO_URL'], str(data_dir)], check=True)
     else:
         subprocess.run(["git", "fetch", "origin"], check=True)
         subprocess.run(["git", "reset", "--hard", "origin/main"], check=True)
@@ -33,14 +33,27 @@ def auto_commit_and_push(config: dict, msg: str):
     data_dir = Path("..") / config['DATA_DIR']
     os.chdir(data_dir)
 
+    try:
+        subprocess.run(["git", "stash"], check=True)
+        subprocess.run(["git", "pull", "--rebase"], check=True)
+        subprocess.run(["git", "stash", "pop"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Git stash/pull/pop failed: {e}")
+        os.chdir(prev_dir)
+        return
+
     subprocess.run(["git", "add", "."], check=True)
     result = subprocess.run(["git", "diff", "--cached", "--quiet"])
     if result.returncode != 0:
-        subprocess.run(["git", "commit", "-m", msg], check=True)
-        subprocess.run(["git", "push", "origin", "main"], check=True)
-        print(f"Changes committed and pushed with message: {msg}")
+        try:
+            subprocess.run(["git", "commit", "-m", msg], check=True)
+            subprocess.run(["git", "push", "origin", "main"], check=True)
+            print(f"Changes committed and pushed with message: {msg}")
+        except subprocess.CalledProcessError as e:
+            print(f"Commit or push failed: {e}")
     else:
         print("Warning: No changes to commit! Skipping commit and push.")
+
     os.chdir(prev_dir)
 
 def periodic_commit(config):

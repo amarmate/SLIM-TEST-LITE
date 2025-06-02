@@ -13,7 +13,7 @@ def multi_tune(params, split_id, n_splits=5):
         if 'gp' in key:
             new_key = key.replace('_gp', '')
             new_dict[new_key] = params.pop(key)
-    params['gp_params'] = new_dict
+    params['params_gp'] = new_dict
 
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)
     rmses, nodes = [], []
@@ -56,7 +56,7 @@ def multi_tune(params, split_id, n_splits=5):
 
 def config_1(config): 
     config.update({ 
-        'SPACE_PARAMETERS': config['SPACE_PARAMETERS_GP'],
+        'SPACE_PARAMETERS': config['SPACE_GP'],
         'N_SEARCHES_HYPER': config['N_SEARCHES_HYPER_GP'],
         'N_RANDOM_STARTS': config['N_RANDOM_STARTS_GP'],
         'selector' : config['SELECTOR_GP'],
@@ -66,7 +66,7 @@ def config_1(config):
 
 def config_2(config, bp_1):
     config.update({ 
-        'SPACE_PARAMETERS': config['SPACE_PARAMETERS_MULTI'],
+        'SPACE_PARAMETERS': config['SPACE_MULTI'],
         'N_SEARCHES_HYPER': config['N_SEARCHES_HYPER_MULTI'],
         'N_RANDOM_STARTS': config['N_RANDOM_STARTS_MULTI'],
         'selector' : config['SELECTOR_MULTI'],

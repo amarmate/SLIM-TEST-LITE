@@ -20,8 +20,8 @@ N_CV = 4
 N_SEARCHES_HYPER_GP = 20     
 N_RANDOM_STARTS_GP = 10  
 
-N_SEARCHES_HYPER_MULTI = 15
-N_RANDOM_STARTS_MULTI = 8
+N_SEARCHES_HYPER_MULTI = 20
+N_RANDOM_STARTS_MULTI = 10
 
 NOISE_SKOPT = 1e-3
 N_TESTS = 15              
@@ -36,7 +36,7 @@ TUNE_DIR = 'train'
 
 DATA_DIR = 'data'
 REPO_URL = 'git@github.com:amarmate/data_transfer.git'
-AUTO_COMMIT_INTERVAL = 1 * 3600 # 1 hour 
+AUTO_COMMIT_INTERVAL = 0.25 * 3600 # every 15 min  
 
 
 # ------------------------------ # 
@@ -78,41 +78,44 @@ gp_params = {
 
 SELECTORS_MULTI = ['dalex']
 FUNCTIONS_MULTI = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD_MULTI = 0.2
+STOP_THRESHOLD_MULTI = 0.025  # CHANGE 
 PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 PROB_TERMINAL_MULTI = 0.7
 PROB_CONST_MULTI = 0.2
-INIT_DEPTH_MULTI = 2
 
 SPACE_PARAMETERS_MULTI = [
-    Integer(3, 5, name='max_depth'),                    
+    Integer(3, 5, name='max_depth'),     
+    Integer(3, 7, name='depth_condition'),                
     Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
     Real(4, 60, name='particularity_pressure', prior='log-uniform'),
     Real(0.5, 0.9, name='p_xo'),    
 ]
 
 MULTI_MAX_DEPTH = 4
-MULTI_N_ITER = 2000
+MULTI_DEPTH_CONDITION = 6
 MULTI_PP = 20
 MULTI_XO = 0.7
+MULTI_POP_SIZE = 100
+MULTI_N_ITER = 2000
 
 multi_params = {
-    "test_elite": False,
-    "dataset_name": "test",
-    "init_depth": INIT_DEPTH_MULTI,
-    "prob_const": PROB_CONST_MULTI,
-    "prob_terminal": PROB_TERMINAL_MULTI,
-    "tree_functions": FUNCTIONS_MULTI,
-    "log_level": 0,
-    "it_tolerance": STOP_THRESHOLD_MULTI,
-    "down_sampling": 1,
-    "full_return": True,
-    "verbose": False,
+    "test_elite"            : False,
+    "dataset_name"          : "test",
+    "prob_const"            : PROB_CONST_MULTI,
+    "prob_terminal"         : PROB_TERMINAL_MULTI,
+    "ensemble_functions"    : FUNCTIONS_MULTI,
+    "log_level"             : 0,
+    "it_tolerance"          : STOP_THRESHOLD_MULTI,
+    "down_sampling"         : 1,
+    "full_return"           : True,
+    "verbose"               : False,
 
-    "max_depth": MULTI_MAX_DEPTH,
-    "n_iter": MULTI_N_ITER,
+    "max_depth"             : MULTI_MAX_DEPTH,
+    "depth_condition"       : MULTI_DEPTH_CONDITION,
     "particularity_pressure": MULTI_PP,
-    "p_xo": MULTI_XO, 
+    "p_xo"                  : MULTI_XO, 
+    "pop_size"              : MULTI_POP_SIZE,
+    "n_iter"                : MULTI_N_ITER,
 }
 
 multi_params.update(gp_params)
@@ -149,10 +152,10 @@ config = {
 
     'SELECTORS' : SELECTORS_GP,
 
-    'SELECTORS_GP': SELECTORS_GP,
+    'SELECTOR_GP': SELECTORS_GP,
     'FUNCTIONS_GP': FUNCTIONS_GP,
 
-    'SELECTORS_MULTI': SELECTORS_MULTI,
+    'SELECTOR_MULTI': SELECTORS_MULTI,
     'FUNCTIONS_MULTI': FUNCTIONS_MULTI,
 
     'PI_MULTI': PI_MULTI,
@@ -163,4 +166,5 @@ config = {
     'SPACE_MULTI': SPACE_PARAMETERS_MULTI,
 
     'gen_params' : multi_params,
+    'multi_run' : True,
 }

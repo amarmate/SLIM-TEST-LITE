@@ -8,6 +8,7 @@ from functions.utils_test import simplify_tuple_expression
 
 
 def gp_test(best_params, split_id, seed):
+    best_params.pop('mask')
     params = best_params.copy()
     bcv_rmse = params.pop('bcv_rmse')
     X_train, y_train = params['X_train'], params['y_train']
