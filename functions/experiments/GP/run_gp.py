@@ -40,6 +40,8 @@ def run_experiment(config, task):
 def run_gp(args):
     np.random.seed(SEED)
 
+    mlflow.set_tracking_uri("file:../data/mlruns")
+
     commit_thread = threading.Thread(
         target=periodic_commit, args=(config), daemon=True
     )
