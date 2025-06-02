@@ -41,11 +41,11 @@ def gp_test(best_params, split_id, seed):
         'rmse_test'             : rmse_test,
         'mae_test'              : mae_test,
         'r2_test'               : r2_test,
-        'gen_gap_%'             : gen_gap,
+        'gen_gap_per'           : gen_gap,
         'nodes'                 : elite.total_nodes,
         'depth'                 : elite.depth,
         'train_rmse'            : rmse_train,
-        'overfit_%'             : overfit,
+        'overfit_per'           : overfit,
         'time'                  : elapsed,
         'latex_repr'            : latex_repr,
     }

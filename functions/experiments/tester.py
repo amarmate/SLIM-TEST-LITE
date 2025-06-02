@@ -80,7 +80,7 @@ class Tester:
 
                 step = test_n+1
                 for metric, val in records.items():
-                    if metric in ('rmse_test','mae_test','r2_test','nodes','time','gen_gap_%','overfit_%'):
+                    if metric in ('rmse_test', 'mae_test', 'r2_test', 'nodes', 'time', 'gen_gap_per', 'overfit_per'):
                         mlflow.log_metric(f"testing_{metric}", val, step=step)
 
             df = pd.DataFrame(all_records)
