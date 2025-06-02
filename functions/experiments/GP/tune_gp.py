@@ -7,6 +7,7 @@ from functions.experiments.GP.config_gp import *
 
 
 def gp_tune(gp_params, split_id, n_splits=5):
+    gp_params.pop('mask')
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)
     rmses, nodes = [], []
     for i, (tr, te) in enumerate(kf.split(gp_params['X_train'])):

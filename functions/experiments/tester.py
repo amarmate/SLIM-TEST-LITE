@@ -63,41 +63,46 @@ class Tester:
         all_pop_stats = []
         all_logs = []
 
-        with mlflow.start_run(run_name=f"test"):
-            mlflow.set_tag("testing_start", True)
+        try: 
+            with mlflow.start_run(run_name=f"test"):
+                mlflow.set_tag("testing_start", True)
 
-            for test_n in range(self.N_TESTS):
-                mlflow.set_tag("testing_step", test_n+1)
+                for test_n in range(self.N_TESTS):
+                    mlflow.set_tag("testing_step", test_n+1)
 
-                records, pop_stats, logs = self.test_fn(
-                    self.params, self.split_id,
-                    seed=self.seed + test_n,
+                    records, pop_stats, logs = self.test_fn(
+                        self.params, self.split_id,
+                        seed=self.seed + test_n,
+                    )
+
+                    all_records.append(records)
+                    all_pop_stats.extend(pop_stats)
+                    all_logs.append(logs)
+
+                    step = test_n+1
+                    for metric, val in records.items():
+                        if metric in ('rmse_test', 'mae_test', 'r2_test', 'nodes', 'time', 'gen_gap_per', 'overfit_per'):
+                            mlflow.log_metric(f"testing_{metric}", val, step=step)
+
+                df = pd.DataFrame(all_records)
+                best_idx = df['rmse_test'].idxmin()
+                best_latex = df.loc[best_idx, 'latex_repr']
+                log_latex_as_image(best_latex, self.name, self.split_id,
+                                prefix=self.config['PREFIX_SAVE'], 
+                                suffix=self.config['SUFFIX_SAVE'],
                 )
 
-                all_records.append(records)
-                all_pop_stats.extend(pop_stats)
-                all_logs.append(logs)
+                pf = pf_rmse_comp_time(all_pop_stats)
+                mlflow.set_tag("testing_complete", True)
 
-                step = test_n+1
-                for metric, val in records.items():
-                    if metric in ('rmse_test', 'mae_test', 'r2_test', 'nodes', 'time', 'gen_gap_per', 'overfit_per'):
-                        mlflow.log_metric(f"testing_{metric}", val, step=step)
+                df.to_parquet(ckpt_test, index=False)        
 
-            df = pd.DataFrame(all_records)
-            best_idx = df['rmse_test'].idxmin()
-            best_latex = df.loc[best_idx, 'latex_repr']
-            log_latex_as_image(best_latex, self.name, self.split_id,
-                               prefix=self.config['PREFIX_SAVE'], 
-                               suffix=self.config['SUFFIX_SAVE'],
-            )
+                with open(ckpt_pf, 'wb') as f:
+                    pickle.dump(pf, f)
+                with open(ckpt_logs, 'wb') as f:
+                    pickle.dump(all_logs, f)
+            return df, pf, all_logs
 
-            pf = pf_rmse_comp_time(all_pop_stats)
-            mlflow.set_tag("testing_complete", True)
-
-            df.to_parquet(ckpt_test, index=False)        
-
-            with open(ckpt_pf, 'wb') as f:
-                pickle.dump(pf, f)
-            with open(ckpt_logs, 'wb') as f:
-                pickle.dump(all_logs, f)
-        return df, pf, all_logs
+        except Exception:
+            mlflow.end_run(status="FAILED")
+            raise 

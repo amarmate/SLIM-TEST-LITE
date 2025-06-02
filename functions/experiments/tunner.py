@@ -34,6 +34,7 @@ class Tuner:
         self.selector = gen_params['selector']
         self.PI = config['PI']
         self.suffix = config['SUFFIX_SAVE'] 
+        self.mask = mask 
 
         self.calls_count = 0
         self.trial_results = []
@@ -47,19 +48,20 @@ class Tuner:
 
     def _wrapped_objective(self, params):
         p = dict(zip(self.param_names, params))
-        gp_params = self.gen_params.copy()
-        gp_params['log_level'] = 0
+        params = self.gen_params.copy()
+        params['log_level'] = 0
 
         if 'pop_iter_setting' in p:
             pis = int(p.pop('pop_iter_setting'))
             p['n_iter'], p['pop_size'] = self.PI[pis]
         
-        gp_params.update(p)
-        gp_params['it_tolerance'] = int(gp_params['it_tolerance'] * gp_params['n_iter'])
-        self.temp_params = gp_params
+        params.update(p)
+        params['it_tolerance'] = int(params['it_tolerance'] * params['n_iter'])
+        self.params['mask'] = self.mask
+        self.temp_params = params
 
         t0 = time.time()
-        mean_rmse, stats = self.objective_fn(gp_params, self.split_id, n_splits=self.n_folds)
+        mean_rmse, stats = self.objective_fn(params, self.split_id, n_splits=self.n_folds)
         elapsed = time.time() - t0
 
         self.calls_count += 1
@@ -69,7 +71,7 @@ class Tuner:
             'trial_id': self.calls_count,
             'split_id': self.split_id,
             'seed': self.seed,
-            **{k: gp_params[k] for k in p.keys()},
+            **{k: params[k] for k in p.keys()},
             'mean_rmse': mean_rmse,
             'elapsed_sec': elapsed,
             **stats,
@@ -99,38 +101,44 @@ class Tuner:
                 best_params = pickle.load(f)
             return best_params
 
-        with mlflow.start_run(run_name=f"train"):
-            res = gp_minimize(
-                func=self._wrapped_objective,
-                dimensions=self.space,
-                n_calls=self.n_calls,
-                noise=self.noise,
-                n_initial_points=self.n_start,
-                random_state=self.seed,
-                verbose=False
-            )
+        try:
+            with mlflow.start_run(run_name=f"train"):
+                res = gp_minimize(
+                    func=self._wrapped_objective,
+                    dimensions=self.space,
+                    n_calls=self.n_calls,
+                    noise=self.noise,
+                    n_initial_points=self.n_start,
+                    random_state=self.seed,
+                    verbose=False
+                )
 
-            df = pd.DataFrame(self.trial_results)
-            best_idx = df['mean_rmse'].idxmin()
+                df = pd.DataFrame(self.trial_results)
+                best_idx = df['mean_rmse'].idxmin()
 
-            test_params = self.temp_params.copy()
-            best_params = {}
-            for key in test_params:
-                if key in df.columns:
-                    test_params[key] = df.loc[best_idx, key]
-                    best_params[key] = test_params[key]
+                test_params = self.temp_params.copy()
+                best_params = {}
+                for key in test_params:
+                    if key in df.columns:
+                        test_params[key] = df.loc[best_idx, key]
+                        best_params[key] = test_params[key]
 
-            best_score = float(df.loc[best_idx, 'mean_rmse'])
+                best_score = float(df.loc[best_idx, 'mean_rmse'])
 
-            mlflow.log_params(best_params)
-            mlflow.log_metric("best_rmse", best_score)
-            mlflow.set_tag("tunning_step", 'completed')
+                mlflow.log_params(best_params)
+                mlflow.log_metric("best_rmse", best_score)
+                mlflow.set_tag("tunning_step", 'completed')
 
-            test_params['bcv_rmse'] = best_score
-            test_params.pop('X_train')
-            test_params.pop('y_train')  
+                test_params['bcv_rmse'] = best_score
+                test_params.pop('X_train')
+                test_params.pop('y_train')  
+                test_params.pop('mask')
 
-            df.to_parquet(ckpt_dir, index=False)
-            with open(ckpt_params, 'wb') as f:
-                pickle.dump(test_params, f)            
-            return test_params 
+                df.to_parquet(ckpt_dir, index=False)
+                with open(ckpt_params, 'wb') as f:
+                    pickle.dump(test_params, f)            
+                return test_params 
+            
+        except Exception as e:
+            mlflow.end_run(status="FAILED")
+            raise 

@@ -1,0 +1,166 @@
+from skopt.space import Integer, Real
+from slim_gsgp_lib_np.datasets.synthetic_datasets import (
+    load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
+    load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
+)
+from slim_gsgp_lib_np.datasets.data_loader import ( 
+    load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,
+    load_istanbul, load_ld50, load_bioav, load_parkinson_updrs, load_ppb, load_resid_build_sale_price,
+)
+
+# --------------------------- # 
+#    General Configuration    #
+# --------------------------- #
+
+datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
+
+N_SPLITS = 4                
+N_CV = 4      
+
+N_SEARCHES_HYPER_GP = 20     
+N_RANDOM_STARTS_GP = 10  
+
+N_SEARCHES_HYPER_MULTI = 15
+N_RANDOM_STARTS_MULTI = 8
+
+NOISE_SKOPT = 1e-3
+N_TESTS = 15              
+P_TEST = 0.2 
+SEED = 0
+N_TIME_BINS = 300
+SUFFIX_SAVE = '1'
+PREFIX_SAVE = 'GP'  
+EXPERIMENT_NAME = 'GP_Experiment'
+TEST_DIR = 'test'
+TUNE_DIR = 'train'
+
+DATA_DIR = 'data'
+REPO_URL = 'git@github.com:amarmate/data_transfer.git'
+AUTO_COMMIT_INTERVAL = 1 * 3600 # 1 hour 
+
+
+# ------------------------------ # 
+#  GP Experiment Configuration   # 
+# ------------------------------ # 
+
+SELECTORS_GP = ['dalex_fast_rand']
+FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
+STOP_THRESHOLD_GP = 0.2
+PI_GP = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
+PROB_TERMINAL_GP = 0.7
+PROB_CONST_GP = 0.2
+INIT_DEPTH_GP = 2
+
+SPACE_PARAMETERS_GP = [
+    Integer(5, 8, name='max_depth_gp'),                    
+    Integer(0, 2, name='pop_iter_setting_gp', prior='uniform'),                                                                    
+    Real(4, 60, name='particularity_pressure_gp', prior='log-uniform'),
+    Real(0.5, 0.9, name='p_xo_gp'),    
+]
+
+gp_params = { 
+    "test_elite_gp": False,
+    "dataset_name_gp": "test",
+    "init_depth_gp": INIT_DEPTH_GP,
+    "prob_const_gp": PROB_CONST_GP,
+    "prob_terminal_gp": PROB_TERMINAL_GP,
+    "tree_functions_gp": FUNCTIONS_GP,
+    "log_level_gp": 0,
+    "it_tolerance_gp": STOP_THRESHOLD_GP,
+    "down_sampling_gp": 1,
+    "full_return_gp": True,
+    "verbose_gp": False,
+}
+
+# ------------------------------ # 
+# MULTI Experiment Configuration # 
+# ------------------------------ # 
+
+SELECTORS_MULTI = ['dalex']
+FUNCTIONS_MULTI = ['add', 'multiply', 'subtract', 'AQ']
+STOP_THRESHOLD_MULTI = 0.2
+PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
+PROB_TERMINAL_MULTI = 0.7
+PROB_CONST_MULTI = 0.2
+INIT_DEPTH_MULTI = 2
+
+SPACE_PARAMETERS_MULTI = [
+    Integer(3, 5, name='max_depth'),                    
+    Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
+    Real(4, 60, name='particularity_pressure', prior='log-uniform'),
+    Real(0.5, 0.9, name='p_xo'),    
+]
+
+MULTI_MAX_DEPTH = 4
+MULTI_N_ITER = 2000
+MULTI_PP = 20
+MULTI_XO = 0.7
+
+multi_params = {
+    "test_elite": False,
+    "dataset_name": "test",
+    "init_depth": INIT_DEPTH_MULTI,
+    "prob_const": PROB_CONST_MULTI,
+    "prob_terminal": PROB_TERMINAL_MULTI,
+    "tree_functions": FUNCTIONS_MULTI,
+    "log_level": 0,
+    "it_tolerance": STOP_THRESHOLD_MULTI,
+    "down_sampling": 1,
+    "full_return": True,
+    "verbose": False,
+
+    "max_depth": MULTI_MAX_DEPTH,
+    "n_iter": MULTI_N_ITER,
+    "particularity_pressure": MULTI_PP,
+    "p_xo": MULTI_XO, 
+}
+
+multi_params.update(gp_params)
+
+# --------------------------- #
+#    Save Configuration       #
+# --------------------------- #
+
+
+
+config = {
+    'N_SPLITS': N_SPLITS,
+    'N_CV': N_CV,
+
+    'N_SEARCHES_HYPER_GP': N_SEARCHES_HYPER_GP,
+    'N_RANDOM_STARTS_GP': N_RANDOM_STARTS_GP,
+    'N_SEARCHES_HYPER_MULTI': N_SEARCHES_HYPER_MULTI,
+    'N_RANDOM_STARTS_MULTI': N_RANDOM_STARTS_MULTI,
+
+    'NOISE_SKOPT': NOISE_SKOPT,
+    'N_TESTS': N_TESTS,
+    'P_TEST': P_TEST,
+    'SEED': SEED,
+    'N_TIME_BINS': N_TIME_BINS,
+    'SUFFIX_SAVE': SUFFIX_SAVE,
+    'PREFIX_SAVE': PREFIX_SAVE,
+    'EXPERIMENT_NAME': EXPERIMENT_NAME,
+    'AUTO_COMMIT_INTERVAL': AUTO_COMMIT_INTERVAL,
+
+    'DATA_DIR': DATA_DIR,
+    'TEST_DIR': TEST_DIR,
+    'TUNE_DIR': TUNE_DIR,
+    'REPO_URL': REPO_URL,
+
+    'SELECTORS' : SELECTORS_GP,
+
+    'SELECTORS_GP': SELECTORS_GP,
+    'FUNCTIONS_GP': FUNCTIONS_GP,
+
+    'SELECTORS_MULTI': SELECTORS_MULTI,
+    'FUNCTIONS_MULTI': FUNCTIONS_MULTI,
+
+    'PI_MULTI': PI_MULTI,
+    'PI_GP': PI_GP,
+    'datasets' : datasets,
+
+    'SPACE_GP': SPACE_PARAMETERS_GP,
+    'SPACE_MULTI': SPACE_PARAMETERS_MULTI,
+
+    'gen_params' : multi_params,
+}
