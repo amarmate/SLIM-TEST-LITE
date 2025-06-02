@@ -43,7 +43,7 @@ def run_gp(args):
     mlflow.set_tracking_uri("file:../data/mlruns")
 
     commit_thread = threading.Thread(
-        target=periodic_commit, args=(config), daemon=True
+        target=periodic_commit, args=(config,), daemon=True
     )
     commit_thread.start()
 

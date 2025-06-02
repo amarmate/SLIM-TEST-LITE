@@ -16,7 +16,7 @@ datasets = {name.split('load_')[1] : loader for name, loader in globals().items(
 
 N_SPLITS = 4                
 N_CV = 4                  
-N_SEARCHES_HYPER = 15     
+N_SEARCHES_HYPER = 20     
 N_RANDOM_STARTS = 10      
 NOISE_SKOPT = 1e-3
 N_TESTS = 15              

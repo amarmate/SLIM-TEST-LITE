@@ -53,5 +53,3 @@ def periodic_commit(config):
             print("Auto commit & push executed.")
         except Exception as e:
             print(f"Auto commit failed: {e}")
-
-
