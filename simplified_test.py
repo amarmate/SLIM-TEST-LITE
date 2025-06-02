@@ -6,10 +6,15 @@ from functions.experiments.github import init_or_update_repo
 from functions.experiments.mlflow import cleanup_running_runs
 
 if __name__ == "__main__":
-    args = parse_args(config)
+    try: 
+        args = parse_args(config)
 
-    init_or_update_repo(config)
+        init_or_update_repo(config)
 
-    cleanup_running_runs()
-    
-    run_gp(args)
+        cleanup_running_runs()
+        
+        run_gp(args)
+        
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        raise e
