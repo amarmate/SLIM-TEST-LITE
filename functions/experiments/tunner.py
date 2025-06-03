@@ -62,7 +62,8 @@ class Tuner:
             params.update(p)
             params['it_tolerance_gp'] = int(params['it_tolerance_gp'] * params['n_iter_gp'])
             params['it_tolerance'] =  int(params['it_tolerance'] * params['n_iter'])
-
+        
+        params.update(p)
         self.temp_params = params
 
         t0 = time.time()
@@ -86,20 +87,23 @@ class Tuner:
         }
 
         for key, value in stats.items(): 
-            mlflow.log_metric(key, value, step=self.calls_count)
+            if isinstance(value, list): 
+                value = ', '.join(map(str, value))
+            else: 
+                mlflow.log_metric(key, value, step=self.calls_count)
 
         self.trial_results.append(record)
         return mean_rmse
 
-    def tune(self, run=0):
+    def tune(self, run=None):
         """
         Perform hyperparameter tuning using Bayesian optimization with Gaussian processes.
         Returns:
             dict: Best hyperparameters found during tuning with the dataset information included.
         """
-
-        ckpt_dir = self.save_dir / f"checkpoint_tunning_split{self.split_id}_{self.suffix}.parquet"
-        ckpt_params = self.save_dir / f"checkpoint_params_split{self.split_id}_{self.suffix}.pkl"
+        add = f'_{run}' if run else ''
+        ckpt_dir = self.save_dir / f"checkpoint_tunning_split{self.split_id}_{self.suffix}{add}.parquet"
+        ckpt_params = self.save_dir / f"checkpoint_params_split{self.split_id}_{self.suffix}{add}.pkl"
 
         if ckpt_params.exists():
             print(f"Checkpoint already exists: {ckpt_params}")
@@ -108,7 +112,7 @@ class Tuner:
             return best_params
 
         try:
-            with mlflow.start_run(run_name=f"train"):
+            with mlflow.start_run(run_name=f"train{add}"):
                 res = gp_minimize(
                     func=self._wrapped_objective,
                     dimensions=self.space,

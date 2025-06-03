@@ -37,21 +37,26 @@ def get_tasks(args, config):
         cs, id = args.cs, args.ci
         tasks = tasks[cs * id: cs * (id + 1)]
         print(f"Running chunk {id} with {len(tasks)} tasks out of {total_tasks}")
+    
+    tasks_pending = []
 
     for task in tasks: 
         _, dataset_name, selector, split_id, task_name = task
 
+        # self.save_dir = config['TEST_DIR'] / self.name / self.selector
+        # ckpt_test = self.save_dir / f"checkpoint_testing_split{self.split_id}_{self.suffix}.parquet"
+
         directory = Path(config['TEST_DIR']) / dataset_name / selector / f"checkpoint_testing_split{split_id}_{config['SUFFIX_SAVE']}.parquet"
         if directory.exists():
             print(f"Task {task_name} already completed. Skipping...")
-            tasks.remove(task)
         else:
             print(f"Task {task_name} is pending.")
+            tasks_pending.append(task)
     
     os.chdir(previous_dir)
 
-    print(f"Total tasks: {len(tasks)} out of {total_tasks}")
-    tasks = [split_task(task, config) for task in tasks]
+    print(f"Total tasks: {len(tasks_pending)} out of {total_tasks}")
+    tasks = [split_task(task, config) for task in tasks_pending]
 
     return tasks 
 

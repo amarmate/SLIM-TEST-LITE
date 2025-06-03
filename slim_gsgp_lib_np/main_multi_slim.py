@@ -232,9 +232,9 @@ def multi_slim(
     multi_pi_init['SPECIALISTS'] = {f'S_{i}' : ind for i, ind in enumerate(population.population)}
 
     if ensemble_functions is not None:
-        multi_pi_init['FUNCTIONS'] = FUNCTIONS[ensemble_functions]
+        multi_pi_init["FUNCTIONS"] = {key: FUNCTIONS[key] for key in ensemble_functions}
     if ensemble_constants is not None:
-        multi_pi_init['CONSTANTS'] = CONSTANTS[ensemble_constants]
+        multi_pi_init['CONSTANTS'] = {key: CONSTANTS[key] for key in ensemble_constants}
 
     multi_pi_init['p_c'] = prob_const
     multi_pi_init['p_t'] = prob_terminal

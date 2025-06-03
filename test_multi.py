@@ -9,7 +9,7 @@ if __name__ == "__main__":
     try: 
         args = parse_args(config)
 
-        init_or_update_repo(config)
+        # init_or_update_repo(config)
 
         cleanup_running_runs()
         

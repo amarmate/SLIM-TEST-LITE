@@ -781,7 +781,6 @@ class PressureSampler:
 
 def dalex_fast_min(shape, 
                     n_cases=20,
-                    tournament_size=2,
                     **kwards):
     """
     Returns a function that performs a fast approxiamtion of DALex (Diversely Aggregated Lexicase Selection)
@@ -802,8 +801,6 @@ def dalex_fast_min(shape,
     
     def ds(pop):
         errors = pop.errors_case
-        num_total_cases = errors.shape[1]
-        # idx = random.sample(range(num_total_cases), n_cases)
         idx = sampler.sample(n_cases)
         score = errors[:, idx].sum(axis=1)
         best_indices = np.argsort(score)[:2]

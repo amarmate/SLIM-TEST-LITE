@@ -6,33 +6,41 @@ from functions.metrics_test import *
 from functions.experiments.GP.config_gp import *
 
 
-def multi_tune(params, split_id, n_splits=5):
-    mask = params.pop('mask')
+def multi_tune(gen_params, 
+               dataset, 
+               split_id, 
+               n_splits=5):
+    
+    mask = dataset.pop('mask')
+    params = gen_params.copy()
     new_dict = {}
     for key in list(params.keys()):
-        if 'gp' in key:
+        if 'gp' in key and key != 'gp_version':
             new_key = key.replace('_gp', '')
             new_dict[new_key] = params.pop(key)
     params['params_gp'] = new_dict
 
-    print(params)
-
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)
     rmses, nodes = [], []
-    for i, (tr, te) in enumerate(kf.split(params['X_train'])):
-        copy_params = params.copy()
-        X_tr, y_tr = params['X_train'][tr], params['y_train'][tr]
-        X_te, y_te = params['X_train'][te], params['y_train'][te]
-        copy_params['X_train'] = X_tr
-        copy_params['y_train'] = y_tr
+    for i, (tr, te) in enumerate(kf.split(dataset['X_train'])):
+        dataset_kf = dataset.copy()
+        X_tr, y_tr = dataset['X_train'][tr], dataset['y_train'][tr]
+        X_te, y_te = dataset['X_train'][te], dataset['y_train'][te]
+        dataset_kf['X_train'] = X_tr
+        dataset_kf['y_train'] = y_tr
+        mask_kf = [sbmask[tr] for sbmask in mask]
 
-        res = multi_slim(**copy_params, seed=split_id + i)
-        elite, pop = res.elite, res.population
+        res = multi_slim(
+            **params,
+            **dataset_kf, 
+            seed=split_id + i
+        )
+        elite, pop = res.elite, res.spec_pop
 
-        min_errs, sizes = [], [], []
+        min_errs, sizes = [], []
         total_sq_errs = 0
-        for submask in mask: 
-            errors_mask = pop.population.errors_case[:, submask]
+        for submask in mask_kf: 
+            errors_mask = pop.errors_case[:, submask]
             errors_ind = np.sqrt(np.mean(errors_mask**2, axis=1))
             best_ind = np.argmin(errors_ind)
             min_err = errors_ind[best_ind]
@@ -40,7 +48,7 @@ def multi_tune(params, split_id, n_splits=5):
             sizes.append(pop.population[best_ind].total_nodes)
             total_sq_errs += np.sum(errors_mask[best_ind] ** 2)
         
-        total_sq_errs = np.sqrt(total_sq_errs / mask.shape[1])
+        total_sq_errs = np.sqrt(total_sq_errs / len(mask_kf[0]))
 
         rmses.append(rmse(elite.predict(X_te), y_te))
         nodes.append(elite.total_nodes)
@@ -61,7 +69,7 @@ def config_1(config):
         'SPACE_PARAMETERS': config['SPACE_GP'],
         'N_SEARCHES_HYPER': config['N_SEARCHES_HYPER_GP'],
         'N_RANDOM_STARTS': config['N_RANDOM_STARTS_GP'],
-        'selector' : config['SELECTOR_GP'],
+        'selector' : config['SELECTOR_MULTI'],
         'PI' : config['PI_GP'],
     })
     return config 

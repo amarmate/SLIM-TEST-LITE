@@ -14,6 +14,7 @@ from slim_gsgp_lib_np.algorithms.GP.representations.tree import Tree as GPTree
 # MULTI SLIM
 from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree_utils import initializer
 from slim_gsgp_lib_np.evaluators.fitness_functions import *
+from slim_gsgp_lib_np.utils.utils import protected_div, protected_sqrt, AQ_np
 
 # --------------------------- FUNCTIONS AND CONSTANTS ---------------------------
 FUNCTIONS = {
@@ -24,7 +25,9 @@ FUNCTIONS = {
     'sqrt' : {'function': protected_sqrt, 'arity': 1},
     'cond' : {'function': lambda x, y, z: np.where(x > 0, y, z), 'arity': 3},
     'sq': {'function': lambda x: x**2, 'arity': 1},
+    'AQ' : {'function': AQ_np, 'arity': 2},
 }
+
 functions = ['add', 'subtract', 'multiply', 'divide', 'sqrt', 'sq']
 
 constants = [round(-1 + (2 * i) / (100 - 1), 2) for i in range(100) if np.abs(i) > 0.1]

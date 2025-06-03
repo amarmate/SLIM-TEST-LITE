@@ -8,7 +8,11 @@ from functions.utils_test import simplify_tuple_expression
 from functions.misc_functions import get_classification_summary
 
 
-def multi_test(best_params, split_id, seed):
+def multi_test(best_params, 
+               dataset, 
+               split_id, 
+               seed):
+    
     new_dict = {}
     for key in list(best_params.keys()):
         if 'gp' in key:
@@ -16,16 +20,15 @@ def multi_test(best_params, split_id, seed):
             new_dict[new_key] = best_params.pop(key)
     best_params['params_gp'] = new_dict
 
-    mask = best_params.pop('mask')
-
-    params = best_params.copy()
-    bcv_rmse = params.pop('bcv_rmse')
-    X_train, y_train = params['X_train'], params['y_train']
-    X_test, y_test = params['X_test'], params['y_test']
+    mask = dataset.pop('mask')
+    bcv_rmse = best_params.pop('bcv_rmse')
+    X_train, y_train = dataset['X_train'], dataset['y_train']
+    X_test, y_test = dataset['X_test'], dataset['y_test']
 
     t0 = time.time()
     res = multi_slim(
-        **params, 
+        **dataset,
+        **best_params, 
         seed=seed,
     )
     elapsed = time.time() - t0
@@ -60,7 +63,7 @@ def multi_test(best_params, split_id, seed):
     latex_repr       = simplify_tuple_expression(elite.repr_)
 
     records = { 
-        'dataset_name'          : params['dataset_name'],
+        'dataset_name'          : best_params['dataset_name'],
         'split_id'              : split_id,
         'trial_id'              : seed,
         'seed'                  : seed,

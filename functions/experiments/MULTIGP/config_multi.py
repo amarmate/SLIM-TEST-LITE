@@ -29,8 +29,8 @@ P_TEST = 0.2
 SEED = 0
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
-PREFIX_SAVE = 'GP'  
-EXPERIMENT_NAME = 'GP_Experiment'
+PREFIX_SAVE = 'MULTI'  
+EXPERIMENT_NAME = 'Multi_Experiment'
 TEST_DIR = 'test'
 TUNE_DIR = 'train'
 
@@ -43,9 +43,9 @@ AUTO_COMMIT_INTERVAL = 0.25 * 3600 # every 15 min
 #  GP Experiment Configuration   # 
 # ------------------------------ # 
 
-SELECTORS_GP = ['dalex_fast_rand']
+SELECTOR_GP = 'dalex_fast_rand'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD_GP = 0.2
+STOP_THRESHOLD_GP = 0.01 # 0.2 
 PI_GP = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 PROB_TERMINAL_GP = 0.7
 PROB_CONST_GP = 0.2
@@ -59,8 +59,6 @@ SPACE_PARAMETERS_GP = [
 ]
 
 gp_params = { 
-    "test_elite_gp": False,
-    "dataset_name_gp": "test",
     "init_depth_gp": INIT_DEPTH_GP,
     "prob_const_gp": PROB_CONST_GP,
     "prob_terminal_gp": PROB_TERMINAL_GP,
@@ -68,17 +66,16 @@ gp_params = {
     "log_level_gp": 0,
     "it_tolerance_gp": STOP_THRESHOLD_GP,
     "down_sampling_gp": 1,
-    "full_return_gp": True,
-    "verbose_gp": False,
+    "selector_gp" : SELECTOR_GP,
 }
 
 # ------------------------------ # 
 # MULTI Experiment Configuration # 
 # ------------------------------ # 
 
-SELECTORS_MULTI = ['dalex']
+SELECTOR_MULTI = 'dalex'
 FUNCTIONS_MULTI = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD_MULTI = 0.025  # CHANGE 
+STOP_THRESHOLD_MULTI = 0.01  # CHANGE 
 PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 PROB_TERMINAL_MULTI = 0.7
 PROB_CONST_MULTI = 0.2
@@ -109,6 +106,8 @@ multi_params = {
     "down_sampling"         : 1,
     "full_return"           : True,
     "verbose"               : False,
+    "gp_version"            : 'gp',
+    "selector"              : SELECTOR_MULTI,
 
     "max_depth"             : MULTI_MAX_DEPTH,
     "depth_condition"       : MULTI_DEPTH_CONDITION,
@@ -150,12 +149,11 @@ config = {
     'TUNE_DIR': TUNE_DIR,
     'REPO_URL': REPO_URL,
 
-    'SELECTORS' : SELECTORS_GP,
+    'SELECTOR_GP': SELECTOR_GP,
+    'SELECTOR_MULTI': SELECTOR_MULTI,
+    'SELECTORS' : [SELECTOR_MULTI], 
 
-    'SELECTOR_GP': SELECTORS_GP,
     'FUNCTIONS_GP': FUNCTIONS_GP,
-
-    'SELECTOR_MULTI': SELECTORS_MULTI,
     'FUNCTIONS_MULTI': FUNCTIONS_MULTI,
 
     'PI_MULTI': PI_MULTI,
