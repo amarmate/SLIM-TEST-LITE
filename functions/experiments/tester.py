@@ -68,8 +68,8 @@ class Tester:
                     records, pop_stats, logs = self.test_fn(
                         best_params = self.params, 
                         dataset = self.dataset, 
-                        split_it = self.split_id,
-                        seed= self.seed + test_n,
+                        split_id = self.split_id,
+                        seed = self.seed + test_n,
                     )
 
                     all_records.append(records)
