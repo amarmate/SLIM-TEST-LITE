@@ -20,15 +20,16 @@ def run_experiment(config, task):
 
     print(f"Running task: {EXPERIMENT_NAME} / {name} / selector {selector} / split {split_id}")
     config1 = config_1(config)
+
     tuner_step1 = Tuner(config=config1, 
                         objective_fn = multi_tune,
                         **task)
     bp1 = tuner_step1.tune(run='multi1') 
     print(f'Tunning step 1 completed for {EXPERIMENT_NAME} / {name} / selector {selector} / split {split_id}')
 
-
     print(f"Running step 2 for task: {EXPERIMENT_NAME} / {name} / selector {selector} / split {split_id}")
-    config2 = config_2(config, bp1)
+    config2, task = config_2(config, bp1, task)
+
     tuner_step2 = Tuner(config=config2, 
                         objective_fn = multi_tune,
                         **task)
@@ -60,5 +61,7 @@ def run_multi(args):
     )
     commit_thread.start()
     
-    with parallel_config(n_jobs=args.workers, prefer='processes', verbose=10):
+    with parallel_config(n_jobs=args.workers, prefer='processes',
+                         # verbose=10
+                         ):
         Parallel()(delayed(run_experiment)(config, task) for task in tasks)

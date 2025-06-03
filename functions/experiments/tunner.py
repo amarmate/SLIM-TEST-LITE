@@ -86,6 +86,9 @@ class Tuner:
             **stats,
         }
 
+        mlflow.log_metric("mean_rmse", mean_rmse, step=self.calls_count)
+        mlflow.log_metric("elapsed_sec", elapsed, step=self.calls_count)
+        
         for key, value in stats.items(): 
             if isinstance(value, list): 
                 value = ', '.join(map(str, value))
