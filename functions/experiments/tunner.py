@@ -142,7 +142,9 @@ class Tuner:
 
                 df.to_parquet(ckpt_dir, index=False)
                 with open(ckpt_params, 'wb') as f:
-                    pickle.dump(test_params, f)            
+                    pickle.dump(test_params, f) 
+                mlflow.end_run(status="FINISHED")  
+                
                 return test_params 
             
         except Exception as e:

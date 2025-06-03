@@ -89,10 +89,10 @@ class Tester:
                 df = pd.DataFrame(all_records)
                 best_idx = df['rmse_test'].idxmin()
                 best_latex = df.loc[best_idx, 'latex_repr']
-                log_latex_as_image(best_latex, self.name, self.split_id,
-                                prefix=self.config['PREFIX_SAVE'], 
-                                suffix=self.config['SUFFIX_SAVE'],
-                )
+                # log_latex_as_image(best_latex, self.name, self.split_id,
+                #                 prefix=self.config['PREFIX_SAVE'], 
+                #                 suffix=self.config['SUFFIX_SAVE'],
+                # )
 
                 pf = pf_rmse_comp_time(all_pop_stats)
                 mlflow.set_tag("testing_complete", True)
@@ -103,6 +103,7 @@ class Tester:
                     pickle.dump(pf, f)
                 with open(ckpt_logs, 'wb') as f:
                     pickle.dump(all_logs, f)
+                mlflow.end_run(status="FINISHED")
             return df, pf, all_logs
 
         except Exception:
