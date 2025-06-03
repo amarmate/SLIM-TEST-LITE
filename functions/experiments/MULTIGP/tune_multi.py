@@ -15,6 +15,8 @@ def multi_tune(params, split_id, n_splits=5):
             new_dict[new_key] = params.pop(key)
     params['params_gp'] = new_dict
 
+    print(params)
+
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)
     rmses, nodes = [], []
     for i, (tr, te) in enumerate(kf.split(params['X_train'])):

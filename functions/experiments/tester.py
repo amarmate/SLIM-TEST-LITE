@@ -11,22 +11,21 @@ from functions.utils_test import pf_rmse_comp_time, log_latex_as_image
 class Tester:
     def __init__(self, config, split_id, 
                  best_params, test_fn,
-                 gen_params, mask, **kwargs):
+                 dataset, **kwargs):
         """
         Initalize the Tester class for running tests on a dataset with given parameters.
         Args:
             config (dict): Experiment-Konfiguration (N_TESTS, DATA_DIR, TEST_DIR, SEED, ...)
-            name (str): Name des Datensatzes
             split_id (int)
             best_params (dict): Hyperparameter-Dict vom Tuner
             test_fn (callable): Funktion test_fn(params, data_split, seed, **kwargs)
                                 sie liefert (records_list, pop_stats_list, logs_list)
-            mask (list): boolean list of lists that indicates to which class the target belongs to. 
         """
 
         self.config = config
         self.split_id = split_id
         self.params = best_params.copy()
+        self.dataset = dataset.copy()
         self.test_fn = test_fn
 
         self.name = best_params['dataset_name']
@@ -38,14 +37,9 @@ class Tester:
 
         self.params.update(
             {
-             'X_train'      : gen_params['X_train'],
-             'y_train'      : gen_params['y_train'],
-             'X_test'       : gen_params['X_test'], 
-             'y_test'       : gen_params['y_test'],
              'test_elite'   : True, 
              'log_level'    : 'evaluate',
              'it_tolerance' : 1e10,  # Remove tolerance for testing 
-             'mask'         : mask
             }
         )
 
@@ -72,8 +66,10 @@ class Tester:
                     mlflow.set_tag("testing_step", test_n+1)
 
                     records, pop_stats, logs = self.test_fn(
-                        self.params, self.split_id,
-                        seed=self.seed + test_n,
+                        best_params = self.params, 
+                        dataset = self.dataset, 
+                        split_it = self.split_id,
+                        seed= self.seed + test_n,
                     )
 
                     all_records.append(records)
@@ -88,7 +84,7 @@ class Tester:
 
                 df = pd.DataFrame(all_records)
                 best_idx = df['rmse_test'].idxmin()
-                best_latex = df.loc[best_idx, 'latex_repr']
+                # best_latex = df.loc[best_idx, 'latex_repr']
                 # log_latex_as_image(best_latex, self.name, self.split_id,
                 #                 prefix=self.config['PREFIX_SAVE'], 
                 #                 suffix=self.config['SUFFIX_SAVE'],

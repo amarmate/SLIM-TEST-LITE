@@ -7,16 +7,21 @@ from functions.experiments.GP.config_gp import *
 from functions.utils_test import simplify_tuple_expression
 
 
-def gp_test(best_params, split_id, seed):
-    best_params.pop('mask')
+def gp_test(best_params, 
+            dataset, 
+            split_id, 
+            seed):
+    
+    dataset.pop('mask', None) 
     params = best_params.copy()
     bcv_rmse = params.pop('bcv_rmse')
-    X_train, y_train = params['X_train'], params['y_train']
-    X_test, y_test = params['X_test'], params['y_test']
+    X_train, y_train = dataset['X_train'], dataset['y_train']
+    X_test, y_test = dataset['X_test'], dataset['y_test']
 
     t0 = time.time()
     res = gp(
         **params, 
+        **dataset,
         seed=seed,
     )
     elapsed = time.time() - t0

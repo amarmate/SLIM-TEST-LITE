@@ -12,8 +12,8 @@ def get_tasks(args, config):
     Returns:
         list: A list of tasks to be executed, where each task is a dictionnary containing:
             - gen_params: A dictionary with parameters for the genetic algorithm.
+            - dataset: A dictionary containing the training and testing datasets.
             - split_id: The split identifier for the task.
-            - mask: The mask for the task, if applicable.
     """
 
 
@@ -85,19 +85,22 @@ def split_task(task, config):
         mask = [sbmask[idx_train] for sbmask in dataset[3]]
 
     update_dict = { 
-        'X_train': X_train,
-        'y_train': y_train,
-        'X_test': X_test,
-        'y_test': y_test,
         'dataset_name': name,
         'selector': selector,
     }
     
     gen_params = config['gen_params'].copy()
     gen_params.update(update_dict)
+    dataset = {
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_test': X_test,
+        'y_test': y_test,
+        'mask': mask
+    }
 
     return {
         'gen_params': gen_params,
+        'dataset': dataset,
         'split_id': split_id,
-        'mask': mask
     }

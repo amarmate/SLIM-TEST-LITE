@@ -188,19 +188,25 @@ def multi_slim(
 
     # Calling the SLIM-GSGP algorithm 
     if population is None:
+        if type(params_gp) != dict: 
+            try: 
+                params_gp = params_gp.__dict__
+            except: 
+                print('Error: Params gp must be a dataclass or a dictionnary')
+
         if gp_version == "gp": 
             optimizer = gp(
                 X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
                 full_return=True, seed=seed, verbose=verbose, log_path=log_path, 
                 run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
-                **params_gp.__dict__)
+                **params_gp)
         else:
             optimizer = slim(
                 X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
                 full_return=True, seed=seed, verbose=verbose, slim_version=gp_version,
                 run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
                 log_path=log_path,
-                **params_gp.__dict__)
+                **params_gp)
         population, elite = optimizer.population, optimizer.elite
         population.population.sort(key=lambda x: x.fitness, reverse=not minimization)
     else: 

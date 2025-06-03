@@ -179,10 +179,6 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
 
     assert 0 <= p_xo <= 1, "p_xo must be a number between 0 and 1"
 
-    if test_elite and (X_test is None or y_test is None):
-        warnings.warn("If test_elite is True, a test dataset must be provided. test_elite has been set to False")
-        test_elite = False
-
     if not (isinstance(max_depth, int) or isinstance(max_depth, np.integer)) and max_depth is not None:
         raise TypeError("max_depth value must be a int or None")
 

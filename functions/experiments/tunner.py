@@ -9,8 +9,8 @@ from functions.metrics_test import *
 
 class Tuner:
     def __init__(self, config, split_id,
-                 gen_params, objective_fn,
-                 mask):
+                 gen_params, dataset,
+                 objective_fn):
         """
         Initialize the Tuner with configuration and parameters.
         
@@ -23,7 +23,9 @@ class Tuner:
         
         self.split_id = split_id
         self.gen_params = gen_params.copy()
+        self.dataset = dataset.copy()
         self.objective_fn = objective_fn
+
         self.space = config['SPACE_PARAMETERS']
         self.n_calls = config['N_SEARCHES_HYPER']
         self.n_start = config['N_RANDOM_STARTS']
@@ -34,15 +36,11 @@ class Tuner:
         self.selector = gen_params['selector']
         self.PI = config['PI']
         self.suffix = config['SUFFIX_SAVE'] 
-        self.mask = mask 
         self.multi = config['multi_run']
 
         self.calls_count = 0
         self.trial_results = []
         self.param_names = [dim.name for dim in self.space]
-
-        self.gen_params.pop('X_test', None)
-        self.gen_params.pop('y_test', None)
 
         self.save_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME'] / config['TUNE_DIR'] / self.name / self.selector
         self.save_dir.mkdir(parents=True, exist_ok=True)
@@ -65,11 +63,13 @@ class Tuner:
             params['it_tolerance_gp'] = int(params['it_tolerance_gp'] * params['n_iter_gp'])
             params['it_tolerance'] =  int(params['it_tolerance'] * params['n_iter'])
 
-        params['mask'] = self.mask
         self.temp_params = params
 
         t0 = time.time()
-        mean_rmse, stats = self.objective_fn(params, self.split_id, n_splits=self.n_folds)
+        mean_rmse, stats = self.objective_fn(gen_params  = params, 
+                                             dataset     = self.dataset,
+                                             split_id    = self.split_id, 
+                                             n_splits    = self.n_folds)
         elapsed = time.time() - t0
 
         self.calls_count += 1
@@ -91,7 +91,7 @@ class Tuner:
         self.trial_results.append(record)
         return mean_rmse
 
-    def tune(self):
+    def tune(self, run=0):
         """
         Perform hyperparameter tuning using Bayesian optimization with Gaussian processes.
         Returns:
@@ -136,15 +136,12 @@ class Tuner:
                 mlflow.set_tag("tunning_step", 'completed')
 
                 test_params['bcv_rmse'] = best_score
-                test_params.pop('X_train')
-                test_params.pop('y_train')  
-                test_params.pop('mask')
 
                 df.to_parquet(ckpt_dir, index=False)
                 with open(ckpt_params, 'wb') as f:
                     pickle.dump(test_params, f) 
                 mlflow.end_run(status="FINISHED")  
-                
+
                 return test_params 
             
         except Exception as e:

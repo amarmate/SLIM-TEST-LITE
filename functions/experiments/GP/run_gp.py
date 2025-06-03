@@ -20,8 +20,8 @@ def run_experiment(config, task):
     mlflow.set_experiment(f"{name}_{selector}_split{split_id}")
 
     tuner = Tuner(config=config, 
-                objective_fn = gp_tune,
-                **task)
+                  objective_fn = gp_tune,
+                  **task)
     params = tuner.tune()    
 
     print(f'Tunning completed for {name} / selector {selector} / split {split_id}')
