@@ -41,6 +41,7 @@ class Tuner:
         self.calls_count = 0
         self.trial_results = []
         self.param_names = [dim.name for dim in self.space]
+        self.run = None 
 
         self.save_dir = Path("..") / config['DATA_DIR'] / config['EXPERIMENT_NAME'] / config['TUNE_DIR'] / self.name / self.selector
         self.save_dir.mkdir(parents=True, exist_ok=True)
@@ -65,7 +66,8 @@ class Tuner:
             gen_params  = base_params,
             dataset     = self.dataset,
             split_id    = self.split_id,
-            n_splits    = self.n_folds
+            n_splits    = self.n_folds,
+            run         = self.run, 
         )
         elapsed = time.time() - t0
 
@@ -100,6 +102,7 @@ class Tuner:
         Returns:
             dict: Best hyperparameters found during tuning with the dataset information included.
         """
+        self.run = run 
         add = f'_{run}' if run else ''
         ckpt_dir = self.save_dir / f"checkpoint_tunning_split{self.split_id}_{self.suffix}{add}.parquet"
         ckpt_params = self.save_dir / f"checkpoint_params_split{self.split_id}_{self.suffix}{add}.pkl"

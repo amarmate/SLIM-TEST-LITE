@@ -185,8 +185,9 @@ def multi_slim(
     if dataset_name is None:
         warnings.warn("No dataset name set. Using default value of dataset_1.")
         dataset_name = "dataset"
-
+    
     # Calling the SLIM-GSGP algorithm 
+    log_spec = None 
     if population is None:
         if type(params_gp) != dict: 
             try: 
@@ -198,16 +199,17 @@ def multi_slim(
             optimizer = gp(
                 X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
                 full_return=True, seed=seed, verbose=verbose, log_path=log_path, 
-                run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
-                **params_gp)
+                run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,**params_gp)
         else:
             optimizer = slim(
                 X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, dataset_name=dataset_name, test_elite=test_elite,
                 full_return=True, seed=seed, verbose=verbose, slim_version=gp_version,
                 run_info=[ALGORITHM, gp_version, UNIQUE_RUN_ID, dataset_name], minimization=minimization,
-                log_path=log_path,
-                **params_gp)
+                log_path=log_path,**params_gp)
+            
         population, elite = optimizer.population, optimizer.elite
+        if params_gp['log_level'] == 'evaluate':
+            log_spec = optimizer.log 
         population.population.sort(key=lambda x: x.fitness, reverse=not minimization)
     else: 
         elite = population[0]
@@ -312,6 +314,7 @@ def multi_slim(
     # optimizer.elite.iteration = optimizer.iteration
     # optimizer.elite.early_stop = optimizer.stop_training
     optimizer.spec_pop = population
+    optimizer.spec_pop_log = log_spec if log_spec is not None else None
     if full_return: 
         return optimizer
     

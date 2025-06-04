@@ -9,7 +9,8 @@ from functions.experiments.GP.config_gp import *
 def gp_tune(gen_params, 
             dataset,
             split_id, 
-            n_splits=5):
+            n_splits=5,
+            **kwargs):
     
     dataset.pop('mask')
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)

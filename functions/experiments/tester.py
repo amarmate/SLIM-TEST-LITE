@@ -39,7 +39,8 @@ class Tester:
             {
              'test_elite'   : True, 
              'log_level'    : 'evaluate',
-             'it_tolerance' : 1e10,  # Remove tolerance for testing 
+             'log_level_gp' : 'evaluate',
+             'it_tolerance' : 1e10,  
             }
         )
 
@@ -83,7 +84,7 @@ class Tester:
                             mlflow.log_metric(f"testing_{metric}", val, step=step)
 
                 df = pd.DataFrame(all_records)
-                best_idx = df['rmse_test'].idxmin()
+                # best_idx = df['rmse_test'].idxmin()
                 # best_latex = df.loc[best_idx, 'latex_repr']
                 # log_latex_as_image(best_latex, self.name, self.split_id,
                 #                 prefix=self.config['PREFIX_SAVE'], 

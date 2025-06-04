@@ -15,7 +15,7 @@ def multi_test(best_params,
     
     new_dict = {}
     for key in list(best_params.keys()):
-        if 'gp' in key:
+        if '_gp' in key:
             new_key = key.replace('_gp', '')
             new_dict[new_key] = best_params.pop(key)
     best_params['params_gp'] = new_dict

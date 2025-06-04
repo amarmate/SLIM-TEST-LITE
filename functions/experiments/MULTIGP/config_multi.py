@@ -1,7 +1,6 @@
 from skopt.space import Integer, Real
 from slim_gsgp_lib_np.datasets.synthetic_datasets import (
-    # load_synthetic1, 
-    load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
+    load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
     load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
 )
 from slim_gsgp_lib_np.datasets.data_loader import ( 
@@ -16,7 +15,7 @@ from slim_gsgp_lib_np.datasets.data_loader import (
 datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
 
 N_SPLITS = 4                
-N_CV = 2                     # 4      
+N_CV = 4                     # 4      
 
 N_SEARCHES_HYPER_GP = 5      # 20 
 N_RANDOM_STARTS_GP = 2       # 10
@@ -46,7 +45,7 @@ AUTO_COMMIT_INTERVAL = 0.25 * 3600 # every 15 min
 
 SELECTOR_GP = 'dalex_fast_rand'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD_GP = 0.01 # 0.2 
+STOP_THRESHOLD_GP = 0.05 # 0.2 
 PI_GP = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 PROB_TERMINAL_GP = 0.7
 PROB_CONST_GP = 0.2

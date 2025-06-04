@@ -133,6 +133,16 @@ class MULTI_SLIM:
         random.seed(self.seed)
         np.random.seed(self.seed)
 
+        if log_level == "evaluate":
+            self.log = {
+                "generation": [],
+                "time": [],
+                "train_rmse": [],
+                "val_rmse": [],
+                "nodes_count": [],
+                "diversity_var": [],
+            }
+
         # Check if test data is provided when test_elite is True.
         if test_elite and (X_test is None or y_test is None):
             raise Exception('If test_elite is True you need to provide a test dataset')
@@ -246,7 +256,7 @@ class MULTI_SLIM:
 
             # Display and log results
             self.print_results(it, start, end) if verbose > 0 else None
-            self.log_results(it, start, end)
+            self.log_results(it, self.population, end - start)
 
             # Run callbacks
             for callback in self.callbacks:
@@ -319,16 +329,26 @@ class MULTI_SLIM:
                 col_width=14
         )
 
-    def log_results(self, 
-                    iteration, 
-                    start_time, 
-                    end_time):
+    def log_results(self, generation, elapsed_time):
+        if self.log_level == "evaluate":
+            train_rmse    = float(self.elite.fitness)
+            val_rmse      = float(self.elite.test_fitness)
+            nodes_count   = int(self.elite.nodes_count)
+            diversity_var = float(np.std(self.population.fit))
+
+            self.log["generation"].append(generation)
+            self.log["time"].append(elapsed_time + self.log["time"][-1] if self.log["time"] else elapsed_time)
+            self.log["train_rmse"].append(train_rmse)
+            self.log["val_rmse"].append(val_rmse)
+            self.log["nodes_count"].append(nodes_count)
+            self.log["diversity_var"].append(diversity_var)
+            return
         
         if self.log_level == 0:
             return
                 
         if self.log_level in [2, 4]:
-            gen_diversity = self.calculate_diversity(iteration)
+            gen_diversity = self.calculate_diversity(generation)
 
         if self.log_level == 2:
             add_info = [
@@ -360,9 +380,9 @@ class MULTI_SLIM:
 
         logger(
             self.log_path,
-            iteration,
+            generation,
             self.elite.fitness,
-            end_time - start_time,
+            elapsed_time,
             float(self.population.nodes_count),
             additional_infos=add_info,
             run_info=self.run_info,
