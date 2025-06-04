@@ -103,7 +103,7 @@ config = {
     'SELECTORS': SELECTORS,
     'FUNCTIONS': FUNCTIONS,
     'STOP_THRESHOLD': STOP_THRESHOLD,
-    'PI': PI,
+    'PI': [PI],
     'datasets' : datasets,
 
     'SPACE_PARAMETERS': SPACE_PARAMETERS,

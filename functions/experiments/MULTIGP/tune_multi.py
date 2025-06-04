@@ -92,7 +92,6 @@ def config_1(config):
         'N_SEARCHES_HYPER': config['N_SEARCHES_HYPER_GP'],
         'N_RANDOM_STARTS': config['N_RANDOM_STARTS_GP'],
         'selector' : config['SELECTOR_MULTI'],
-        'PI' : config['PI_GP'],
     })
     return config 
 
@@ -102,7 +101,6 @@ def config_2(config, bp_1, task):
         'N_SEARCHES_HYPER': config['N_SEARCHES_HYPER_MULTI'],
         'N_RANDOM_STARTS': config['N_RANDOM_STARTS_MULTI'],
         'selector' : config['SELECTOR_MULTI'],
-        'PI' : config['PI_MULTI'],
     })
     config.update(bp_1)
     task['gen_params'].update(bp_1)

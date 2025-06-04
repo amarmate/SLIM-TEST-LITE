@@ -1,6 +1,7 @@
 from skopt.space import Integer, Real
 from slim_gsgp_lib_np.datasets.synthetic_datasets import (
-    load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
+    # load_synthetic1, 
+    load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
     load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
 )
 from slim_gsgp_lib_np.datasets.data_loader import ( 
@@ -15,13 +16,13 @@ from slim_gsgp_lib_np.datasets.data_loader import (
 datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
 
 N_SPLITS = 4                
-N_CV = 4      
+N_CV = 2                     # 4      
 
 N_SEARCHES_HYPER_GP = 5      # 20 
 N_RANDOM_STARTS_GP = 2       # 10
 
-N_SEARCHES_HYPER_MULTI = 5  # 20
-N_RANDOM_STARTS_MULTI = 2   # 10
+N_SEARCHES_HYPER_MULTI = 5   # 20
+N_RANDOM_STARTS_MULTI = 2    # 10
 
 NOISE_SKOPT = 1e-3
 N_TESTS = 15              
@@ -155,9 +156,8 @@ config = {
 
     'FUNCTIONS_GP': FUNCTIONS_GP,
     'FUNCTIONS_MULTI': FUNCTIONS_MULTI,
-
-    'PI_MULTI': PI_MULTI,
-    'PI_GP': PI_GP,
+        
+    'PI' : [PI_MULTI, PI_GP],
     'datasets' : datasets,
 
     'SPACE_GP': SPACE_PARAMETERS_GP,

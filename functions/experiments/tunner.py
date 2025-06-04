@@ -47,52 +47,48 @@ class Tuner:
 
     def _wrapped_objective(self, params):
         p = dict(zip(self.param_names, params))
-        params = self.gen_params.copy()
-        params['log_level'] = 0
 
-        if 'pop_iter_setting' in p:
-            pis = int(p.pop('pop_iter_setting'))
-            p['n_iter'], p['pop_size'] = self.PI[pis]
-            params.update(p)
-            params['it_tolerance'] = int(params['it_tolerance'] * params['n_iter'])
+        base_params = self.gen_params.copy()
+        base_params['log_level'] = 0
 
-        if 'pop_iter_setting_gp' in p: 
-            pis = int(p.pop('pop_iter_setting_gp'))
-            p['n_iter_gp'], p['pop_size_gp'] = self.PI[pis]
-            params.update(p)
-            params['it_tolerance_gp'] = int(params['it_tolerance_gp'] * params['n_iter_gp'])
-            params['it_tolerance'] =  int(params['it_tolerance'] * params['n_iter'])
-        
-        params.update(p)
-        self.temp_params = params
+        for s in SETTINGS:
+            if s['key'] in p:
+                pi_choice = int(p.pop(s['key']))
+                iterations, population = self.PI[s['pi_selection']][pi_choice]
+                p[s['iter_key']], p[s['pop_key']] = iterations, population
+                
+        base_params.update(p)
+        self.temp_params = base_params.copy()
 
         t0 = time.time()
-        mean_rmse, stats = self.objective_fn(gen_params  = params, 
-                                             dataset     = self.dataset,
-                                             split_id    = self.split_id, 
-                                             n_splits    = self.n_folds)
+        mean_rmse, stats = self.objective_fn(
+            gen_params  = base_params,
+            dataset     = self.dataset,
+            split_id    = self.split_id,
+            n_splits    = self.n_folds
+        )
         elapsed = time.time() - t0
 
         self.calls_count += 1
         mlflow.set_tag("tuning_step", self.calls_count)
 
         record = {
-            'trial_id': self.calls_count,
-            'split_id': self.split_id,
-            'seed': self.seed,
-            **{k: params[k] for k in p.keys()},
-            'mean_rmse': mean_rmse,
-            'elapsed_sec': elapsed,
-            **stats,
+            'trial_id'      : self.calls_count,
+            'split_id'      : self.split_id,
+            'seed'          : self.seed,
+            'mean_rmse'     : mean_rmse,
+            'elapsed_sec'   : elapsed,
+
+            **{k: base_params[k] for k in p.keys()},
+            **stats
         }
 
-        mlflow.log_metric("mean_rmse", mean_rmse, step=self.calls_count)
+        mlflow.log_metric("test_rmse", mean_rmse, step=self.calls_count)
         mlflow.log_metric("elapsed_sec", elapsed, step=self.calls_count)
-        
-        for key, value in stats.items(): 
-            if isinstance(value, list): 
+        for key, value in stats.items():
+            if isinstance(value, list):
                 value = ', '.join(map(str, value))
-            else: 
+            else:
                 mlflow.log_metric(key, value, step=self.calls_count)
 
         self.trial_results.append(record)
@@ -154,3 +150,20 @@ class Tuner:
         except Exception as e:
             mlflow.end_run(status="FAILED")
             raise 
+
+
+# ----------------------------------------------------- settings ----------------------------------------------------- #
+SETTINGS = [
+    {
+        'key': 'pop_iter_setting',
+        'iter_key': 'n_iter',
+        'pop_key': 'pop_size',
+        'pi_selection': 0
+    },
+    {
+        'key': 'pop_iter_setting_gp',
+        'iter_key': 'n_iter_gp',
+        'pop_key': 'pop_size_gp',
+        'pi_selection': 1
+    }
+]

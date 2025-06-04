@@ -84,7 +84,7 @@ def multi_slim(
         timeout: int = 100,
         full_return: bool = False,
         elite_tree: Tree = None,
-        it_tolerance: int = 500, 
+        it_tolerance: int = 1, 
 ):
     
     """
@@ -170,7 +170,7 @@ def multi_slim(
         If True, return all internal state (e.g., full population, logs); otherwise only final solution.
     elite_tree : Tree, optional
         Predefined tree to start as the elite individual. Default is None.
-    it_tollerance : int, optional
+    it_tolerance : int, optional
         Number of iterations to wait before stopping the algorithm if no improvement is found.  
 
     Returns
@@ -287,7 +287,7 @@ def multi_slim(
     multi_solve_params['n_elites'] = n_elites
     multi_solve_params['elitism'] = True if n_elites > 0 else False
     multi_solve_params['timeout'] = timeout
-    multi_solve_params['it_tolerance'] = it_tolerance
+    multi_solve_params['it_tolerance'] = it_tolerance * n_iter
 
     # --------------- Run the MULTI_SLIM algorithm --------------------
     optimizer = MULTI_SLIM(pi_init=multi_pi_init, **multi_params)

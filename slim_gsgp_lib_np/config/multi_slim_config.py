@@ -149,6 +149,7 @@ class GPParameters:
     dalex_size_prob: float = 0.5,
     elite_tree: list = None
     log_level: int = 0
+    it_tolerance: float = 1
 
 # ---------------------------- MULTI SLIM SOLVE parameters ----------------------------
 multi_solve_params = {
