@@ -82,7 +82,7 @@ class Tuner:
             'elapsed_sec'   : elapsed,
 
             **{k: base_params[k] for k in p.keys()},
-            **stats
+            **stats,
             **stats2
         }
 

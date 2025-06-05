@@ -7,6 +7,8 @@ from functions.experiments.GP.config_gp import *
 from functions.utils_test import simplify_tuple_expression_multi
 from functions.misc_functions import get_classification_summary
 
+from slim_gsgp_lib_np.utils.callbacks import LogSpecialist
+
 
 def multi_test(best_params, 
                dataset, 
@@ -29,6 +31,9 @@ def multi_test(best_params,
     X_train, y_train = dataset['X_train'], dataset['y_train']
     X_test, y_test = dataset['X_test'], dataset['y_test']
 
+    l_spec = LogSpecialist(X_train, y_train, mask)
+    params['params_gp']['callbacks'] = [l_spec]  
+
     t0 = time.time()
     res = multi_slim(
         **dataset,
@@ -39,7 +44,10 @@ def multi_test(best_params,
 
     elite, pop, log = res.elite, res.population, res.log 
     spec_pop = res.spec_pop
+    spec_pop_log = l_spec.get_log_dict()
     pop_stats = [(rmse(ind.predict(X_test), y_test), ind.total_nodes, elapsed) for ind in pop]
+
+    print(spec_pop_log)
 
     min_errs, sizes = [], []
     total_sq_errs = 0
@@ -90,4 +98,4 @@ def multi_test(best_params,
     }
 
 
-    return records, pop_stats, log
+    return records, pop_stats, [log, spec_pop_log]

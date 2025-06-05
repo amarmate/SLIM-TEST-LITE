@@ -105,7 +105,7 @@ multi_params = {
     "it_tolerance"          : STOP_THRESHOLD_MULTI,
     "down_sampling"         : 1,
     "full_return"           : True,
-    "verbose"               : True,
+    "verbose"               : False,
     "gp_version"            : 'gp',
     "selector"              : SELECTOR_MULTI,
 

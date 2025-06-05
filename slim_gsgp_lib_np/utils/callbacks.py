@@ -266,7 +266,6 @@ class LogSpecialist(SLIM_GSGP_Callback):
         self.masks = masks
 
         self.log_rmse, self.log_size, self.log_rmse_out, self.log_best_ensemble = [], [], [], []  
-        self.count_specialists = [] 
 
     def on_generation_start(self, optimizer, generation):
         min_errs, best_inds, sizes, errs_out = [], [], [], []
@@ -278,7 +277,7 @@ class LogSpecialist(SLIM_GSGP_Callback):
             best_ind = np.argmin(errors_ind)
             min_err = errors_ind[best_ind]
             errors_out = optimizer.population.errors_case[best_ind, ~mask]
-            min_err_out = np.sqrt(np.mean(errors_out**2))
+            min_err_out = np.sqrt(np.mean(errors_out**2)) if np.sum(~mask) > 0 else 0
 
             min_errs.append(min_err)
             best_inds.append(optimizer.population.population[best_ind])
@@ -289,7 +288,17 @@ class LogSpecialist(SLIM_GSGP_Callback):
         self.log_rmse.append(min_errs)
         self.log_size.append(sizes)
         self.log_rmse_out.append(errs_out)
-        self.log_best_ensemble.append(np.sqrt(total_sq_errs / self.masks.shape[1]))
+        self.log_best_ensemble.append(np.sqrt(total_sq_errs / len(self.masks[0])))
+
+    def get_log_dict(self): 
+        G = len(self.log_rmse)
+        return { 
+            'generation': list(range(G)),
+            'specialist_rmse': np.array(self.log_rmse),
+            'specialist_size': np.array(self.log_size),
+            'specialist_rmse_out': np.array(self.log_rmse_out),
+            'best_ensemble_rmse': np.array(self.log_best_ensemble),
+        }
 
     def plot_specialist_fitnesses(self, best_ensemble=False):
         fig, axs = plt.subplots(1, 2, figsize=(20, 6))
