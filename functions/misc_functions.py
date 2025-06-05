@@ -122,7 +122,6 @@ def get_specialist_masks(tree_node, X_data, current_mask=None, indices=True):
 
 def get_classification_summary(tree_node, X_data, mask):
     spec_masks = get_specialist_masks(tree_node, X_data, indices=True)
-    print(spec_masks)
     id_masks = [np.where(submask)[0].tolist() for submask in mask]
 
     class_summary = []

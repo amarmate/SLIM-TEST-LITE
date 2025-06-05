@@ -62,7 +62,7 @@ class Tuner:
         self.temp_params = base_params.copy()
 
         t0 = time.time()
-        mean_rmse, stats = self.objective_fn(
+        rmse, stats, stats2 = self.objective_fn(
             gen_params  = base_params,
             dataset     = self.dataset,
             split_id    = self.split_id,
@@ -78,14 +78,15 @@ class Tuner:
             'trial_id'      : self.calls_count,
             'split_id'      : self.split_id,
             'seed'          : self.seed,
-            'mean_rmse'     : mean_rmse,
+            'mean_rmse'     : rmse,
             'elapsed_sec'   : elapsed,
 
             **{k: base_params[k] for k in p.keys()},
             **stats
+            **stats2
         }
 
-        mlflow.log_metric("test_rmse", mean_rmse, step=self.calls_count)
+        mlflow.log_metric("test_rmse", rmse, step=self.calls_count)
         mlflow.log_metric("elapsed_sec", elapsed, step=self.calls_count)
         for key, value in stats.items():
             if isinstance(value, list):
@@ -94,7 +95,7 @@ class Tuner:
                 mlflow.log_metric(key, value, step=self.calls_count)
 
         self.trial_results.append(record)
-        return mean_rmse
+        return rmse
 
     def tune(self, run=None):
         """

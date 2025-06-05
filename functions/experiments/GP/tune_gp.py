@@ -34,4 +34,4 @@ def gp_tune(gen_params,
         'std_rmse': float(np.std(rmses)),
         'mean_nodes': float(np.mean(nodes)),
         'std_nodes': float(np.std(nodes)),
-    }
+    }, {}

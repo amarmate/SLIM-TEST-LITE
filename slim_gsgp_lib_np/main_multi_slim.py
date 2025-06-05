@@ -275,7 +275,6 @@ def multi_slim(
     )
     
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
-
     multi_params['elite_tree'] = elite_tree
 
     # ---------------- MULTI_SLIM SOLVE PARAMETERS --------------------
@@ -302,19 +301,20 @@ def multi_slim(
         **multi_solve_params
     )
 
-    log_settings(
-        path=os.path.join(os.getcwd(), "log", "slim_settings.csv"),
-        settings_dict=[params_gp,
-                       multi_pi_init,
-                       multi_params, 
-                       multi_solve_params],
-        unique_run_id=UNIQUE_RUN_ID
-    ) if log_level > 0 else None
+    if not isinstance(log_level, str): 
+        log_settings(
+            path=os.path.join(os.getcwd(), "log", "slim_settings.csv"),
+            settings_dict=[params_gp,
+                        multi_pi_init,
+                        multi_params, 
+                        multi_solve_params],
+            unique_run_id=UNIQUE_RUN_ID
+        ) if log_level > 0 else None
 
     # optimizer.elite.iteration = optimizer.iteration
     # optimizer.elite.early_stop = optimizer.stop_training
     optimizer.spec_pop = population
-    optimizer.spec_pop_log = log_spec if log_spec is not None else None
+    optimizer.spec_pop_log = log_spec
     if full_return: 
         return optimizer
     

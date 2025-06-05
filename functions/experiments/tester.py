@@ -38,9 +38,10 @@ class Tester:
         self.params.update(
             {
              'test_elite'   : True, 
+             'verbose'      : config['gen_params']['verbose'],
              'log_level'    : 'evaluate',
              'log_level_gp' : 'evaluate',
-             'it_tolerance' : 1e10,  
+             # 'it_tolerance' : 1,  
             }
         )
 

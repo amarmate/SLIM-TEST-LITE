@@ -223,6 +223,26 @@ def simplify_tuple_expression(expr_tuple, latex=True):
         simplified = sp.latex(simplified, mode='equation')
     return simplified
 
+
+def simplify_tuple_expression_multi(expr_tuple, latex=True):
+    def unpack_multi(expr):
+        def traverse(expr): 
+            if isinstance(expr, tuple): 
+                op = 'cond'
+                cond = expr[0].repr_
+                true_val = traverse(expr[1])
+                false_val = traverse(expr[2])
+                return (op, cond, true_val, false_val)
+            elif isinstance(expr, str): 
+                return expr
+            else: 
+                return expr.repr_
+        return traverse(expr)
+
+    mod_expression = unpack_multi(expr_tuple)
+    return simplify_tuple_expression(mod_expression, latex=latex)
+
+
 # ------------------------------------------------------------------- EXPERIMENT RESULTS  -------------------------------------------------------------------------------------------
 def aggregate_by_time_bins(logs, n_bins):
     """

@@ -79,16 +79,18 @@ def multi_tune(gen_params,
         divg.append(rmse_train / ensemb_sqerr)
 
     return float(np.mean(rmses_te)), {
-        'std_rmse_elite'    : float(np.std(rmses_te)),
         'mean_tnodes_elite' : float(np.mean(tnodes)),
-        'std_nodes_elite'   : float(np.std(tnodes)),
         'mean_nodes'        : float(np.mean(nodes)),
-        'std_nodes'         : float(np.std(nodes)),
         'norm_errs_ens'     : float(np.mean(norm_errs)),
         'sizes_spec_ens'    : float(np.mean(best_ensemble_sizes)),
         'ensemble_rmse'     : float(np.mean(best_ensemble_rmses)),
         'rmse_train'        : float(np.mean(rmses_tr)),
         'divergence_tr'     : float(np.mean(divg)),
+    }, \
+    {
+        'std_rmse_elite'    : float(np.std(rmses_te)),
+        'std_nodes_elite'   : float(np.std(tnodes)),
+        'std_nodes'         : float(np.std(nodes)),
     }
 
 

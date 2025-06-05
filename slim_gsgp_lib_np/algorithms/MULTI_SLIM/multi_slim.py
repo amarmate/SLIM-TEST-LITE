@@ -187,7 +187,7 @@ class MULTI_SLIM:
             self.lex_rounds = [0]
 
         self.print_results(0, start, end) if verbose > 0 else None
-        self.log_results(0, start, end)
+        self.log_results(0, end - start)
 
         # Run callbacks
         for callback in self.callbacks:
@@ -256,7 +256,7 @@ class MULTI_SLIM:
 
             # Display and log results
             self.print_results(it, start, end) if verbose > 0 else None
-            self.log_results(it, self.population, end - start)
+            self.log_results(it, end - start)
 
             # Run callbacks
             for callback in self.callbacks:
@@ -276,6 +276,8 @@ class MULTI_SLIM:
         # Run callbacks
         for callback in self.callbacks:
             callback.on_train_end(self)
+        
+        print('-'*30, '\nTraining completed\n', '-'*30) if verbose > 0 else None
 
     # ------------------------------------ Helper functions ------------------------------------
     def crossover_step(self):  
