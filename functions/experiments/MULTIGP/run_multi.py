@@ -61,7 +61,8 @@ def run_multi(args):
     )
     commit_thread.start()
     
-    with parallel_config(n_jobs=args.workers, prefer='processes',
+    with parallel_config(n_jobs=args.workers, 
+                         prefer='processes',
                          # verbose=10
-                         ):
+                        ):
         Parallel()(delayed(run_experiment)(config, task) for task in tasks)
