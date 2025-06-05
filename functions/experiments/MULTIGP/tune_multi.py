@@ -37,7 +37,7 @@ def multi_tune(gen_params,
         key = (split_id + i, hash_Xtr)
 
         if run == 'multi2' and key in _spec_pop_cache:
-            print(f"Using cached population for key: {key}")
+            # print(f"Using cached population for key: {key}")
             spec_pop = _spec_pop_cache[key]
         else:
             spec_pop = None

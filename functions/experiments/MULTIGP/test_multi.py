@@ -47,8 +47,6 @@ def multi_test(best_params,
     spec_pop_log = l_spec.get_log_dict()
     pop_stats = [(rmse(ind.predict(X_test), y_test), ind.total_nodes, elapsed) for ind in pop]
 
-    print(spec_pop_log)
-
     min_errs, sizes = [], []
     total_sq_errs = 0
     for submask in mask: 

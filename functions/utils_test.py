@@ -217,10 +217,20 @@ def simplify_tuple_expression(expr_tuple, latex=True):
             raise ValueError(f"Unknown expression element: {expr}")
     
     # -------------------------------------------------------------
-    sympy_expr = parse_expression(expr_tuple)
-    simplified = sp.simplify(sympy_expr)
-    if latex: 
-        simplified = sp.latex(simplified, mode='equation')
+    try: 
+        sympy_expr = parse_expression(expr_tuple)
+
+        if 'sqrt' in str(sympy_expr):
+            simplified = sympy_expr
+        else:
+            simplified = sp.simplify(sympy_expr)
+
+        if latex: 
+            simplified = sp.latex(simplified, mode='equation')
+            
+    except Exception as e:
+        print(f"Error simplifying expression {expr_tuple}: {e}")
+        simplified = str(expr_tuple)
     return simplified
 
 
