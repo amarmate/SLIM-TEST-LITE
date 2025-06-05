@@ -25,7 +25,7 @@ def multi_tune(gen_params,
     params['params_gp'] = gp_params
 
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)
-    rmses_tr, rmses_te, nodes, tnodes, divg = [], [], [], [], []
+    rmses_tr, rmses_te, nodes, tnodes = [], [], [], []
     best_ensemble_rmses, best_ensemble_sizes, norm_errs = [], [], []
 
     for i, (idx_tr, idx_te) in enumerate(kf.split(data_all['X_train'])):
@@ -76,7 +76,6 @@ def multi_tune(gen_params,
         rmses_te.append(rmse_test)
         tnodes.append(elite.total_nodes)
         nodes.append(elite.nodes_count)
-        divg.append(rmse_train / ensemb_sqerr)
 
     return float(np.mean(rmses_te)), {
         'mean_tnodes_elite' : float(np.mean(tnodes)),
@@ -85,7 +84,7 @@ def multi_tune(gen_params,
         'sizes_spec_ens'    : float(np.mean(best_ensemble_sizes)),
         'ensemble_rmse'     : float(np.mean(best_ensemble_rmses)),
         'rmse_train'        : float(np.mean(rmses_tr)),
-        'divergence_tr'     : float(np.mean(divg)),
+        'divergence_tr'     : float(np.mean(rmses_tr) / np.mean(best_ensemble_rmses)),
     }, \
     {
         'std_rmse_elite'    : float(np.std(rmses_te)),

@@ -56,10 +56,10 @@ def run_multi(args):
 
     mlflow.set_tracking_uri("file:../data/mlruns")
 
-    commit_thread = threading.Thread(
-        target=periodic_commit, args=(config,), daemon=True
-    )
-    commit_thread.start()
+    # commit_thread = threading.Thread(
+    #     target=periodic_commit, args=(config,), daemon=True
+    # )
+    # commit_thread.start()
     
     with parallel_config(n_jobs=args.workers, 
                          prefer='processes',
