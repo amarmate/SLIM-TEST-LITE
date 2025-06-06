@@ -642,10 +642,12 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
             
     else: 
         if repr_ in TERMINALS:
-            print(X[:, TERMINALS[repr_]].dtype)
+            if X[:, TERMINALS[repr_]].dtype in [np.int32, np.int64]:
+                print("Terminal dtype:", X[:, TERMINALS[repr_]].dtype)
             return X[:, TERMINALS[repr_]]
         elif repr_ in CONSTANTS:
-            print(get_const_array(repr_, X.shape[0], CONSTANTS).dtype)
+            if get_const_array(repr_, X.shape[0], CONSTANTS).dtype in [np.int32, np.int64]:
+                print("Constant dtype:", get_const_array(repr_, X.shape[0], CONSTANTS).dtype)
             return get_const_array(repr_, X.shape[0], CONSTANTS)
         
 
