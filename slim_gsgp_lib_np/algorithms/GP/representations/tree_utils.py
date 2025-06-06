@@ -599,7 +599,7 @@ def get_const_array(name, length, CONSTANTS):
     key = (name, length)
     if key not in _const_cache:
         val = CONSTANTS[name](None)
-        _const_cache[key] = np.full((length,), val)
+        _const_cache[key] = np.full((length,), val, dtype=np.float64)
     return _const_cache[key]
 
 def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):

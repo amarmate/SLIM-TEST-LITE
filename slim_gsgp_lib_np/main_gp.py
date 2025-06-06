@@ -221,8 +221,6 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         X_test = X_test.astype(float)
         y_test = y_test.astype(float)
 
-    print(X_train.dtype, y_train.dtype, X_test.dtype if X_test is not None else None, y_test.dtype if y_test is not None else None)
-
     # ================================
     #       Parameter Definition
     # ================================
