@@ -25,7 +25,7 @@ SEED = 0
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'GP'  
-EXPERIMENT_NAME = 'GP_Experiment'
+EXPERIMENT_NAME = 'GP'
 TEST_DIR = 'test'
 TUNE_DIR = 'train'
 

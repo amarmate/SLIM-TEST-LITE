@@ -53,7 +53,7 @@ PROB_CONST_GP = 0.2
 INIT_DEPTH_GP = 2
 
 SPACE_PARAMETERS_GP = [
-    Integer(5, 8, name='max_depth_gp'),                    
+    Integer(4, 8, name='max_depth_gp'),                    
     Integer(0, 2, name='pop_iter_setting_gp', prior='uniform'),                                                                    
     Real(4, 60, name='particularity_pressure_gp', prior='log-uniform'),
     Real(0.5, 0.9, name='p_xo_gp'),    
