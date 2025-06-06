@@ -179,6 +179,13 @@ def multi_slim(
     """
     random.seed(seed)
     np.random.seed(seed)
+
+    X_train = X_train.astype(float)
+    y_train = y_train.astype(float)
+
+    if X_test is not None:
+        X_test = X_test.astype(float)
+        y_test = y_test.astype(float)
     
     # Validate the inputs given  TODO 
     # validate_parameters()

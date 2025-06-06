@@ -54,6 +54,23 @@ def bound_value(vector, min_val, max_val):
     vector.clip(-1e10, 1e10, out=vector)
     return vector
 
+# def bound_value(output, min_val, max_val):
+#     """
+#     In-place clip without casting error:
+#     - Read output.dtype once (O(1)).
+#     - Convert float bounds into that integer type if needed.
+#     """
+#     dt = output.dtype
+#     if np.issubdtype(dt, np.integer):
+#         # Convert bounds exactly to this integer dtype
+#         min_int = dt.type(np.ceil(min_val))
+#         max_int = dt.type(np.floor(max_val))
+#         output.clip(min_int, max_int, out=output)
+#     else:
+#         output.clip(min_val, max_val, out=output)
+#     return output
+
+
 def flatten(data):
     """
     Flattens a nested tuple structure.
@@ -582,9 +599,10 @@ def get_const_array(name, length, CONSTANTS):
     key = (name, length)
     if key not in _const_cache:
         val = CONSTANTS[name](None)
-        _const_cache[key] = np.full((length,), val, dtype=np.float64)
+        _const_cache[key] = np.full((length,), val)
     return _const_cache[key]
 
+@profile
 def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
     """
     Evaluates a tree genotype on input vectors.
@@ -621,11 +639,8 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
 
         # Apply the function to the evaluated children
         output = FUNCTIONS[function_name]["function"](*child_results)
-
-        try: 
-            return bound_value(output, -1e12, 1e12)            
-        except Exception:
-            print(type(output), output.shape, output.dtype)
+        return bound_value(output, -1e12, 1e12)    
+            
     else: 
         if repr_ in TERMINALS:
             return X[:, TERMINALS[repr_]]
