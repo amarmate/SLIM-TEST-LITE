@@ -13,6 +13,13 @@ os.environ.update({k: '1' for k in [
     "OPENBLAS_NUM_THREADS","VECLIB_MAXIMUM_THREADS","BLIS_NUM_THREADS"
 ]})
 
+try:
+    profile
+except NameError:
+    def profile(func):
+        return func
+
+
 def dataset3(n=500, seed=0, noise=0):
     np.random.seed(seed)
     x = np.random.uniform(-3,3,(n,2))

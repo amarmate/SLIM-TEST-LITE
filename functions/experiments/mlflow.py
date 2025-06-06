@@ -5,6 +5,7 @@ import os
 os.environ['MLFLOW_TRACKING_URI'] = 'file:../data/mlruns'
 
 def cleanup_running_runs():
+    print("Cleaning up RUNNING and FAILED runs...")
     client = MlflowClient()
 
     experiments = client.search_experiments(view_type=ViewType.ALL)
@@ -15,7 +16,13 @@ def cleanup_running_runs():
 
         runs = client.search_runs(
             experiment_ids=exp.experiment_id,
-            filter_string="attributes.status = 'FAILED'" or "attributes.status = 'RUNNING'",
+            filter_string="attributes.status = 'FAILED'",
+            max_results=100
+        )
+
+        runs += client.search_runs(
+            experiment_ids=exp.experiment_id,
+            filter_string="attributes.status = 'RUNNING'",
             max_results=100
         )
 
