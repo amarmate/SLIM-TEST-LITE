@@ -602,7 +602,6 @@ def get_const_array(name, length, CONSTANTS):
         _const_cache[key] = np.full((length,), val)
     return _const_cache[key]
 
-@profile
 def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
     """
     Evaluates a tree genotype on input vectors.
