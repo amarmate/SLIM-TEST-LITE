@@ -24,7 +24,7 @@ def multi_test(best_params,
             new_dict[new_key] = params.pop(key)
 
     params['params_gp'] = new_dict
-    params['it_tolerance_gp'] = 1
+    params['params_gp']['it_tolerance'] = 1
 
     mask = dataset.pop('mask', None) 
     bcv_rmse = params.pop('bcv_rmse')

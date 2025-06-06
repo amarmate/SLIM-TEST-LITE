@@ -66,7 +66,7 @@ def multi_tune(gen_params,
                 ensemb_sqerr += np.sum(errors_mask[best_ind] ** 2)
             
             ensemb_sqerr = np.sqrt(ensemb_sqerr / len(mask_kf[0]))
-            norm_err    = np.sqrt(np.sum(np.array(min_errs)**2))
+            norm_err     = np.sqrt(np.sum(np.array(min_errs)**2))
             best_ensemble_rmses.append(ensemb_sqerr)
             best_ensemble_sizes.append(np.sum(sizes))
             norm_errs.append(norm_err)
