@@ -625,7 +625,7 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
         try: 
             return bound_value(output, -1e12, 1e12)            
         except Exception:
-            print(output) 
+            print(type(output), output.shape, output.dtype)
     else: 
         if repr_ in TERMINALS:
             return X[:, TERMINALS[repr_]]
