@@ -12,8 +12,11 @@ def gp_test(best_params,
             split_id, 
             seed):
     
-    dataset.pop('mask', None) 
+    dataset = dataset.copy()
     params = best_params.copy()
+
+    dataset.pop('mask', None) 
+    params.pop('log_level_gp', )
     bcv_rmse = params.pop('bcv_rmse')
     X_train, y_train = dataset['X_train'], dataset['y_train']
     X_test, y_test = dataset['X_test'], dataset['y_test']
