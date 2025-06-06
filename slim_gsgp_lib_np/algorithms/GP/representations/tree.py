@@ -23,7 +23,7 @@
 Tree class implementation for representing tree structures in genetic programming.
 """
 
-from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import bound_value, _execute_tree, tree_depth_and_nodes
+from slim_gsgp_lib_np.algorithms.GP.representations.tree_utils import _execute_tree, tree_depth_and_nodes
 
 class Tree:
     """
