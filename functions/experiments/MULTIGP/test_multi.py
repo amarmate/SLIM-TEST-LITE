@@ -24,15 +24,16 @@ def multi_test(best_params,
             new_dict[new_key] = params.pop(key)
 
     params['params_gp'] = new_dict
-    # params['it_tolerance_gp'] = 1
+    params['it_tolerance_gp'] = 1
 
-    mask = dataset.pop('mask')
+    mask = dataset.pop('mask', None) 
     bcv_rmse = params.pop('bcv_rmse')
     X_train, y_train = dataset['X_train'], dataset['y_train']
     X_test, y_test = dataset['X_test'], dataset['y_test']
 
-    l_spec = LogSpecialist(X_train, y_train, mask)
-    params['params_gp']['callbacks'] = [l_spec]  
+    if mask is not None:
+        l_spec = LogSpecialist(X_train, y_train, mask)
+        params['params_gp']['callbacks'] = [l_spec]
 
     t0 = time.time()
     res = multi_slim(
@@ -44,22 +45,32 @@ def multi_test(best_params,
 
     elite, pop, log = res.elite, res.population, res.log 
     spec_pop = res.spec_pop
-    spec_pop_log = l_spec.get_log_dict()
+    logs = [log, l_spec.get_log_dict()] if mask is not None else [log]
     pop_stats = [(rmse(ind.predict(X_test), y_test), ind.total_nodes, elapsed) for ind in pop]
 
-    min_errs, sizes = [], []
-    total_sq_errs = 0
-    for submask in mask: 
-        errors_mask = spec_pop.errors_case[:, submask]
-        errors_ind = np.sqrt(np.mean(errors_mask**2, axis=1))
-        best_ind = np.argmin(errors_ind)
-        min_err = errors_ind[best_ind]
-        min_errs.append(min_err)
-        sizes.append(spec_pop.population[best_ind].total_nodes)
-        total_sq_errs += np.sum(errors_mask[best_ind] ** 2)
-    best_ensemble_possible = np.sqrt(total_sq_errs / len(mask[0]))
+    if mask is not None:
 
-    classes = get_classification_summary(elite.collection, X_train, mask)
+        min_errs, sizes = [], []
+        total_sq_errs = 0
+        for submask in mask: 
+            errors_mask = spec_pop.errors_case[:, submask]
+            errors_ind = np.sqrt(np.mean(errors_mask**2, axis=1))
+            best_ind = np.argmin(errors_ind)
+            min_err = errors_ind[best_ind]
+            min_errs.append(min_err)
+            sizes.append(spec_pop.population[best_ind].total_nodes)
+            total_sq_errs += np.sum(errors_mask[best_ind] ** 2)
+        best_ensemble_possible = np.sqrt(total_sq_errs / len(mask[0]))
+
+        classes          = str(get_classification_summary(elite.collection, X_train, mask))
+        best_specialists = min_errs
+        ensemble_gap     = 100 * (rmse_train - best_ensemble_possible) / rmse_train
+
+        records_mask = { 
+            'best_specialists'      : best_specialists,
+            'ensemble_gap_per'      : ensemble_gap,
+            'classes'               : str(classes),
+        }
 
     y_test_pred      = elite.predict(X_test)
     y_train_pred     = elite.predict(X_train)   
@@ -68,8 +79,6 @@ def multi_test(best_params,
     r2_test          = r_squared(y_test, y_test_pred)
     rmse_train       = rmse(y_train_pred, y_train)
     gen_gap          = 100 * abs(rmse_test - bcv_rmse) / bcv_rmse
-    ensemble_gap     = 100 * (rmse_train - best_ensemble_possible) / rmse_train
-    best_specialists = min_errs
     overfit          = 100 * (rmse_train - rmse_test) / rmse_train
     latex_repr       = simplify_tuple_expression_multi(elite.collection)
 
@@ -83,9 +92,6 @@ def multi_test(best_params,
         'mae_test'              : mae_test,
         'r2_test'               : r2_test,
         'gen_gap_per'           : gen_gap,
-        'ensemble_gap_per'      : ensemble_gap,
-        'best_specialists'      : best_specialists,
-        'classes'               : str(classes),
         'nodes'                 : elite.total_nodes,
         'nodes_count'           : elite.nodes_count,
         'depth'                 : elite.depth,
@@ -95,5 +101,7 @@ def multi_test(best_params,
         'latex_repr'            : latex_repr,
     }
 
+    if mask is not None:
+        records.update(records_mask)
 
-    return records, pop_stats, [log, spec_pop_log]
+    return records, pop_stats, logs 

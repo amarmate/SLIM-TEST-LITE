@@ -31,7 +31,7 @@ def multi_tune(gen_params,
     for i, (idx_tr, idx_te) in enumerate(kf.split(data_all['X_train'])):
         X_tr, y_tr = data_all['X_train'][idx_tr], data_all['y_train'][idx_tr]
         X_te, y_te = data_all['X_train'][idx_te], data_all['y_train'][idx_te]
-        mask_kf = [marr[idx_tr] for marr in mask]
+        mask_kf = [marr[idx_tr] for marr in mask] if mask is not None else None
 
         hash_Xtr = _hash_array(X_tr[:20])
         key = (split_id + i, hash_Xtr)
@@ -54,46 +54,49 @@ def multi_tune(gen_params,
         if run == 'multi2':
             _spec_pop_cache[key] = pop
 
-        min_errs, sizes = [], []
-        ensemb_sqerr = 0
-        for submask in mask_kf: 
-            errors_mask = pop.errors_case[:, submask]
-            errors_ind  = np.sqrt(np.mean(errors_mask**2, axis=1))
-            best_ind    = np.argmin(errors_ind)
-            min_errs.append(errors_ind[best_ind])
-            sizes.append(pop.population[best_ind].total_nodes)
-            ensemb_sqerr += np.sum(errors_mask[best_ind] ** 2)
+        if mask is not None: 
+            min_errs, sizes = [], []
+            ensemb_sqerr = 0
+            for submask in mask_kf: 
+                errors_mask = pop.errors_case[:, submask]
+                errors_ind  = np.sqrt(np.mean(errors_mask**2, axis=1))
+                best_ind    = np.argmin(errors_ind)
+                min_errs.append(errors_ind[best_ind])
+                sizes.append(pop.population[best_ind].total_nodes)
+                ensemb_sqerr += np.sum(errors_mask[best_ind] ** 2)
+            
+            ensemb_sqerr = np.sqrt(ensemb_sqerr / len(mask_kf[0]))
+            norm_err    = np.sqrt(np.sum(np.array(min_errs)**2))
+            best_ensemble_rmses.append(ensemb_sqerr)
+            best_ensemble_sizes.append(np.sum(sizes))
+            norm_errs.append(norm_err)
         
-        ensemb_sqerr = np.sqrt(ensemb_sqerr / len(mask_kf[0]))
-        norm_err    = np.sqrt(np.sum(np.array(min_errs)**2))
         rmse_train  = rmse(elite.predict(X_tr), y_tr)
         rmse_test   = rmse(elite.predict(X_te), y_te)
-
-        best_ensemble_rmses.append(ensemb_sqerr)
-        best_ensemble_sizes.append(np.sum(sizes))
-        norm_errs.append(norm_err)
         rmses_tr.append(rmse_train)
         rmses_te.append(rmse_test)
         tnodes.append(elite.total_nodes)
         nodes.append(elite.nodes_count)
 
-    return float(np.mean(rmses_te)), {
+    stats_general = {
         'mean_tnodes_elite' : float(np.mean(tnodes)),
         'mean_nodes'        : float(np.mean(nodes)),
-        'norm_errs_ens'     : float(np.mean(norm_errs)),
-        'sizes_spec_ens'    : float(np.mean(best_ensemble_sizes)),
-        'ensemble_rmse'     : float(np.mean(best_ensemble_rmses)),
         'rmse_train'        : float(np.mean(rmses_tr)),
-        'divergence_tr'     : float(np.mean(rmses_tr) / np.mean(best_ensemble_rmses)),
-    }, \
-    {
+    }
+
+    if mask is not None: 
+        stats_general.update({
+            'sizes_spec_ens'    : float(np.mean(best_ensemble_sizes)),
+            'norm_errs_ens'     : float(np.mean(norm_errs)),
+            'ensemble_rmse'     : float(np.mean(best_ensemble_rmses)),
+            'divergence_tr'     : float(np.mean(rmses_tr) / np.mean(best_ensemble_rmses)),
+        })
+
+    return float(np.mean(rmses_te)), stats_general, {
         'std_rmse_elite'    : float(np.std(rmses_te)),
         'std_nodes_elite'   : float(np.std(tnodes)),
         'std_nodes'         : float(np.std(nodes)),
     }
-
-
-
 
 
 
