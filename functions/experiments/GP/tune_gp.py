@@ -28,7 +28,10 @@ def gp_tune(gen_params,
                 seed=split_id + i)
         
         elite = res.elite
-        rmses.append(rmse(elite.predict(X_te), y_te))
+        try: 
+            rmses.append(rmse(elite.predict(X_te), y_te))
+        except Exception as e:
+            print(gen_params)
         nodes.append(elite.total_nodes)
 
     return float(np.mean(rmses)), {

@@ -145,8 +145,6 @@ class GP:
                 "diversity_var": [],
             }
 
-        print(X_train.dtype, X_test.dtype, y_train.dtype, y_test.dtype)
-
         start = time.time()
         population = Population([Tree(tree) for tree in self.initializer(**self.pi_init)])
         
