@@ -43,9 +43,9 @@ AUTO_COMMIT_INTERVAL = 0.25 * 3600 # every 15 min
 #  GP Experiment Configuration   # 
 # ------------------------------ # 
 
-SELECTOR_GP = 'dalex_fast_rand'
+SELECTOR_GP = 'dalex'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD_GP = 0.2 # 0.2 
+STOP_THRESHOLD_GP = 0.25 # 0.2 
 PI_GP = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 # PI_GP = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
 PROB_TERMINAL_GP = 0.7
@@ -76,7 +76,7 @@ gp_params = {
 
 SELECTOR_MULTI = 'dalex'
 FUNCTIONS_MULTI = ['add', 'multiply', 'subtract', 'AQ']
-STOP_THRESHOLD_MULTI = 0.2  # CHANGE 
+STOP_THRESHOLD_MULTI = 0.25  # CHANGE 
 PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 # PI_MULTI = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
 PROB_TERMINAL_MULTI = 0.7
