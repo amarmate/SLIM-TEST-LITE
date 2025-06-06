@@ -214,13 +214,6 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         warnings.warn("p_cond can't be larger than 0 if 'cond' not in FUNCTIONS. Setting p_cond to 0")
         prob_cond = 0
 
-    X_train = X_train.astype(float)
-    y_train = y_train.astype(float)
-
-    if X_test is not None:
-        X_test = X_test.astype(float)
-        y_test = y_test.astype(float)
-
     # ================================
     #       Parameter Definition
     # ================================

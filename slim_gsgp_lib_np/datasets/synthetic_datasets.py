@@ -436,6 +436,9 @@ def load_synthetic11(n=600, seed=0, noise=0, verbose=False):
     print("Mask counts (no overflow, overflow):") if verbose else None
     print([mask.sum() for mask in masks]) if verbose else None
 
+    X = X.astype(float)
+    y = y.astype(float)
+
     return X, y, masks, masks
 
 
