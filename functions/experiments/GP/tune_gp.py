@@ -12,6 +12,7 @@ def gp_tune(gen_params,
             n_splits=5,
             **kwargs):
     
+    dataset = dataset.copy()
     dataset.pop('mask')
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)
     rmses, nodes = [], []
