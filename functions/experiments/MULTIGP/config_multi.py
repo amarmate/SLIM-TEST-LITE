@@ -30,7 +30,7 @@ SEED = 0
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
 PREFIX_SAVE = 'MULTI'  
-EXPERIMENT_NAME = 'MULTI'
+EXPERIMENT_NAME = 'Multi_Experiment'
 TEST_DIR = 'test'
 TUNE_DIR = 'train'
 
