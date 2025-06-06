@@ -48,8 +48,9 @@ def multi_test(best_params,
     logs = [log, l_spec.get_log_dict()] if mask is not None else [log]
     pop_stats = [(rmse(ind.predict(X_test), y_test), ind.total_nodes, elapsed) for ind in pop]
 
-    if mask is not None:
+    rmse_train       = rmse(y_train_pred, y_train)
 
+    if mask is not None:
         min_errs, sizes = [], []
         total_sq_errs = 0
         for submask in mask: 
@@ -77,7 +78,6 @@ def multi_test(best_params,
     rmse_test        = rmse(y_test_pred, y_test)
     mae_test         = mae(y_test_pred, y_test)
     r2_test          = r_squared(y_test, y_test_pred)
-    rmse_train       = rmse(y_train_pred, y_train)
     gen_gap          = 100 * abs(rmse_test - bcv_rmse) / bcv_rmse
     overfit          = 100 * (rmse_train - rmse_test) / rmse_train
     latex_repr       = simplify_tuple_expression_multi(elite.collection)
