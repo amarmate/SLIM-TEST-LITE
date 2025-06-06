@@ -48,6 +48,7 @@ def multi_test(best_params,
     logs = [log, l_spec.get_log_dict()] if mask is not None else [log]
     pop_stats = [(rmse(ind.predict(X_test), y_test), ind.total_nodes, elapsed) for ind in pop]
 
+    y_train_pred     = elite.predict(X_train)   
     rmse_train       = rmse(y_train_pred, y_train)
 
     if mask is not None:
@@ -74,7 +75,6 @@ def multi_test(best_params,
         }
 
     y_test_pred      = elite.predict(X_test)
-    y_train_pred     = elite.predict(X_train)   
     rmse_test        = rmse(y_test_pred, y_test)
     mae_test         = mae(y_test_pred, y_test)
     r2_test          = r_squared(y_test, y_test_pred)
