@@ -622,8 +622,10 @@ def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
         # Apply the function to the evaluated children
         output = FUNCTIONS[function_name]["function"](*child_results)
 
-        return bound_value(output, -1e12, 1e12)            
-
+        try: 
+            return bound_value(output, -1e12, 1e12)            
+        except Exception:
+            print(output) 
     else: 
         if repr_ in TERMINALS:
             return X[:, TERMINALS[repr_]]
