@@ -40,6 +40,8 @@ AUTO_COMMIT_INTERVAL = 0.1 * 3600 # every 6 min
 
 SELECTORS = ['dalex']
 FUNCTIONS = ['add', 'multiply', 'subtract', 'AQ']
+CONSTANTS = constants = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]  # From -2.0 to 2.0 with step 0.1 
+
 STOP_THRESHOLD = 0.2
 PI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 PROB_TERMINAL = 0.7

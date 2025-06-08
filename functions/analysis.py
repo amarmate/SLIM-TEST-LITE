@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 from functions.misc_functions import pf_rmse_comp_extended, pf_rmse_comp_time
 
 
-
-
 # ---------------------------------------------------- PARETO FRONT PLOTTING ----------------------------------------------------
 def plot_pareto_front(dataset_name, selector, suffix):
     """
