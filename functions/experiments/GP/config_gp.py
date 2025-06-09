@@ -40,7 +40,8 @@ AUTO_COMMIT_INTERVAL = 0.1 * 3600 # every 6 min
 
 SELECTORS = ['dalex']
 FUNCTIONS = ['add', 'multiply', 'subtract', 'AQ']
-CONSTANTS = constants = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]  # From -2.0 to 2.0 with step 0.1 
+# CONSTANTS = constants = [round(i*0.05, 2) for i in range(2, 21)] + [round(-i*0.05, 2) for i in range(2, 21)]  # From -1 to 1 with step 0.05 
+CONSTANTS = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]  # From -2.0 to 2.0 with step 0.1 
 
 STOP_THRESHOLD = 0.2
 PI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
@@ -74,6 +75,7 @@ gen_params = {
     "prob_const": PROB_CONST,
     "prob_terminal": PROB_TERMINAL,
     "tree_functions": FUNCTIONS,
+    "tree_constants": CONSTANTS,
     "log_level": 'evaluate',
     "it_tolerance": STOP_THRESHOLD,
     "down_sampling": 1,

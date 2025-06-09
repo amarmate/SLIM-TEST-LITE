@@ -244,7 +244,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
         raise KeyError(
             "The available tree constants are: " + f"{', '.join(valid_constants[:-1])} or "f"{valid_constants[-1]}"
             if len(valid_constants) > 1 else valid_constants[0])
-
+        
     gp_pi_init["p_c"] = prob_const
     gp_pi_init["p_t"] = prob_terminal
     gp_pi_init["p_cond"] = prob_cond
