@@ -34,6 +34,9 @@ from slim_gsgp_lib_np.utils.logger import logger
 from slim_gsgp_lib_np.utils.diversity import (gsgp_pop_div_from_vectors, gsgp_pop_div_from_vectors_var)
 from slim_gsgp_lib_np.utils.utils import verbose_reporter
 
+from functions.misc_functions import pf_rmse_comp_extended
+from functions.metrics_test import rmse
+
 class GP:
     def __init__(
         self,
@@ -261,14 +264,13 @@ class GP:
         # Ensure the offspring population matches the required size.
         if len(offs_pop) > population.size:
             offs_pop = offs_pop[: population.size]
-
+                                    
         # Evaluate the new population.
         offs_pop = Population(offs_pop)
         offs_pop.calculate_semantics(X_train, testing=False)
         offs_pop.calculate_errors_case(y_train)
         offs_pop.evaluate(target=y_train, testing=False)
         self.population = offs_pop
-
         return offs_pop, gen_start
 
     def crossover_step(self, population, max_depth, depth_calculator):

@@ -73,6 +73,7 @@ def protected_sqrt(x1):
 def AQ_np(x, y):
     return np.divide(x, np.sqrt(1 + y**2))
 
+
 def mean_(x1, x2):
     """
     Compute the mean of two tensors.
@@ -117,10 +118,10 @@ def train_test_split(X, y, p_test=0.3, shuffle=True, indices_only=False, seed=0)
     -------
     X_train : np.ndarray
         Training data instances.
-    y_train : np.ndarray
-        Training target vector.
     X_test : np.ndarray
         Test data instances.
+    y_train : np.ndarray
+        Training target vector.
     y_test : np.ndarray
         Test target vector.
     train_indices : np.ndarray

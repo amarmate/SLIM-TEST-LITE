@@ -236,7 +236,9 @@ def multi_slim(
     if ensemble_functions is not None:
         multi_pi_init["FUNCTIONS"] = {key: FUNCTIONS[key] for key in ensemble_functions}
     if ensemble_constants is not None:
-        multi_pi_init['CONSTANTS'] = {key: CONSTANTS[key] for key in ensemble_constants}
+        multi_pi_init['CONSTANTS'] = {f"constant_{str(n).replace('-', '_')}": lambda _, num=n: np.array(num)
+                                   for n in ensemble_constants}
+        
 
     multi_pi_init['p_c'] = prob_const
     multi_pi_init['p_t'] = prob_terminal

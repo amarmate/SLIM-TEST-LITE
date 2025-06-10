@@ -4,7 +4,7 @@ from itertools import chain
 
 
 # ------------------------------------------------ PF FUNCTIONS ---------------------------------------------------
-def pf_rmse_comp_extended(points):
+def pf_rmse_comp_extended(points, index=False, error=0):
     """
     Identifies the Pareto front from a list of points.
     Each point is a tuple where the first element is RMSE, the second is complexity,
@@ -14,6 +14,8 @@ def pf_rmse_comp_extended(points):
     and at least one of these is strictly smaller.
     The function returns the full original points that are non-dominated.
     """
+    err = 1 - error 
+    
     pareto = []
     if not points:
         return pareto
@@ -28,14 +30,17 @@ def pf_rmse_comp_extended(points):
 
             rmse2 = point2[0]
             comp2 = point2[1]
-            if (rmse2 <= rmse1 and comp2 <= comp1) and \
-               (rmse2 < rmse1 or comp2 < comp1):
+            if (rmse2 <= rmse1*err and comp2 <= comp1*err) and \
+               (rmse2 < rmse1*err or comp2 < comp1*err):
                 dominated = True
                 break 
 
         if not dominated:
-            pareto.append(point1) 
-    pareto.sort(key=lambda x: x[0])
+            pareto.append((i, point1)) if index else pareto.append(point1)
+    if index: 
+        pareto.sort(key=lambda x: (x[1][0], x[1][1])) 
+    else: 
+        pareto.sort(key=lambda x: (x[0], x[1]))
     return pareto
 
 def pf_rmse_comp_time(points): 

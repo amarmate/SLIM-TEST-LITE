@@ -43,8 +43,9 @@ AUTO_COMMIT_INTERVAL = 0.25 * 3600 # every 15 min
 #  GP Experiment Configuration   # 
 # ------------------------------ # 
 
-SELECTOR_GP = 'dalex'
+SELECTOR_GP = 'dalex_fast_rand'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
+CONSTANTS_GP = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
 STOP_THRESHOLD_GP = 0.25 # 0.2 
 PI_GP = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 # PI_GP = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
@@ -64,6 +65,7 @@ gp_params = {
     "prob_const_gp": PROB_CONST_GP,
     "prob_terminal_gp": PROB_TERMINAL_GP,
     "tree_functions_gp": FUNCTIONS_GP,
+    "tree_constants_gp": CONSTANTS_GP,
     "log_level_gp": 0,
     "it_tolerance_gp": STOP_THRESHOLD_GP,
     "down_sampling_gp": 1,
@@ -76,6 +78,8 @@ gp_params = {
 
 SELECTOR_MULTI = 'dalex'
 FUNCTIONS_MULTI = ['add', 'multiply', 'subtract', 'AQ']
+CONSTANTS_MULTI = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
+
 STOP_THRESHOLD_MULTI = 0.25  # CHANGE 
 PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 # PI_MULTI = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
@@ -103,6 +107,7 @@ multi_params = {
     "prob_const"            : PROB_CONST_MULTI,
     "prob_terminal"         : PROB_TERMINAL_MULTI,
     "ensemble_functions"    : FUNCTIONS_MULTI,
+    "ensemble_constants"    : CONSTANTS_MULTI,
     "log_level"             : 0,
     "it_tolerance"          : STOP_THRESHOLD_MULTI,
     "down_sampling"         : 1,
