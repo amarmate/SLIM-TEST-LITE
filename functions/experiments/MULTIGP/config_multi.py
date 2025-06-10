@@ -95,7 +95,7 @@ SPACE_PARAMETERS_MULTI = [
     Integer(2, 5, name='max_depth'),     
     Integer(2, 7, name='depth_condition'),                
     Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
-    Real(2, 30, name='particularity_pressure', prior='uniform'),
+    Real(1, 30, name='particularity_pressure', prior='uniform'),
     Real(0.3, 0.75, name='p_xo'),    
 ]
 
