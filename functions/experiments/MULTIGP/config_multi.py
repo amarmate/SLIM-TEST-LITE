@@ -43,10 +43,10 @@ AUTO_COMMIT_INTERVAL = 0.25 * 3600 # every 15 min
 #  GP Experiment Configuration   # 
 # ------------------------------ # 
 
-SELECTOR_GP = 'dalex_fast_rand'
+SELECTOR_GP = 'dalex'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
 CONSTANTS_GP = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
-STOP_THRESHOLD_GP = 0.25 # 0.2 
+STOP_THRESHOLD_GP = 0.3 # 0.2 
 PI_GP = [
     # (2000, 100), 
     (1000, 200), 
@@ -85,7 +85,7 @@ SELECTOR_MULTI = 'dalex'
 FUNCTIONS_MULTI = ['add', 'multiply', 'subtract', 'AQ']
 CONSTANTS_MULTI = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
 
-STOP_THRESHOLD_MULTI = 0.25  # CHANGE 
+STOP_THRESHOLD_MULTI = 0.3  # CHANGE 
 PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 # PI_MULTI = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
 PROB_TERMINAL_MULTI = 0.7
@@ -99,9 +99,9 @@ SPACE_PARAMETERS_MULTI = [
     Real(0.3, 0.75, name='p_xo'),    
 ]
 
-MULTI_MAX_DEPTH = 4
+MULTI_MAX_DEPTH = 3
 MULTI_DEPTH_CONDITION = 6
-MULTI_PP = 5
+MULTI_PP = 2.5
 MULTI_XO = 0.5
 MULTI_POP_SIZE = 100  # 100
 MULTI_N_ITER = 2000    # 2000
