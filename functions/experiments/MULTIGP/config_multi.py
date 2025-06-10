@@ -47,17 +47,22 @@ SELECTOR_GP = 'dalex_fast_rand'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
 CONSTANTS_GP = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
 STOP_THRESHOLD_GP = 0.25 # 0.2 
-PI_GP = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
+PI_GP = [
+    # (2000, 100), 
+    (1000, 200), 
+    (400, 400),
+    (150, 1000)
+    ]   # n_generations, pop_size
 # PI_GP = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
 PROB_TERMINAL_GP = 0.7
 PROB_CONST_GP = 0.2
 INIT_DEPTH_GP = 2
 
 SPACE_PARAMETERS_GP = [
-    Integer(4, 8, name='max_depth_gp'),                    
+    Integer(4, 9, name='max_depth_gp'),                    
     Integer(0, 2, name='pop_iter_setting_gp', prior='uniform'),                                                                    
-    Real(4, 60, name='particularity_pressure_gp', prior='log-uniform'),
-    Real(0.5, 0.9, name='p_xo_gp'),    
+    Real(2, 40, name='particularity_pressure_gp', prior='uniform'),
+    Real(0.4, 0.9, name='p_xo_gp'),    
 ]
 
 gp_params = { 
@@ -90,13 +95,13 @@ SPACE_PARAMETERS_MULTI = [
     Integer(2, 5, name='max_depth'),     
     Integer(2, 7, name='depth_condition'),                
     Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
-    Real(4, 60, name='particularity_pressure', prior='log-uniform'),
-    Real(0.5, 0.9, name='p_xo'),    
+    Real(2, 30, name='particularity_pressure', prior='uniform'),
+    Real(0.3, 0.75, name='p_xo'),    
 ]
 
 MULTI_MAX_DEPTH = 4
 MULTI_DEPTH_CONDITION = 6
-MULTI_PP = 20
+MULTI_PP = 5
 MULTI_XO = 0.7
 MULTI_POP_SIZE = 100  # 100
 MULTI_N_ITER = 2000    # 2000
