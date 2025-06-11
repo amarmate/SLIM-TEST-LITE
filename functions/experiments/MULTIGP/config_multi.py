@@ -17,18 +17,18 @@ datasets = {name.split('load_')[1] : loader for name, loader in globals().items(
 N_SPLITS = 4                
 N_CV = 4                     # 4      
 
-N_SEARCHES_HYPER_GP = 20      # 20 
-N_RANDOM_STARTS_GP = 10       # 10
+N_SEARCHES_HYPER_GP = 30      # 20 
+N_RANDOM_STARTS_GP = 15       # 10
 
-N_SEARCHES_HYPER_MULTI = 20   # 20
-N_RANDOM_STARTS_MULTI = 10    # 10
+N_SEARCHES_HYPER_MULTI = 30   # 20
+N_RANDOM_STARTS_MULTI = 15    # 10
 
 NOISE_SKOPT = 1e-3
 N_TESTS = 15              
 P_TEST = 0.2 
 SEED = 0
 N_TIME_BINS = 300
-SUFFIX_SAVE = '2'
+SUFFIX_SAVE = '3'
 PREFIX_SAVE = 'MULTI'  
 EXPERIMENT_NAME = 'MULTI'
 TEST_DIR = 'test'
@@ -43,7 +43,7 @@ AUTO_COMMIT_INTERVAL = 0.25 * 3600 # every 15 min
 #  GP Experiment Configuration   # 
 # ------------------------------ # 
 
-SELECTOR_GP = 'dalex'
+SELECTOR_GP = 'dalex_fast_rand'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
 CONSTANTS_GP = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
 STOP_THRESHOLD_GP = 0.3 # 0.2 
