@@ -843,10 +843,8 @@ def dalex_fast_min_rand(shape,
         pp = pressures.sample()
         n = int(round(pp))
         n = max(1, min(n, n_cases))
-        idx = sampler.sample(n)
-        errs = errors[:, idx]
-                
-        score = standardized_errors.sum(axis=1)
+        idx = sampler.sample(n)                
+        score = errors[:, idx].sum(axis=1)
         best_indices = np.argsort(score)[:tournament_size]
         best_index = random.choice(best_indices)
         # best_index = np.argmin(score)

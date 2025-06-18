@@ -171,12 +171,16 @@ class Population:
         -------
         None
         """
-        if std_errs: 
+        if std_errs:
+            threshold = 1e-5
             mean = np.mean(self.errors_case, axis=0)
             stdev = np.std(self.errors_case, axis=0)
+            
             standardized_errs = np.zeros_like(self.errors_case)
-            mask = stdev > 0
+            mask = stdev > threshold
             standardized_errs[:, mask] = (self.errors_case[:, mask] - mean[mask]) / stdev[mask]
+            
+            # Leave masked-out (constant) columns as zero
             self.errors_case = standardized_errs
 
     def evaluate(self, target, testing=False):
