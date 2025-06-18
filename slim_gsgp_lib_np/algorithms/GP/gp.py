@@ -43,6 +43,7 @@ class GP:
         pi_init,
         initializer,
         selector,
+        std_errs,
         mutator,
         crossover,
         find_elit_func,
@@ -88,6 +89,7 @@ class GP:
         """
         self.pi_init = pi_init
         self.selector = selector
+        self.std_errs = std_errs
         self.p_m = p_m
         self.crossover = crossover
         self.mutator = mutator
@@ -158,6 +160,7 @@ class GP:
         population.calculate_semantics(inputs=X_train, testing=False)
         population.calculate_errors_case(y_train)
         population.evaluate(target=y_train, testing=False)
+        population.standardize_errors(self.std_errs)
         self.population = population
         self.dataset = curr_dataset
 
@@ -270,6 +273,7 @@ class GP:
         offs_pop.calculate_semantics(X_train, testing=False)
         offs_pop.calculate_errors_case(y_train)
         offs_pop.evaluate(target=y_train, testing=False)
+        offs_pop.standardize_errors(self.std_errs)
         self.population = offs_pop
         return offs_pop, gen_start
 

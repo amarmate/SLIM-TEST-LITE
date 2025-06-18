@@ -15,6 +15,7 @@ class MULTI_SLIM:
                  mutator, 
                  xo_operator, 
                  selector, 
+                 std_errs, 
                  initializer, 
                  find_elit_func,
                  p_mut, 
@@ -64,6 +65,7 @@ class MULTI_SLIM:
         self.mutator = mutator
         self.xo_operator = xo_operator 
         self.selector = selector
+        self.std_errs = std_errs
         self.initializer = initializer
         self.find_elit_func = find_elit_func
         self.p_mut = p_mut
@@ -159,6 +161,7 @@ class MULTI_SLIM:
         population.calculate_semantics(inputs=X_train, testing=False)
         population.calculate_errors_case(y_train)
         population.evaluate(target=y_train, testing=False)
+        population.standardize_errors(self.std_errs)
         end = time.time()
 
         # Set up the elites
@@ -239,6 +242,7 @@ class MULTI_SLIM:
             offs_pop.calculate_semantics(inputs=X_train, testing=False)
             offs_pop.calculate_errors_case(y_train)
             offs_pop.evaluate(target=y_train, testing=False)
+            offs_pop.standardize_errors(self.std_errs)
 
             # Replace the current population with the offspring population P = P'
             population = offs_pop

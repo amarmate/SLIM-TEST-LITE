@@ -72,6 +72,7 @@ def multi_slim(
         minimization: bool = True,
         log_path: str = None,
         selector: str = multi_params["selector"],
+        std_errs: bool = multi_params["std_errs"],
         down_sampling: float = 0.5, 
         particularity_pressure: float = 20,
         dalex_size_prob: float = 0.5,
@@ -275,6 +276,7 @@ def multi_slim(
                                                 dalex_size_prob=dalex_size_prob,
                                                 n_cases=dalex_n_cases,
     )
+    multi_params['std_errs'] = std_errs
     
     multi_params['find_elit_func'] = get_best_min if minimization else get_best_max
     multi_params['elite_tree'] = elite_tree

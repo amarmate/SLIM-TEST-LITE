@@ -24,8 +24,8 @@ P_TEST = 0.2
 SEED = 0
 N_TIME_BINS = 300
 SUFFIX_SAVE = '1'
-PREFIX_SAVE = 'GP'  
-EXPERIMENT_NAME = 'GP'
+PREFIX_SAVE = 'GP_STDERR'  
+EXPERIMENT_NAME = 'GP_STDERR'
 TEST_DIR = 'test'
 TUNE_DIR = 'train'
 
@@ -48,7 +48,7 @@ PI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
 PROB_TERMINAL = 0.7
 PROB_CONST = 0.2
 INIT_DEPTH = 2
-
+STD_ERRS = True
 
 
 SPACE_PARAMETERS = [
@@ -76,6 +76,7 @@ gen_params = {
     "prob_terminal": PROB_TERMINAL,
     "tree_functions": FUNCTIONS,
     "tree_constants": CONSTANTS,
+    "std_errs": STD_ERRS,
     "log_level": 'evaluate',
     "it_tolerance": STOP_THRESHOLD,
     "down_sampling": 1,

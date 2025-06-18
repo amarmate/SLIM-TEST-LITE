@@ -77,6 +77,7 @@ gp_solve_parameters = {
 gp_parameters = {
     "initializer": "rhh",
     "selector": 'tournament',
+    "std_errs": True,
     "settings_dict": settings_dict,
     "p_xo": 0.8,
     "pop_size": 100,

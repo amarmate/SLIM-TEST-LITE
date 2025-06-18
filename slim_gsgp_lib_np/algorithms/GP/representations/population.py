@@ -103,9 +103,20 @@ class Population:
         Returns
         -------
         None
-        """        
-        errors = np.abs(self.train_semantics - np.stack([target] * self.train_semantics.shape[0]))
+        """
+        if not hasattr(self, "train_semantics"):
+            raise ValueError("Training semantics not calculated. Call calculate_semantics first.")
+        if hasattr(self, "errors_case"):
+            print("Warning: Errors case already calculated.")
+            return
+                
+        errors = np.abs(self.train_semantics - np.stack([target] * self.train_semantics.shape[0]))        
         self.errors_case = errors
+        
+    def standardize_errors(self, std_errs=False): 
+        if std_errs: 
+            standardized_errs = (self.errors_case - np.mean(self.errors_case, axis=0)) / np.std(self.errors_case, axis=0)
+            self.errors_case = standardized_errs
 
     def calculate_mad(self): 
         """

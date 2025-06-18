@@ -638,7 +638,9 @@ def roulette_wheel_selection(population):
     # return random.choices(population, weights=[ind.fitness for ind in population])[0]
     return random.choices(population)[0]
  
-def dalex_min(down_sampling=0.5, particularity_pressure=20):
+ 
+def dalex_min(down_sampling=0.5, 
+              particularity_pressure=20):
     """
     Returns a function that performs DALex (Diversely Aggregated Lexicase Selection)
     to select an individual based on a weighted aggregation of test-case errors.
@@ -650,6 +652,9 @@ def dalex_min(down_sampling=0.5, particularity_pressure=20):
     particularity_pressure : float, optional
         Standard deviation for the normal distribution used to sample importance scores.
         Higher values cause a more extreme weighting (more lexicase-like). Defaults to 20.
+    standardize_errors : bool, optional
+        Whether to standardize the errors before performing selection. Defaults to True.
+        If set to False, the errors are not standardized and the selection is performed directly on the error matrix.
 
     Returns
     -------
@@ -670,7 +675,7 @@ def dalex_min(down_sampling=0.5, particularity_pressure=20):
             n_cases = int(num_total_cases * down_sampling)
             case_order = random.sample(range(num_total_cases), n_cases)
             subset_errors = errors[:, case_order]
-        
+            
         # Sample importance scores from N(0, particularity_pressure)
         I = np.random.normal(0, particularity_pressure, size=n_cases)
         exp_I = np.exp(I - np.max(I))
@@ -715,7 +720,7 @@ def dalex_size(mode='min',
 
     def ds(pop):
         # Get the error matrix (assumed shape: (n_individuals, n_total_cases))
-        errors = pop.errors_case 
+        errors = pop.errors_case.copy()
         num_total_cases = errors.shape[1]
 
         if down_sampling == 1:
@@ -839,7 +844,9 @@ def dalex_fast_min_rand(shape,
         n = int(round(pp))
         n = max(1, min(n, n_cases))
         idx = sampler.sample(n)
-        score = errors[:, idx].sum(axis=1)
+        errs = errors[:, idx]
+                
+        score = standardized_errors.sum(axis=1)
         best_indices = np.argsort(score)[:tournament_size]
         best_index = random.choice(best_indices)
         # best_index = np.argmin(score)

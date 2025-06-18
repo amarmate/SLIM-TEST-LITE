@@ -44,6 +44,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
        p_xo: float = gp_parameters['p_xo'],
        elitism: bool = gp_solve_parameters["elitism"], n_elites: int = gp_solve_parameters["n_elites"],
        selector: str = gp_parameters["selector"],
+       std_errs: bool = gp_parameters["std_errs"],
        dalex_size_prob: float = 0.5,
        dalex_n_cases: int = 2, 
        max_depth: int | None = gp_solve_parameters["max_depth"],
@@ -279,6 +280,7 @@ def gp(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray = None, y_te
                                          n_cases=dalex_n_cases,
                                          n=X_train.shape[0],
     )
+    gp_parameters["std_errs"] = std_errs
 
     gp_parameters["find_elit_func"] = get_best_min if minimization else get_best_max
     gp_parameters["seed"] = seed

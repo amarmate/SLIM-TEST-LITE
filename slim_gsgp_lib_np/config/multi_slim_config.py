@@ -135,6 +135,7 @@ class GPParameters:
     elitism: bool = True
     n_elites: int = 1
     selector: str = "dalex"
+    std_errs: bool = True
     down_sampling: float = 1
     epsilon: float = 1e-6,
     max_depth: Optional[int] = 15
@@ -167,6 +168,7 @@ multi_solve_params = {
 # ---------------------------- MULTI SLIM parameters ----------------------------
 multi_params = {
     "selector": 'tournament',
+    'std_errs': True,
     "mutator": None,
     "xo_operator": None,
     "p_xo": 0.8,
