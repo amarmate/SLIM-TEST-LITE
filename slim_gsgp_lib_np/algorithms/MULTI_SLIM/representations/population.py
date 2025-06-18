@@ -172,7 +172,11 @@ class Population:
         None
         """
         if std_errs: 
-            standardized_errs = (self.errors_case - np.mean(self.errors_case, axis=0)) / np.std(self.errors_case, axis=0)
+            mean = np.mean(self.errors_case, axis=0)
+            stdev = np.std(self.errors_case, axis=0)
+            standardized_errs = np.zeros_like(self.errors_case)
+            mask = stdev > 0
+            standardized_errs[:, mask] = (self.errors_case[:, mask] - mean[mask]) / stdev[mask]
             self.errors_case = standardized_errs
 
     def evaluate(self, target, testing=False):
