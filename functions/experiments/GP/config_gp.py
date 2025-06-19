@@ -39,7 +39,7 @@ AUTO_COMMIT_INTERVAL = 0.1 * 3600 # every 6 min
 # GP Experiment Configuration # 
 # --------------------------- # 
 
-SELECTORS = ['dalex']
+SELECTORS = ['dalex', 'dalex_fast_rand']
 FUNCTIONS = ['add', 'multiply', 'subtract', 'AQ']
 # CONSTANTS = constants = [round(i*0.05, 2) for i in range(2, 21)] + [round(-i*0.05, 2) for i in range(2, 21)]  # From -1 to 1 with step 0.05 
 CONSTANTS = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]  # From -2.0 to 2.0 with step 0.1 
