@@ -44,10 +44,5 @@ def run_gp(args):
 
     tasks = get_tasks(args, config)
 
-    # commit_thread = threading.Thread(
-    #     target=periodic_commit, args=(config,), daemon=True
-    # )
-    # commit_thread.start()
-    
     with parallel_config(n_jobs=args.workers, prefer='processes', verbose=10):
         Parallel()(delayed(run_experiment)(config, task) for task in tasks)

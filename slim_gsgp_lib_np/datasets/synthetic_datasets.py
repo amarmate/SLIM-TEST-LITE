@@ -132,8 +132,65 @@ def load_synthetic5(n=600, seed=0, noise=0, verbose=False):
     mask = [mask_1, mask_2]
     return x, y_noisy, mask, mask
 
-
 def load_synthetic6(n=600, seed=0, noise=0, verbose=False):
+    """
+    Synthetic dataset for 8-bit signed addition with latent overflow label in X, with optional noise on the modulo sum.
+    
+    - Inputs:
+        n     : number of samples
+        seed  : random seed
+        noise : standard deviation of Gaussian noise added to sum_mod (in least significant bit units)
+    - Features (X):
+        X[:,0]: operand a (signed 8-bit: -128 to 127)
+        X[:,1]: operand b (signed 8-bit: -128 to 127)
+        X[:,2]: overflow flag (0=no overflow, 1=overflow)
+    - Target (y):
+        sum_mod_noisy = (a + b) mod 256, reinterpreted as signed 8-bit, plus Gaussian noise
+    """
+    np.random.seed(seed)
+    low, high = -128, 127
+    
+    # sample operands
+    a = np.random.randint(low, high+1, size=n)
+    b = np.random.randint(low, high+1, size=n)
+    
+    # compute true sum and modulo sum
+    true_sum = a + b
+    sum_mod_unsigned = np.mod(true_sum, 256)
+    sum_mod = ((sum_mod_unsigned + 128) % 256) - 128
+    
+    # overflow flag (latent in features)
+    overflow = ((true_sum < low) | (true_sum > high)).astype(int)
+    
+    # add Gaussian noise to sum_mod
+    if noise > 0:
+        # noise interpreted in same units as sum_mod (integer LSBs)
+        sum_mod = sum_mod.astype(float)
+        sum_mod += np.random.normal(0, noise, size=n)
+        # round back to integer and clip to signed 8-bit range
+        sum_mod = np.round(sum_mod).astype(int)
+        sum_mod = np.clip(sum_mod, low, high)
+    
+    # assemble feature matrix X and target y
+    X = np.column_stack([a, b, overflow])
+    y = sum_mod
+
+    # masks 
+    mask_no_overflow = overflow == 0
+    mask_overflow = overflow == 1
+    masks = [mask_no_overflow, mask_overflow]
+
+    print("Mask counts (no overflow, overflow):") if verbose else None
+    print([mask.sum() for mask in masks]) if verbose else None
+
+    X = X.astype(float)
+    y = y.astype(float)
+
+    return X, y, masks, masks
+
+
+
+def load_synthetic7(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating retail sales with different regimes on weekdays versus weekends.
     - x[:,0] represents the day of the week (0 to 6, with <5 considered weekdays, >=5 as weekend).
@@ -175,7 +232,7 @@ def load_synthetic6(n=600, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask
 
 
-def load_synthetic7(n=600, seed=0, noise=0, verbose=False):
+def load_synthetic8(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating housing prices based on geographic location.
     - x contains two features: normalized latitude and longitude.
@@ -219,7 +276,7 @@ def load_synthetic7(n=600, seed=0, noise=0, verbose=False):
     return x, y_noisy, mask, mask 
 
 
-def load_synthetic8(n=600, seed=0, noise=0, verbose=False):
+def load_synthetic9(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating an insurance risk score in a smooth, real-world fashion.
     
@@ -281,7 +338,7 @@ def load_synthetic8(n=600, seed=0, noise=0, verbose=False):
     
     return x, y_noisy, mask, mask
 
-def load_synthetic9(n=600, seed=0, noise=0, verbose=False):
+def load_synthetic10(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset simulating bug risk estimation for software modules.
 
@@ -337,7 +394,7 @@ def load_synthetic9(n=600, seed=0, noise=0, verbose=False):
     return x, y_noisy, masks, condition_masks
 
 
-def load_synthetic10(n=600, seed=0, noise=0, verbose=False):
+def load_synthetic11(n=600, seed=0, noise=0, verbose=False):
     """
     Synthetic dataset: Crop yield estimation under nonlinear climate factors.
     
@@ -385,116 +442,52 @@ def load_synthetic10(n=600, seed=0, noise=0, verbose=False):
 
 
 
-def load_synthetic11(n=600, seed=0, noise=0, verbose=False):
-    """
-    Synthetic dataset for 8-bit signed addition with latent overflow label in X, with optional noise on the modulo sum.
+
+# def load_synthetic12(n=600, seed=0, noise=0, verbose=False):
+#     """
+#     Synthetic dataset: Air quality index under nonlinear environmental factors.
     
-    - Inputs:
-        n     : number of samples
-        seed  : random seed
-        noise : standard deviation of Gaussian noise added to sum_mod (in least significant bit units)
-    - Features (X):
-        X[:,0]: operand a (signed 8-bit: -128 to 127)
-        X[:,1]: operand b (signed 8-bit: -128 to 127)
-        X[:,2]: overflow flag (0=no overflow, 1=overflow)
-    - Target (y):
-        sum_mod_noisy = (a + b) mod 256, reinterpreted as signed 8-bit, plus Gaussian noise
-    """
-    np.random.seed(seed)
-    low, high = -128, 127
-    
-    # sample operands
-    a = np.random.randint(low, high+1, size=n)
-    b = np.random.randint(low, high+1, size=n)
-    
-    # compute true sum and modulo sum
-    true_sum = a + b
-    sum_mod_unsigned = np.mod(true_sum, 256)
-    sum_mod = ((sum_mod_unsigned + 128) % 256) - 128
-    
-    # overflow flag (latent in features)
-    overflow = ((true_sum < low) | (true_sum > high)).astype(int)
-    
-    # add Gaussian noise to sum_mod
-    if noise > 0:
-        # noise interpreted in same units as sum_mod (integer LSBs)
-        sum_mod = sum_mod.astype(float)
-        sum_mod += np.random.normal(0, noise, size=n)
-        # round back to integer and clip to signed 8-bit range
-        sum_mod = np.round(sum_mod).astype(int)
-        sum_mod = np.clip(sum_mod, low, high)
-    
-    # assemble feature matrix X and target y
-    X = np.column_stack([a, b, overflow])
-    y = sum_mod
+#     Features:
+#       - x[:,0]: Temperatur (°C, 0–40)
+#       - x[:,1]: relative Luftfeuchtigkeit (0–1)
+#       - x[:,2]: PM2.5-Konzentration (µg/m³, 0–200)
 
-    # masks 
-    mask_no_overflow = overflow == 0
-    mask_overflow = overflow == 1
-    masks = [mask_no_overflow, mask_overflow]
+#     Regime-Bedingungen:
+#       1. Sehr schlecht:     cos(pm/50) - humidity**2 < -0.5
+#       2. Schlecht:          exp(-temp/20) + (pm/100)**1.5 > 1.2
+#       3. Mäßig:             sin(humidity·π) + log(pm+1) < 0.8
+#       4. Gut:               sonst
+#     """
+#     import numpy as np
 
-    print("Mask counts (no overflow, overflow):") if verbose else None
-    print([mask.sum() for mask in masks]) if verbose else None
+#     np.random.seed(seed)
+#     temp = np.random.uniform(0, 40, size=n)
+#     hum  = np.random.uniform(0, 1, size=n)
+#     pm   = np.random.uniform(0, 200, size=n)
+#     x = np.column_stack([temp, hum, pm])
 
-    X = X.astype(float)
-    y = y.astype(float)
+#     # Bedingungen
+#     m1 = np.cos(pm/50) - hum**2 < -0.5
+#     m2 = np.exp(-temp/20) + (pm/100)**1.5 > 1.2
+#     m3 = np.sin(hum * np.pi) + np.log(pm+1) < 0.8
+#     m4 = ~(m1 | m2 | m3)
 
-    return X, y, masks, masks
+#     # AQI-Funktionen
+#     y = np.zeros(n)
+#     y[m1] = 200 + 0.5*pm[m1] + 10*np.cos(temp[m1]/10)
+#     y[m2] = 150 + 0.8*pm[m2] - 5*np.exp(-hum[m2])
+#     y[m3] = 100 + 0.3*pm[m3] + 20*np.sin(temp[m3]/15)
+#     y[m4] = 50 + 0.2*pm[m4] + 30*hum[m4]
 
+#     # Rauschen
+#     std = np.std(y)
+#     y_noisy = y + np.random.normal(0, (noise/100)*std, size=n)
 
-def load_synthetic12(n=600, seed=0, noise=0, verbose=False):
-    """
-    Synthetic dataset: Air quality index under nonlinear environmental factors.
-    
-    Features:
-      - x[:,0]: Temperatur (°C, 0–40)
-      - x[:,1]: relative Luftfeuchtigkeit (0–1)
-      - x[:,2]: PM2.5-Konzentration (µg/m³, 0–200)
+#     if verbose:
+#         print("Regime-Counts:", m1.sum(), m2.sum(), m3.sum(), m4.sum())
 
-    Regime-Bedingungen:
-      1. Sehr schlecht:     cos(pm/50) - humidity**2 < -0.5
-      2. Schlecht:          exp(-temp/20) + (pm/100)**1.5 > 1.2
-      3. Mäßig:             sin(humidity·π) + log(pm+1) < 0.8
-      4. Gut:               sonst
-    """
-    import numpy as np
-
-    np.random.seed(seed)
-    temp = np.random.uniform(0, 40, size=n)
-    hum  = np.random.uniform(0, 1, size=n)
-    pm   = np.random.uniform(0, 200, size=n)
-    x = np.column_stack([temp, hum, pm])
-
-    # Bedingungen
-    m1 = np.cos(pm/50) - hum**2 < -0.5
-    m2 = np.exp(-temp/20) + (pm/100)**1.5 > 1.2
-    m3 = np.sin(hum * np.pi) + np.log(pm+1) < 0.8
-    m4 = ~(m1 | m2 | m3)
-
-    # AQI-Funktionen
-    y = np.zeros(n)
-    y[m1] = 200 + 0.5*pm[m1] + 10*np.cos(temp[m1]/10)
-    y[m2] = 150 + 0.8*pm[m2] - 5*np.exp(-hum[m2])
-    y[m3] = 100 + 0.3*pm[m3] + 20*np.sin(temp[m3]/15)
-    y[m4] = 50 + 0.2*pm[m4] + 30*hum[m4]
-
-    # Rauschen
-    std = np.std(y)
-    y_noisy = y + np.random.normal(0, (noise/100)*std, size=n)
-
-    if verbose:
-        print("Regime-Counts:", m1.sum(), m2.sum(), m3.sum(), m4.sum())
-
-    masks = [m1, m2, m3, m4]
-    return x, y_noisy, masks, masks
-
-
-
-
-
-
-
-
+#     masks = [m1, m2, m3, m4]
+#     return x, y_noisy, masks, masks
 
 
 # def load_synthetic10(n=600, seed=0, noise=0, verbose=False):

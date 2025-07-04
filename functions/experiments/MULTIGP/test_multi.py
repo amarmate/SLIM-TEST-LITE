@@ -70,6 +70,7 @@ def multi_test(best_params,
 
         records_mask = { 
             'best_specialists'      : best_specialists,
+            'best_ensemble'   : best_ensemble_possible,
             'ensemble_gap_per'      : ensemble_gap,
             'classes'               : str(classes),
         }

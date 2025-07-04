@@ -1,7 +1,7 @@
 from skopt.space import Integer, Real
 from slim_gsgp_lib_np.datasets.synthetic_datasets import (
     load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
-    load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
+    load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, # load_synthetic12,
 )
 from slim_gsgp_lib_np.datasets.data_loader import ( 
     load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,
@@ -17,11 +17,11 @@ datasets = {name.split('load_')[1] : loader for name, loader in globals().items(
 N_SPLITS = 4                
 N_CV = 4                     # 4      
 
-N_SEARCHES_HYPER_GP = 30      # 20 
-N_RANDOM_STARTS_GP = 15       # 10
+N_SEARCHES_HYPER_GP = 20      # 20 
+N_RANDOM_STARTS_GP = 10       # 10
 
-N_SEARCHES_HYPER_MULTI = 30   # 20
-N_RANDOM_STARTS_MULTI = 15    # 10
+N_SEARCHES_HYPER_MULTI = 20   # 20
+N_RANDOM_STARTS_MULTI = 10    # 10
 
 NOISE_SKOPT = 1e-3
 N_TESTS = 15              

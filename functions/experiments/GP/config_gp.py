@@ -7,7 +7,7 @@ from slim_gsgp_lib_np.datasets.data_loader import (
 
 from slim_gsgp_lib_np.datasets.synthetic_datasets import (
     load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
-    load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, load_synthetic12,
+    load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, #  load_synthetic12,
 )
 # --------------------------- # 
 #    General Configuration    #
