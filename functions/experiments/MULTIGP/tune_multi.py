@@ -34,10 +34,11 @@ def multi_tune(gen_params,
     accs, macro_f1s, weighted_f1s, classes_n = [], [], [], []
 
     for i, (idx_tr, idx_te) in enumerate(kf.split(data_all['X_train'])):
-        print(X_tr[0])
         X_tr, y_tr = data_all['X_train'][idx_tr], data_all['y_train'][idx_tr]
         X_te, y_te = data_all['X_train'][idx_te], data_all['y_train'][idx_te]
         mask_kf = [marr[idx_tr] for marr in mask] if mask is not None else None
+        
+        print(X_tr[0])
 
         hash_Xtr = _hash_array(X_tr[:20])
         key = (split_id + i, hash_Xtr)
