@@ -38,8 +38,6 @@ def multi_tune(gen_params,
         X_te, y_te = data_all['X_train'][idx_te], data_all['y_train'][idx_te]
         mask_kf = [marr[idx_tr] for marr in mask] if mask is not None else None
         
-        print(X_tr[0])
-
         hash_Xtr = _hash_array(X_tr[:20])
         key = (split_id + i, hash_Xtr)
 
