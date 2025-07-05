@@ -47,13 +47,11 @@ SELECTOR_GP = 'dalex'
 FUNCTIONS_GP = ['add', 'multiply', 'subtract', 'AQ']
 CONSTANTS_GP = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
 STOP_THRESHOLD_GP = 0.3 # 0.2 
-PI_GP = [(10, 10), (10, 10), (10, 10),]   # n_generations, pop_size
-# PI_GP = [
-#     # (2000, 100),
-#     (1000, 200), 
-#     (400, 400),
-#     (150, 1000)
-#     ]   # n_generations, pop_size
+# PI_GP = [(10, 10), (10, 10), (10, 10),]   # n_generations, pop_size
+PI_GP = [
+    # (2000, 100),
+    (1000, 200), (400, 400),(150, 1000)
+    ]   # n_generations, pop_size
 
 PROB_TERMINAL_GP = 0.7
 PROB_CONST_GP = 0.2
@@ -87,8 +85,8 @@ FUNCTIONS_MULTI = ['add', 'multiply', 'subtract', 'AQ']
 CONSTANTS_MULTI = [round(i*0.1, 2) for i in range(2, 21)] + [round(-i*0.1, 2) for i in range(2, 21)]
 
 STOP_THRESHOLD_MULTI = 0.3  # CHANGE 
-# PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
-PI_MULTI = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
+PI_MULTI = [(2000, 100), (1000, 200), (500, 400)]   # n_generations, pop_size
+# PI_MULTI = [(20, 10), (10, 20), (5, 4)]   # n_generations, pop_size
 PROB_TERMINAL_MULTI = 0.7
 PROB_CONST_MULTI = 0.2
 
@@ -104,8 +102,8 @@ MULTI_MAX_DEPTH = 3
 MULTI_DEPTH_CONDITION = 6
 MULTI_PP = 2.5
 MULTI_XO = 0.5
-MULTI_POP_SIZE = 10  # 100
-MULTI_N_ITER = 20    # 2000
+MULTI_POP_SIZE = 100  # 100
+MULTI_N_ITER = 2000    # 2000
 
 multi_params = {
     "test_elite"            : False,
