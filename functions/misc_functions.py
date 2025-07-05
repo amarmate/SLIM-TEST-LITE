@@ -2,7 +2,7 @@ import numpy as np
 from collections import defaultdict
 from itertools import chain
 from scipy.optimize import linear_sum_assignment
-
+import warnings
 
 # ------------------------------------------------ PF FUNCTIONS ---------------------------------------------------
 def pf_rmse_comp_extended(points, index=False, error=0):
@@ -198,21 +198,50 @@ def get_classification_summary(X_data,
                                spec_masks=None,
                                tree_node=None):
     """
-    Returns a square confusion matrix (n_true_classes × n_true_classes),
-    where rows are true classes and columns are predicted classes.
-    Applies optimal column permutation to maximize diagonal.
+    Build a confusion-like matrix that cross-tabulates true vs. predicted specialist
+    classes.  Rows correspond to the 'true' classes defined by *mask*; columns
+    correspond to the specialist classes inferred from *spec_masks* (or from the
+    subtree rooted at *tree_node*).
+
+    The matrix is:
+        n × n   where n = max(n_true_classes, n_pred_classes)
+
+    –  Rows/columns that exceed the smaller dimension are filled with zeros.
+    –  Columns are permuted with the Hungarian algorithm so that the diagonal
+       contains the maximum possible agreement between true and predicted
+       classes.
+
+    Parameters
+    ----------
+    X_data : ndarray (n_samples, n_features)
+        Full data set (only needed when *tree_node* is given).
+    mask : list[list[int] | ndarray]
+        List of index lists (or boolean masks) defining the true classes.
+    spec_masks : dict | list | ndarray, optional
+        Specialist membership returned by `get_specialist_masks`
+        (skips the call to that function when supplied directly).
+    tree_node : MultiTree or Node, optional
+        Root node of the GP tree if specialist masks have to be computed.
+
+    Returns
+    -------
+    aligned_summary : ndarray (n × n)
+        Square confusion matrix containing *all* true and predicted classes.
     """
+    # --- 1. obtain the mapping {predicted_class : list(sample_indices)} --------
     assert (tree_node is not None) or (spec_masks is not None), \
         "Either spec_masks or tree_node must be provided."
-    
+
     if spec_masks is None:
+        # derive specialist masks from the GP tree
         spec_dict = get_specialist_masks(tree_node, X_data, indices=True)
     elif isinstance(spec_masks, dict):
         spec_dict = spec_masks
     else:
-        arr = np.array(spec_masks)
-        assert spec_masks.shape[0] == len(mask[0]), "spec_masks must have same length as mask[0]"
-        
+        arr = np.asarray(spec_masks)
+        assert arr.shape[0] == len(mask[0]), \
+            "spec_masks must have the same length as mask[0]"
+
         if arr.dtype == bool:
             spec_dict = {i: np.where(arr[i])[0].tolist()
                          for i in range(len(arr))}
@@ -220,16 +249,15 @@ def get_classification_summary(X_data,
             labels = np.unique(arr)
             spec_dict = {lab: np.where(arr == lab)[0].tolist()
                          for lab in labels}
-        
+
+    # --- 2. convert *mask* to a list of index lists --------------------------------
     id_masks = []
     for m in mask:
-        m_arr = np.array(m)
-        if m_arr.dtype == bool:
-            id_masks.append(np.where(m_arr)[0].tolist())
-        else:
-            id_masks.append(m_arr.tolist())
+        m_arr = np.asarray(m)
+        id_masks.append(np.where(m_arr)[0].tolist() if m_arr.dtype == bool
+                        else m_arr.tolist())
 
-    # Build the (n_true_classes × n_pred_classes) confusion matrix
+    # --- 3. build the raw (n_true × n_pred) count matrix ---------------------------
     class_summary = []
     for m_indices in id_masks:
         true_set = set(m_indices)
@@ -237,20 +265,24 @@ def get_classification_summary(X_data,
                for _, pred_indices in spec_dict.items()]
         class_summary.append(row)
 
-    class_summary = np.array(class_summary, dtype=int)
+    class_summary = np.asarray(class_summary, dtype=int)
 
-    # Pad to square matrix
+    # --- 4. pad to square (n × n) where n = max(n_true, n_pred) --------------------
     n_true, n_pred = class_summary.shape
     n = max(n_true, n_pred)
     padded = np.zeros((n, n), dtype=int)
     padded[:n_true, :n_pred] = class_summary
 
-    # Use Hungarian algorithm to find best column permutation
-    cost = -padded
+    # --- 5. align columns (Hungarian algorithm) ------------------------------------
+    cost = -padded        # maximise diagonal → minimise negative counts
     _, col_ind = linear_sum_assignment(cost)
-
-    # Apply permutation to columns
     aligned_summary = padded[:, col_ind]
 
-    # Return only original unpadded part
-    return aligned_summary[:n_true, :n_true]
+    # --- 6. sanity checks -----------------------------------------------------------
+    total_samples = X_data.shape[0]
+    if aligned_summary.sum() != total_samples:
+        warnings.warn("Mismatch between matrix total and sample count. "
+                      "Check for overlapping or missing masks.")
+
+    # --- 7. return the **largest** square matrix (n × n) ---------------------------
+    return aligned_summary[:n, :n]
