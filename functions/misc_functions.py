@@ -125,16 +125,127 @@ def get_specialist_masks(tree_node, X_data, current_mask=None, indices=True):
         merged[ind] = np.where(mask)[0].tolist()
     return merged
 
-def get_classification_summary(tree_node, X_data, mask):
-    spec_masks = get_specialist_masks(tree_node, X_data, indices=True)
-    id_masks = [np.where(submask)[0].tolist() for submask in mask]
 
+def simplify_ensemble(tree, X_data, min_usage=0.1):
+    """
+    Prune any specialist leaf whose coverage on X_data is below min_usage.
+    Repeat until all leaves have usage ≥ min_usage.
+    """
+    n = X_data.shape[0]
+    
+    def get_node(tree, path):
+        node = tree
+        for step in path:
+            if not isinstance(node, tuple):
+                return node
+            node = node[step]
+        return node
+    
+    def annotate(node, mask, path=()):
+        """Return dict of {path: usage} for every node."""
+        stats = {path: mask.mean()}
+        if isinstance(node, tuple):
+            cond, left, right = node
+            # compute boolean mask where this cond is True/False
+            m_true  = mask & (cond.predict(X_data) > 0)
+            m_false = mask & ~m_true
+            stats.update(annotate(left,  m_true,  path+(1,)))
+            stats.update(annotate(right, m_false, path+(2,)))
+        return stats
+
+    def prune(node, target_path, path=()):
+        """
+        Replace the branch at target_path with its sibling.
+        If target_path == path + (1,), replace left with right, etc.
+        """
+        if not isinstance(node, tuple):
+            return node
+
+        if path + (1,) == target_path:
+            # prune left → return right subtree
+            return node[2]
+        if path + (2,) == target_path:
+            # prune right → return left subtree
+            return node[1]
+
+        # else recurse into the matching child
+        cond, left, right = node
+        if target_path[:len(path)+1] == path+(1,):
+            left  = prune(left,  target_path, path+(1,))
+        elif target_path[:len(path)+1] == path+(2,):
+            right = prune(right, target_path, path+(2,))
+        return (cond, left, right)
+
+    # repeat pruning until no leaf below threshold
+    current = tree
+    while True:
+        stats = annotate(current, np.ones(n, bool))
+        # pick all leaf‐paths with usage < min_usage
+        bad = [(p,u) for p,u in stats.items()
+               if not isinstance(get_node(current, p), tuple) and u<min_usage]
+        if not bad:
+            break
+        # prune the least‐used leaf
+        path,_ = min(bad, key=lambda pu: pu[1])
+        current = prune(current, path)
+
+    return current
+
+
+
+def get_classification_summary(X_data,
+                               mask,
+                               spec_masks=None,
+                               tree_node=None):
+    """
+    Liefert eine transponierte Kontingenzmatrix mit Shape (n_true_classes, n_pred_classes).
+    Zeilen = wahre Klassen, Spalten = vorhergesagte Klassen.
+    """
+    assert (tree_node is not None) or (spec_masks is not None), \
+        "Entweder spec_masks oder tree_node muss gesetzt sein."
+                               
+    if spec_masks is None:
+        spec_dict = get_specialist_masks(tree_node, X_data, indices=True)
+    elif isinstance(spec_masks, dict):
+        spec_dict = spec_masks
+    else:
+        arr = np.array(spec_masks)
+        assert spec_masks.shape[0] == len(mask[0]), "spec_masks must have the same length as mask[0]"
+        
+        if arr.dtype == bool:
+            spec_dict = {i: np.where(arr[i])[0].tolist()
+                         for i in range(len(arr))}
+        else:
+            labels = np.unique(arr)
+            spec_dict = {lab: np.where(arr == lab)[0].tolist()
+                         for lab in labels}
+        
+    id_masks = []
+    for m in mask:
+        m_arr = np.array(m)
+        if m_arr.dtype == bool:
+            id_masks.append(np.where(m_arr)[0].tolist())
+        else:
+            id_masks.append(m_arr.tolist())
+
+    # Matrix mit shape (n_true_classes, n_pred_classes) erzeugen
     class_summary = []
-    for _, pred in spec_masks.items():
-        temp = []
-        for m in id_masks: 
-            intersection = np.intersect1d(pred, m)
-            temp.append(len(intersection))
-        class_summary.append(temp)
-    class_summary = np.array(class_summary)
+    for m_indices in id_masks:
+        true_set = set(m_indices)
+        row = [len(true_set.intersection(pred_indices))
+               for _, pred_indices in spec_dict.items()]
+        class_summary.append(row)
+
+    class_summary = np.array(class_summary, dtype=int)
+
+    n_true = class_summary.shape[0]
+    n_pred = class_summary.shape[1]
+    if n_pred < n_true:
+        padding = np.zeros((n_true, n_true - n_pred), dtype=int)
+        class_summary = np.hstack([class_summary, padding])
+    elif n_pred > n_true:
+        padding = np.zeros((n_pred - n_true, n_pred), dtype=int)
+        class_summary = np.vstack([class_summary, padding])
+        class_summary = class_summary[:n_pred, :]  # just in case
+
     return class_summary

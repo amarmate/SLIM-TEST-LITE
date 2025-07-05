@@ -37,6 +37,7 @@ def gp_test(best_params,
     rmse_test    = rmse(y_test_pred, y_test)
     mae_test     = mae(y_test_pred, y_test)
     r2_test      = r_squared(y_test, y_test_pred)
+    r2_train     = r_squared(y_train,y_train_pred)
     rmse_train   = rmse(y_train_pred, y_train)
     gen_gap      = 100 * abs(rmse_test - bcv_rmse) / bcv_rmse
     overfit      = 100 * (rmse_train - rmse_test) / rmse_train
@@ -50,6 +51,7 @@ def gp_test(best_params,
         'rmse_test'             : rmse_test,
         'mae_test'              : mae_test,
         'r2_test'               : r2_test,
+        'r2_train'              : r2_train, 
         'gen_gap_per'           : gen_gap,
         'nodes'                 : elite.total_nodes,
         'depth'                 : elite.depth,

@@ -3,8 +3,12 @@ import numpy as np
 import hashlib
 from sklearn.model_selection import KFold
 from slim_gsgp_lib_np.main_multi_slim import multi_slim
+from slim_gsgp_lib_np.algorithms.MULTI_SLIM.representations.tree import Tree as MultiTree
 from functions.metrics_test import *
 from functions.experiments.GP.config_gp import *
+from functions.misc_functions import get_classification_summary, simplify_ensemble, get_specialist_masks
+from functions.metrics_test import calc_scores_from_summary as calc_scores
+
 
 def multi_tune(gen_params, 
                dataset, 
@@ -25,8 +29,9 @@ def multi_tune(gen_params,
     params['params_gp'] = gp_params
 
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=split_id)
-    rmses_tr, rmses_te, nodes, tnodes = [], [], [], []
+    rmses_tr, rmses_te, tnodes = [], [], []
     best_ensemble_rmses, best_ensemble_sizes, norm_errs = [], [], []
+    accs, macro_f1s, weighted_f1s, classes_n = [], [], [], []
 
     for i, (idx_tr, idx_te) in enumerate(kf.split(data_all['X_train'])):
         X_tr, y_tr = data_all['X_train'][idx_tr], data_all['y_train'][idx_tr]
@@ -50,11 +55,14 @@ def multi_tune(gen_params,
             population=spec_pop
         )
         elite, pop = res.elite, res.spec_pop
+        elite = simplify_ensemble(elite.collection, X_tr, min_usage=0.05)
+        elite = MultiTree(elite)
 
         if run == 'multi2':
             _spec_pop_cache[key] = pop
 
         if mask is not None: 
+            spec_mask = get_specialist_masks(elite.collection, X_tr)
             min_errs, sizes = [], []
             ensemb_sqerr = 0
             for submask in mask_kf: 
@@ -70,17 +78,28 @@ def multi_tune(gen_params,
             best_ensemble_rmses.append(ensemb_sqerr)
             best_ensemble_sizes.append(np.sum(sizes))
             norm_errs.append(norm_err)
+            
+            class_n         = len(spec_mask)
+            class_summary = get_classification_summary(
+                 X_data = X_tr, 
+                 mask = mask_kf,
+                 spec_masks = spec_mask,
+                 )
+                     
+            acc, macro_f1, weighted_f1 = calc_scores(class_summary)    
+            accs.append(acc)
+            macro_f1s.append(macro_f1)
+            weighted_f1s.append(weighted_f1)  
+            classes_n.append(class_n)    
         
         rmse_train  = rmse(elite.predict(X_tr), y_tr)
         rmse_test   = rmse(elite.predict(X_te), y_te)
         rmses_tr.append(rmse_train)
         rmses_te.append(rmse_test)
         tnodes.append(elite.total_nodes)
-        nodes.append(elite.nodes_count)
 
     stats_general = {
         'mean_tnodes_elite' : float(np.mean(tnodes)),
-        'mean_nodes'        : float(np.mean(nodes)),
         'rmse_train'        : float(np.mean(rmses_tr)),
     }
 
@@ -90,12 +109,15 @@ def multi_tune(gen_params,
             'norm_errs_ens'     : float(np.mean(norm_errs)),
             'ensemble_rmse'     : float(np.mean(best_ensemble_rmses)),
             'divergence_tr'     : float(np.mean(rmses_tr) / np.mean(best_ensemble_rmses)),
+            'accs'              : float(np.mean(accs)),
+            'macro_f1s'         : float(np.mean(macro_f1s)),
+            'weighted_f1s'      : float(np.mean(weighted_f1s)),
+            'classes_n'         : float(np.mean(classes_n)),
         })
 
     return float(np.mean(rmses_te)), stats_general, {
         'std_rmse_elite'    : float(np.std(rmses_te)),
         'std_nodes_elite'   : float(np.std(tnodes)),
-        'std_nodes'         : float(np.std(nodes)),
     }
 
 
