@@ -84,6 +84,7 @@ def split_task(task, config):
         mask = None
     
     else: 
+        dataset = loader(seed=config['SEED'])
         idx_train, idx_test = train_test_split(dataset[0], dataset[1], p_test=config['P_TEST'], seed=split_id, indices_only=True)
         X_train, X_test = dataset[0][idx_train], dataset[0][idx_test]
         y_train, y_test = dataset[1][idx_train], dataset[1][idx_test]

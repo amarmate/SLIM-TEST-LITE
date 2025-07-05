@@ -1,4 +1,6 @@
 import numpy as np 
+import os 
+import random
 import mlflow 
 from functions.experiments.MULTIGP.config_multi import *
 from functions.experiments.tracking import get_tasks
@@ -51,6 +53,10 @@ def run_experiment(config, task):
 # ------------------------------------------------- MAIN FUNCTION ------------------------------------------------- #
 def run_multi(args):
     np.random.seed(SEED)
+    os.environ["PYTHONHASHSEED"] = str(SEED)
+    random.seed(SEED)
+
+
 
     tasks = get_tasks(args, config)
 

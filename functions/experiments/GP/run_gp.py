@@ -1,4 +1,6 @@
 import numpy as np 
+import os 
+import random 
 import mlflow 
 from functions.experiments.GP.config_gp import *
 from functions.experiments.tracking import get_tasks
@@ -12,7 +14,6 @@ from functions.experiments.github import periodic_commit
 
 from joblib import Parallel, delayed, parallel_config
 import threading
-
 
 def run_experiment(config, task):
     name, selector, split_id = task['gen_params']['dataset_name'], task['gen_params']['selector'], task['split_id']
@@ -39,6 +40,8 @@ def run_experiment(config, task):
 
 def run_gp(args):
     np.random.seed(SEED)
+    os.environ["PYTHONHASHSEED"] = str(SEED)
+    random.seed(SEED)
 
     mlflow.set_tracking_uri("file:../data/mlruns")
 

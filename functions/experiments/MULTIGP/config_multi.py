@@ -12,6 +12,8 @@ from slim_gsgp_lib_np.datasets.data_loader import (
 #    General Configuration    #
 # --------------------------- #
 
+SEED = 0
+
 datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
 
 N_SPLITS = 4                
@@ -26,7 +28,6 @@ N_RANDOM_STARTS_MULTI = 10    # 10
 NOISE_SKOPT = 1e-3
 N_TESTS = 20              
 P_TEST = 0.25 
-SEED = 0
 N_TIME_BINS = 300
 SUFFIX_SAVE = '3'
 PREFIX_SAVE = 'MULTI'  
