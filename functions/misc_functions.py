@@ -1,6 +1,7 @@
 import numpy as np 
 from collections import defaultdict
 from itertools import chain
+from scipy.optimize import linear_sum_assignment
 
 
 # ------------------------------------------------ PF FUNCTIONS ---------------------------------------------------
@@ -192,25 +193,25 @@ def simplify_ensemble(tree, X_data, min_usage=0.1):
     return current
 
 
-
 def get_classification_summary(X_data,
                                mask,
                                spec_masks=None,
                                tree_node=None):
     """
-    Liefert eine transponierte Kontingenzmatrix mit Shape (n_true_classes, n_pred_classes).
-    Zeilen = wahre Klassen, Spalten = vorhergesagte Klassen.
+    Returns a square confusion matrix (n_true_classes × n_true_classes),
+    where rows are true classes and columns are predicted classes.
+    Applies optimal column permutation to maximize diagonal.
     """
     assert (tree_node is not None) or (spec_masks is not None), \
-        "Entweder spec_masks oder tree_node muss gesetzt sein."
-                               
+        "Either spec_masks or tree_node must be provided."
+    
     if spec_masks is None:
         spec_dict = get_specialist_masks(tree_node, X_data, indices=True)
     elif isinstance(spec_masks, dict):
         spec_dict = spec_masks
     else:
         arr = np.array(spec_masks)
-        assert spec_masks.shape[0] == len(mask[0]), "spec_masks must have the same length as mask[0]"
+        assert spec_masks.shape[0] == len(mask[0]), "spec_masks must have same length as mask[0]"
         
         if arr.dtype == bool:
             spec_dict = {i: np.where(arr[i])[0].tolist()
@@ -228,7 +229,7 @@ def get_classification_summary(X_data,
         else:
             id_masks.append(m_arr.tolist())
 
-    # Matrix mit shape (n_true_classes, n_pred_classes) erzeugen
+    # Build the (n_true_classes × n_pred_classes) confusion matrix
     class_summary = []
     for m_indices in id_masks:
         true_set = set(m_indices)
@@ -238,14 +239,18 @@ def get_classification_summary(X_data,
 
     class_summary = np.array(class_summary, dtype=int)
 
-    n_true = class_summary.shape[0]
-    n_pred = class_summary.shape[1]
-    if n_pred < n_true:
-        padding = np.zeros((n_true, n_true - n_pred), dtype=int)
-        class_summary = np.hstack([class_summary, padding])
-    elif n_pred > n_true:
-        padding = np.zeros((n_pred - n_true, n_pred), dtype=int)
-        class_summary = np.vstack([class_summary, padding])
-        class_summary = class_summary[:n_pred, :]  # just in case
+    # Pad to square matrix
+    n_true, n_pred = class_summary.shape
+    n = max(n_true, n_pred)
+    padded = np.zeros((n, n), dtype=int)
+    padded[:n_true, :n_pred] = class_summary
 
-    return class_summary
+    # Use Hungarian algorithm to find best column permutation
+    cost = -padded
+    _, col_ind = linear_sum_assignment(cost)
+
+    # Apply permutation to columns
+    aligned_summary = padded[:, col_ind]
+
+    # Return only original unpadded part
+    return aligned_summary[:n_true, :n_true]
