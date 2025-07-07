@@ -489,7 +489,7 @@ def load_synthetic11(n=600, *, seed=0, noise=0.0, verbose=False):
     if verbose:
         print("Regime counts (Top/Mid/Dry/Cloud/Other):", counts)
 
-    return X, y_noisy, masks, one_hot
+    return X, y_noisy, masks, masks
 
 
 
