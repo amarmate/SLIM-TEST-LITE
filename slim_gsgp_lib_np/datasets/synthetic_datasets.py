@@ -394,51 +394,102 @@ def load_synthetic10(n=600, seed=0, noise=0, verbose=False):
     return x, y_noisy, masks, condition_masks
 
 
-def load_synthetic11(n=600, seed=0, noise=0, verbose=False):
+def load_synthetic11(n=600, *, seed=0, noise=0.0, verbose=False):
     """
-    Synthetic dataset: Crop yield estimation under nonlinear climate factors.
-    
-    Features:
-      - x[:,0]: Temperatur (°C, 5–35)
-      - x[:,1]: Niederschlag (mm, 0–200)
-      - x[:,2]: Sonnenstunden pro Tag (h, 0–14)
+    Synthetic crop-yield dataset whose five classes contain (almost) the
+    same number of samples.
 
-    Regime-Bedingungen (alle nicht-linear):
-      1. Top-Ertrag:    sin(temp·π/30) + log(rain+1) > 1.5
-      2. Mittel-Ertrag: (rain/50)**2 + cos(sun/7) > 1.2
-      3. Trockenstress: sin(temp/10) - (rain/100)**1.5 < 0.5
-      4. Wolkenstress:  (sun/14)·log(temp) < 0.8
+    The first four classes are the agronomic regimes described in the
+    original `load_synthetic11`; any sample that satisfies none of them
+    is assigned to the fallback class ‘other’.  
+    Samples are generated **per class** until the target counts are met,
+    making the final masks mutually exclusive, collectively exhaustive
+    and roughly balanced.
+
+    Returns
+    -------
+    X         : ndarray (n, 3)      – features (temp, rain, sun)
+    y_noisy   : ndarray (n,)        – response with additive Gaussian noise
+    masks     : list[np.ndarray]    – 5 Boolean masks, one per class
+    one_hot   : ndarray (n, 5)      – same information in one-hot form
     """
     import numpy as np
 
-    np.random.seed(seed)
-    temp = np.random.uniform(5, 35, size=n)
-    rain = np.random.uniform(0, 200, size=n)
-    sun  = np.random.uniform(0, 14, size=n)
-    x = np.column_stack([temp, rain, sun])
+    rng   = np.random.default_rng(seed)
+    per_c = [n // 5] * 5                      # target size of each class
+    for k in range(n % 5):                    # distribute the remainder
+        per_c[k] += 1
 
-    # Bedingungen
-    m1 = np.sin(temp * np.pi/30) + np.log(rain+1) > 1.5
-    m2 = (rain/50)**2 + np.cos(sun/7) > 1.2
-    m3 = np.sin(temp/10) - (rain/100)**1.5 < 0.5
-    m4 = (sun/14)*np.log(temp) < 0.8
+    # ------------------------------------------------------------------
+    # 1 regime predicates (same formulas as before)
+    # ------------------------------------------------------------------
+    def predicates(t, r, s):
+        c1 = np.sin(t * np.pi / 30) + np.log(r + 1)       > 1.5
+        c2 = (r / 50) ** 2     + np.cos(s / 7)            > 1.2
+        c3 = np.sin(t / 10)    - (r / 100) ** 1.5         < 0.5
+        c4 = (s / 14) * np.log(t)                         < 0.8
+        return c1, c2, c3, c4
 
-    # Ertragsfunktionen pro Regime
+    # ------------------------------------------------------------------
+    # 2 generate samples until every class is full
+    # ------------------------------------------------------------------
+    features, labels = [], []            # temporary storage
+    counts = [0] * 5
+
+    while any(cnt < tgt for cnt, tgt in zip(counts, per_c)):
+        t   = rng.uniform(5, 35)
+        r   = rng.uniform(0, 200)
+        s   = rng.uniform(0, 14)
+        c1, c2, c3, c4 = predicates(t, r, s)
+
+        # exclusive assignment
+        if   c1 and counts[0] < per_c[0]:
+            label = 0
+        elif c2 and counts[1] < per_c[1]:
+            label = 1
+        elif c3 and counts[2] < per_c[2]:
+            label = 2
+        elif c4 and counts[3] < per_c[3]:
+            label = 3
+        elif counts[4] < per_c[4]:       # fallback ‘other’
+            label = 4
+        else:
+            continue                      # skip, class already full
+
+        features.append((t, r, s))
+        labels.append(label)
+        counts[label] += 1
+
+    X = np.asarray(features)
+    labels = np.asarray(labels)
+
+    # ------------------------------------------------------------------
+    # 3 yield functions
+    # ------------------------------------------------------------------
     y = np.zeros(n)
-    y[m1] = 8 + 2 * np.sin(temp[m1]/5) + 0.01*rain[m1]
-    y[m2] = 5 + 0.02*rain[m2] + 1.5*np.cos(sun[m2]/3)
-    y[m3] = 3 + 0.5*(sun[m3]/14)**2 - 0.01*temp[m3]
-    y[m4] = 4 + 0.02*sun[m4] + 0.1*np.log(rain[m4]+1)
+    idx = labels == 0
+    y[idx] = 8 + 2 * np.sin(X[idx, 0] / 5)      + 0.01 * X[idx, 1]
+    idx = labels == 1
+    y[idx] = 5 + 0.02 * X[idx, 1]               + 1.5 * np.cos(X[idx, 2] / 3)
+    idx = labels == 2
+    y[idx] = 3 + 0.5 * (X[idx, 2] / 14) ** 2    - 0.01 * X[idx, 0]
+    idx = labels == 3
+    y[idx] = 4 + 0.02 * X[idx, 2]               + 0.1 * np.log(X[idx, 1] + 1)
+    idx = labels == 4                           # simple baseline
+    y[idx] = 4 + 0.01 * X[idx, 2]
 
-    # Rauschen
-    std = np.std(y)
-    y_noisy = y + np.random.normal(0, (noise/100)*std, size=n)
+    # ------------------------------------------------------------------
+    # 4 add noise & build masks
+    # ------------------------------------------------------------------
+    y_noisy = y + rng.normal(0, (noise / 100) * y.std(ddof=0), size=n)
+
+    one_hot = np.eye(5, dtype=bool)[labels]
+    masks   = [one_hot[:, k] for k in range(5)]
 
     if verbose:
-        print("Regime-Counts:", m1.sum(), m2.sum(), m3.sum(), m4.sum())
+        print("Regime counts (Top/Mid/Dry/Cloud/Other):", counts)
 
-    masks = [m1, m2, m3, m4]
-    return x, y_noisy, masks, masks
+    return X, y_noisy, masks, one_hot
 
 
 
