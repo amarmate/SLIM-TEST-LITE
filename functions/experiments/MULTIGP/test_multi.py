@@ -45,7 +45,7 @@ def multi_test(best_params,
     )
     elapsed = time.time() - t0
 
-    elite, pop, log = res.elite, res.population, res.log 
+    elite, pop, log, spec_pop = res.elite, res.population, res.log, res.spec_pop
     elite = simplify_ensemble(elite.collection, X_train, min_usage=0.05)
     elite = MultiTree(elite)
 
@@ -100,7 +100,7 @@ def multi_test(best_params,
     r2_test          = r_squared(y_test, y_test_pred)
     gen_gap          = 100 * abs(rmse_test - bcv_rmse) / bcv_rmse
     overfit          = 100 * (rmse_train - rmse_test) / rmse_train
-    latex_repr       = simplify_tuple_expression_multi(elite.collection)
+    latex_repr       = simplify_tuple_expression_multi(elite.collection, spec_pop)
 
 
     records = { 

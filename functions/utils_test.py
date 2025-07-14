@@ -234,7 +234,9 @@ def simplify_tuple_expression(expr_tuple, latex=True):
     return simplified
 
 
-def simplify_tuple_expression_multi(expr_tuple, latex=True):
+def simplify_tuple_expression_multi(expr_tuple, 
+                                    spec_pop,
+                                    latex=True):
     def unpack_multi(expr):
         def traverse(expr): 
             if isinstance(expr, tuple): 
@@ -244,7 +246,8 @@ def simplify_tuple_expression_multi(expr_tuple, latex=True):
                 false_val = traverse(expr[2])
                 return (op, cond, true_val, false_val)
             elif isinstance(expr, str): 
-                return expr
+                id = int(expr.split('_')[1])
+                return spec_pop[id].repr_
             else: 
                 return expr.repr_
         return traverse(expr)
