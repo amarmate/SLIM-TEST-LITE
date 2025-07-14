@@ -178,7 +178,9 @@ def load_synthetic6(n=600, seed=0, noise=0, verbose=False):
     # masks 
     mask_no_overflow = overflow == 0
     mask_overflow = overflow == 1
-    masks = [mask_no_overflow, mask_overflow]
+    mask_overflow_plus = np.logical_and(overflow == 1, true_sum > high)
+    mask_overflow_minus = np.logical_and(overflow == 1, true_sum < low)
+    masks = [mask_no_overflow, mask_overflow_plus, mask_overflow_minus]
 
     print("Mask counts (no overflow, overflow):") if verbose else None
     print([mask.sum() for mask in masks]) if verbose else None

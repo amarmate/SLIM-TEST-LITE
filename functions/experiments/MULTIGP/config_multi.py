@@ -3,10 +3,10 @@ from slim_gsgp_lib_np.datasets.synthetic_datasets import (
     load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
     load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, # load_synthetic12,
 )
-from slim_gsgp_lib_np.datasets.data_loader import ( 
-    load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,
-    load_istanbul, load_ld50, load_bioav, load_parkinson_updrs, load_ppb, load_resid_build_sale_price,
-)
+# from slim_gsgp_lib_np.datasets.data_loader import ( 
+#     load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,
+#     load_istanbul, load_ld50, load_bioav, load_parkinson_updrs, load_ppb, load_resid_build_sale_price,
+# )
 
 # --------------------------- # 
 #    General Configuration    #
@@ -117,7 +117,7 @@ multi_params = {
     "it_tolerance"          : STOP_THRESHOLD_MULTI,
     "down_sampling"         : 1,
     "full_return"           : True,
-    "verbose"               : False,
+    "verbose"               : True,  # FALSE 
     "gp_version"            : 'gp',
     "selector"              : SELECTOR_MULTI,
 
