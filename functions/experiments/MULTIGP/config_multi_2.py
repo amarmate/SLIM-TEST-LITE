@@ -3,10 +3,10 @@ from slim_gsgp_lib_np.datasets.synthetic_datasets import (
     load_synthetic1, load_synthetic2, load_synthetic3, load_synthetic4, load_synthetic5, load_synthetic6, 
     load_synthetic7, load_synthetic8, load_synthetic9, load_synthetic10, load_synthetic11, # load_synthetic12,
 )
-from slim_gsgp_lib_np.datasets.data_loader import ( 
-    load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,
-    load_istanbul, load_ld50, load_bioav, load_parkinson_updrs, load_ppb, load_resid_build_sale_price,
-)
+# from slim_gsgp_lib_np.datasets.data_loader import ( 
+#     load_airfoil, load_boston, load_concrete_strength, load_diabetes, load_efficiency_heating, load_forest_fires,
+#     load_istanbul, load_ld50, load_bioav, load_parkinson_updrs, load_ppb, load_resid_build_sale_price,
+# )
 
 # --------------------------- # 
 #    General Configuration    #
@@ -16,7 +16,7 @@ SEED = 0
 
 datasets = {name.split('load_')[1] : loader for name, loader in globals().items() if name.startswith('load_') and callable(loader)}
 
-N_SPLITS = 1                
+N_SPLITS = 4                
 N_CV = 4                     # 4      
 
 N_SEARCHES_HYPER_GP = 20      # 20 
@@ -25,7 +25,7 @@ N_RANDOM_STARTS_GP = 10       # 10
 N_SEARCHES_HYPER_MULTI = 20   # 20
 N_RANDOM_STARTS_MULTI = 10    # 10
 
-NOISE_SKOPT = 1e-2
+NOISE_SKOPT = 1e-3
 N_TESTS = 20              
 P_TEST = 0.25 
 N_TIME_BINS = 300
@@ -51,9 +51,7 @@ STOP_THRESHOLD_GP = 0.3 # 0.2
 # PI_GP = [(10, 10), (10, 10), (10, 10),]   # n_generations, pop_size
 PI_GP = [
     # (2000, 100),
-    # (1000, 200), (400, 400),
-    (150, 1000),
-    (150, 1000)
+    (1000, 200), (400, 400),(150, 1000)
     ]   # n_generations, pop_size
 
 PROB_TERMINAL_GP = 0.7
@@ -61,8 +59,8 @@ PROB_CONST_GP = 0.2
 INIT_DEPTH_GP = 2
 
 SPACE_PARAMETERS_GP = [
-    Integer(3, 7, name='max_depth_gp'),                    
-    Integer(0, 1, name='pop_iter_setting_gp', prior='uniform'),                                                                    
+    Integer(4, 9, name='max_depth_gp'),                    
+    Integer(0, 2, name='pop_iter_setting_gp', prior='uniform'),                                                                    
     Real(2, 40, name='particularity_pressure_gp', prior='uniform'),
     Real(0.4, 0.9, name='p_xo_gp'),    
 ]
@@ -95,14 +93,14 @@ PROB_CONST_MULTI = 0.2
 
 SPACE_PARAMETERS_MULTI = [
     Integer(2, 5, name='max_depth'),     
-    Integer(2, 6, name='depth_condition'),                
+    Integer(2, 7, name='depth_condition'),                
     Integer(0, 2, name='pop_iter_setting', prior='uniform'),                                                                    
     Real(1, 30, name='particularity_pressure', prior='uniform'),
     Real(0.3, 0.75, name='p_xo'),    
 ]
 
 MULTI_MAX_DEPTH = 3
-MULTI_DEPTH_CONDITION = 5
+MULTI_DEPTH_CONDITION = 6
 MULTI_PP = 2.5
 MULTI_XO = 0.5
 MULTI_POP_SIZE = 100  # 100
